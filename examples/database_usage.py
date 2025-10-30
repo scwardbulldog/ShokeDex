@@ -6,6 +6,7 @@ This script demonstrates how to use the database module to query Pokémon data.
 """
 
 import sys
+import os
 from pathlib import Path
 
 # Add parent directory to path for imports
@@ -41,9 +42,10 @@ def example_query_stats():
     print("=" * 60)
     
     with Database() as db:
+        pokemon = db.get_pokemon_by_id(25)
         stats = db.get_pokemon_stats(25)
-        if stats:
-            print("\nPikachu's Base Stats:")
+        if stats and pokemon:
+            print(f"\n{pokemon['name'].title()}'s Base Stats:")
             for stat in stats:
                 print(f"  {stat['name'].replace('-', ' ').title()}: {stat['base_stat']}")
         else:
@@ -176,7 +178,6 @@ def main():
     
     # Check if database exists
     db = Database()
-    import os
     if not os.path.exists(db.db_path):
         print("\n⚠ Database not found!")
         print("\nPlease initialize and seed the database first:")
