@@ -84,8 +84,11 @@ src/
 ## Domain Knowledge
 
 ### Pokémon Data
-- **National Pokédex numbers**: 1-151 (Gen 1), 152-251 (Gen 2), 252-386 (Gen 3)
-- **18 Types**: Normal, Fire, Water, Electric, Grass, Ice, Fighting, Poison, Ground, Flying, Psychic, Bug, Rock, Ghost, Dragon, Dark, Steel, Fairy
+- **National Pokédex numbers**: #001-151 (Gen 1), #152-251 (Gen 2), #252-386 (Gen 3)
+- **Types for Gen 1-3**: 
+  - Gen 1 (15 types): Normal, Fire, Water, Electric, Grass, Ice, Fighting, Poison, Ground, Flying, Psychic, Bug, Rock, Ghost, Dragon
+  - Gen 2+ adds: Dark, Steel (17 types total)
+  - Note: Fairy type was introduced in Gen 6, not applicable to this project
 - **6 Base Stats**: HP, Attack, Defense, Special Attack, Special Defense, Speed
 - Pokémon can have 1-2 types (dual-typing)
 - Evolution chains can be complex (branching, items, happiness, trades, etc.)
