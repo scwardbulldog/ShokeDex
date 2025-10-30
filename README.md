@@ -224,6 +224,23 @@ python src/data/manage_db.py query --name pikachu
 
 **Note:** Loading data requires an internet connection to access PokéAPI. See [docs/data_loading_guide.md](docs/data_loading_guide.md) for detailed instructions.
 
+### Sprite Processing
+
+ShokeDex includes a sprite processing pipeline that converts Pokémon sprites to a Gameboy Color palette:
+
+```bash
+# Process all generations (1-3)
+python src/data/sprite_processor.py --all
+
+# Process a specific generation
+python src/data/sprite_processor.py --gen 1
+
+# Process a specific Pokémon
+python src/data/sprite_processor.py --pokemon 25  # Pikachu
+```
+
+Processed sprites are saved in `assets/sprites/thumb/` (32x32) and `assets/sprites/detail/` (96x96). See [docs/sprite_pipeline.md](docs/sprite_pipeline.md) for detailed documentation.
+
 ### Running the Application
 
 ```bash

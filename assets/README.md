@@ -11,10 +11,13 @@ This directory contains all visual and media assets for ShokeDex.
 ## Asset Sources
 
 ### Pokémon Sprites
-Pokémon sprites can be obtained from:
-- [PokéAPI Sprites](https://pokeapi.co/docs/v2#pokemon-sprites)
-- Official Pokémon resources (with proper attribution)
-- Community sprite repositories
+Pokémon sprites are automatically processed using the sprite pipeline:
+- Source: [PokéAPI Sprites](https://pokeapi.co/docs/v2#pokemon-sprites)
+- Processing: Converted to Gameboy Color palette with dithering
+- Sizes: Thumbnail (32x32) and Detail (96x96)
+- Tool: `src/data/sprite_processor.py`
+
+See [docs/sprite_pipeline.md](../docs/sprite_pipeline.md) for detailed documentation on generating sprites.
 
 ### Icons
 UI icons should be:

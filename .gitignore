@@ -75,3 +75,9 @@ Thumbs.db
 # Raspberry Pi specific
 *.img
 *.backup
+
+# Generated sprites (can be regenerated with sprite_processor.py)
+assets/sprites/thumb/*.png
+assets/sprites/detail/*.png
+!assets/sprites/thumb/.gitkeep
+!assets/sprites/detail/.gitkeep
