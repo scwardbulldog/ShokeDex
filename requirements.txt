@@ -1,0 +1,15 @@
+# Core Dependencies for ShokeDex - Raspberry Pi Pokédex Clone
+
+# Graphics and Display
+pygame>=2.5.0
+
+# Image Processing
+Pillow>=10.0.0
+
+# GPIO Control for Raspberry Pi
+gpiozero>=2.0.0
+
+# HTTP Requests for API calls
+requests>=2.31.0
+
+# Note: sqlite3 is part of Python's standard library (no installation needed)
