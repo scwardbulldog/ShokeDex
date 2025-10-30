@@ -1,0 +1,67 @@
+{
+  "name": "ShokeDex Development Environment",
+  "image": "mcr.microsoft.com/devcontainers/python:3.11-bullseye",
+  
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "python.linting.enabled": true,
+        "python.linting.pylintEnabled": true,
+        "python.formatting.provider": "black",
+        "python.testing.unittestEnabled": true,
+        "python.testing.unittestArgs": [
+          "-v",
+          "-s",
+          "./tests",
+          "-p",
+          "test_*.py"
+        ],
+        "files.exclude": {
+          "**/__pycache__": true,
+          "**/*.pyc": true,
+          "**/venv": true,
+          "**/.pytest_cache": true
+        },
+        "editor.formatOnSave": true,
+        "editor.rulers": [79, 120],
+        "files.trimTrailingWhitespace": true,
+        "files.insertFinalNewline": true
+      },
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-python.black-formatter",
+        "ms-python.pylint",
+        "ms-python.debugpy",
+        "donjayamanne.python-extension-pack",
+        "njpwerner.autodocstring",
+        "visualstudioexptteam.vscodeintellicode",
+        "eamodio.gitlens",
+        "github.copilot"
+      ]
+    }
+  },
+
+  "postCreateCommand": "bash .devcontainer/postCreate.sh",
+
+  "remoteUser": "vscode",
+
+  "forwardPorts": [],
+
+  "portsAttributes": {},
+
+  "containerEnv": {
+    "PYTHONPATH": "/workspaces/ShokeDex",
+    "DISPLAY": ":0"
+  },
+
+  "runArgs": [
+    "--name=shokedex-dev"
+  ]
+}
