@@ -38,7 +38,7 @@ def create_demo_sprite():
     draw.ellipse([130, 95, 150, 115], fill=(255, 50, 50, 255))
     
     # Mouth
-    draw.arc([80, 105, 120, 125], 0, 180, fill=(0, 0, 0, 255), width=2)
+    draw.arc([80, 105, 120, 125], 0, 180, fill=(0, 0, 0, 255))
     
     # Tail (lightning bolt shape - simplified)
     draw.polygon([(155, 100), (165, 90), (160, 110), (170, 100), (160, 130), (165, 110)],
