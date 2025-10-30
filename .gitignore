@@ -81,3 +81,6 @@ assets/sprites/thumb/*.png
 assets/sprites/detail/*.png
 !assets/sprites/thumb/.gitkeep
 !assets/sprites/detail/.gitkeep
+
+# Demo output
+examples/demo_output/
