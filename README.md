@@ -165,22 +165,31 @@ sudo raspi-config
 ShokeDex/
 ├── src/                    # Source code
 │   ├── __init__.py        # Package initialization
-│   ├── main.py            # Application entry point
-│   ├── ui/                # User interface modules
-│   ├── data/              # Data management and API
-│   ├── hardware/          # GPIO and hardware control
-│   └── config.py          # Configuration settings
+│   ├── main.py            # Application entry point (coming soon)
+│   ├── ui/                # User interface modules (coming soon)
+│   ├── data/              # Data management and database
+│   │   ├── database.py    # SQLite database operations
+│   │   ├── loader.py      # PokéAPI data loader
+│   │   ├── migrations.py  # Database migration system
+│   │   └── manage_db.py   # CLI for database management
+│   ├── hardware/          # GPIO and hardware control (coming soon)
+│   └── config.py          # Configuration settings (coming soon)
 ├── assets/                # Images, sprites, fonts
 │   ├── sprites/           # Pokémon sprites
 │   ├── icons/             # UI icons
 │   └── fonts/             # Custom fonts
+├── data/                  # Database files
+│   └── pokedex.db         # SQLite database (created on init)
 ├── docs/                  # Documentation
+│   ├── database_schema.md # Database schema documentation
+│   ├── data_loading_guide.md # Guide for loading Pokémon data
 │   ├── hardware_guide.md  # Hardware assembly instructions
 │   ├── api_usage.md       # API integration guide
 │   └── troubleshooting.md # Common issues and solutions
 ├── tests/                 # Unit and integration tests
 │   ├── __init__.py
-│   └── test_*.py          # Test modules
+│   ├── test_database.py   # Database module tests
+│   └── test_*.py          # Additional test modules
 ├── .gitignore            # Git ignore rules
 ├── LICENSE               # MIT License with IP disclaimer
 ├── README.md             # This file
@@ -189,24 +198,50 @@ ShokeDex/
 
 ## 🔧 Development
 
+### Database Setup
+
+ShokeDex uses SQLite to store Pokémon data locally. Set up the database:
+
+```bash
+# Initialize the database schema
+python src/data/manage_db.py init
+
+# Load Gen 1-3 Pokémon data from PokéAPI (takes 10-20 minutes)
+python src/data/manage_db.py seed --gen 1-3
+
+# Or load individual generations
+python src/data/manage_db.py seed --gen 1  # Gen 1 only
+python src/data/manage_db.py seed --gen 2  # Gen 2 only
+python src/data/manage_db.py seed --gen 3  # Gen 3 only
+
+# Check database statistics
+python src/data/manage_db.py stats
+
+# Query a specific Pokémon
+python src/data/manage_db.py query --id 25
+python src/data/manage_db.py query --name pikachu
+```
+
+**Note:** Loading data requires an internet connection to access PokéAPI. See [docs/data_loading_guide.md](docs/data_loading_guide.md) for detailed instructions.
+
 ### Running the Application
 
 ```bash
 # Activate virtual environment
 source venv/bin/activate
 
-# Run the main application (once implemented)
+# Run the main application (coming soon)
 python src/main.py
 ```
 
 ### Running Tests
 
 ```bash
-# Run all tests (once implemented)
-python -m pytest tests/
+# Run all tests
+python -m unittest discover tests -v
 
-# Run with coverage
-python -m pytest --cov=src tests/
+# Run specific test module
+python -m unittest tests.test_database -v
 ```
 
 ### Code Style
