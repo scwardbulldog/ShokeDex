@@ -29,15 +29,15 @@ mkdir -p data
 
 # Initialize the database
 echo "🗄️  Initializing database schema..."
-python src/data/manage_db.py init || echo "⚠️  Database may already be initialized"
+python src/data/manage_db.py init || echo "⚠️  Database initialization failed or already completed"
 
 # Show database stats
 echo "📊 Database statistics:"
-python src/data/manage_db.py stats || echo "⚠️  Could not retrieve database stats"
+python src/data/manage_db.py stats || echo "⚠️  Could not retrieve database stats - check if database was initialized successfully"
 
 # Run tests to verify setup
 echo "🧪 Running tests to verify setup..."
-python -m unittest discover tests -v || echo "⚠️  Some tests may have failed"
+python -m unittest discover tests -v || echo "⚠️  Some tests failed - check output above for details or run tests individually"
 
 echo ""
 echo "✅ ShokeDex development environment setup complete!"
