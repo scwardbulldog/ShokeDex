@@ -142,10 +142,20 @@ class SettingsScreen(Screen):
         if key == 'input_mode' and self.input_manager:
             # Switch input mode
             mode_name = self.settings['input_mode']
-            if mode_name == 'keyboard':
-                self.input_manager.switch_mode(InputMode.KEYBOARD)
-            elif mode_name == 'gpio':
-                self.input_manager.switch_mode(InputMode.GPIO)
+            try:
+                if mode_name == 'keyboard':
+                    self.input_manager.switch_mode(InputMode.KEYBOARD)
+                elif mode_name == 'gpio':
+                    self.input_manager.switch_mode(InputMode.GPIO)
+                    # Check if GPIO initialization succeeded
+                    if self.input_manager.mode == InputMode.KEYBOARD:
+                        # GPIO failed, revert setting
+                        self.settings['input_mode'] = 'keyboard'
+                        print("Warning: GPIO initialization failed, using keyboard")
+            except Exception as e:
+                print(f"Error switching input mode: {e}")
+                self.settings['input_mode'] = 'keyboard'
+                self.input_manager.mode = InputMode.KEYBOARD
         elif key == 'network_sync':
             # Stub for network sync
             if self.settings['network_sync']:

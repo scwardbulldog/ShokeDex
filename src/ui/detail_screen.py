@@ -110,8 +110,20 @@ class DetailScreen(Screen):
         """Navigate to adjacent Pokemon."""
         new_id = self.pokemon_id + delta
         
-        # Check if Pokemon exists (simple bounds check for now)
-        if new_id >= 1 and new_id <= 386:
+        # Check if Pokemon exists
+        # TODO: Query database for max Pokemon ID instead of hardcoding
+        max_id = 386  # Gen 1-3 for now
+        if self.database:
+            try:
+                with self.database as db:
+                    cursor = db.execute("SELECT MAX(id) FROM pokemon")
+                    result = cursor.fetchone()
+                    if result and result[0]:
+                        max_id = result[0]
+            except Exception:
+                pass  # Use default
+        
+        if new_id >= 1 and new_id <= max_id:
             self.pokemon_id = new_id
             self._load_pokemon_data()
     

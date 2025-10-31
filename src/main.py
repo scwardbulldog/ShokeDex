@@ -88,14 +88,15 @@ class ShokeDexApp:
                 # Process input through input manager
                 action = self.input_manager.process_event(event)
                 
+                # Handle quit with BACK action on home screen
+                if action == InputAction.BACK:
+                    if self.screen_manager.get_stack_depth() <= 1:
+                        self.running = False
+                        continue
+                
                 # Pass action to screen manager
                 if action != InputAction.NONE:
                     self.screen_manager.handle_input(action)
-                
-                # Handle quit with ESC (if on home screen)
-                if event.key == pygame.K_ESCAPE:
-                    if self.screen_manager.get_stack_depth() <= 1:
-                        self.running = False
     
     def update(self, delta_time: float):
         """
