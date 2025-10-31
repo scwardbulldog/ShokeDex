@@ -165,14 +165,21 @@ sudo raspi-config
 ShokeDex/
 ├── src/                    # Source code
 │   ├── __init__.py        # Package initialization
-│   ├── main.py            # Application entry point (coming soon)
-│   ├── ui/                # User interface modules (coming soon)
+│   ├── main.py            # Application entry point
+│   ├── input_manager.py   # Input abstraction (GPIO & keyboard)
+│   ├── ui/                # User interface modules
+│   │   ├── screen.py      # Base screen class
+│   │   ├── screen_manager.py # Screen stack management
+│   │   ├── home_screen.py # Grid view of Pokémon
+│   │   ├── list_screen.py # List view of Pokémon
+│   │   ├── detail_screen.py # Pokémon detail view
+│   │   ├── settings_screen.py # Settings menu
+│   │   └── colors.py      # Retro color palette
 │   ├── data/              # Data management and database
 │   │   ├── database.py    # SQLite database operations
 │   │   ├── loader.py      # PokéAPI data loader
 │   │   ├── migrations.py  # Database migration system
 │   │   └── manage_db.py   # CLI for database management
-│   ├── hardware/          # GPIO and hardware control (coming soon)
 │   └── config.py          # Configuration settings (coming soon)
 ├── assets/                # Images, sprites, fonts
 │   ├── sprites/           # Pokémon sprites
@@ -183,13 +190,18 @@ ShokeDex/
 ├── docs/                  # Documentation
 │   ├── database_schema.md # Database schema documentation
 │   ├── data_loading_guide.md # Guide for loading Pokémon data
+│   ├── ui_guide.md        # UI system and screen documentation
 │   ├── hardware_guide.md  # Hardware assembly instructions
 │   ├── api_usage.md       # API integration guide
 │   └── troubleshooting.md # Common issues and solutions
 ├── tests/                 # Unit and integration tests
 │   ├── __init__.py
 │   ├── test_database.py   # Database module tests
+│   ├── test_input_manager.py # Input manager tests
 │   └── test_*.py          # Additional test modules
+├── examples/              # Example scripts
+│   ├── database_usage.py  # Database usage examples
+│   └── ui_demo.py         # UI demo (no database needed)
 ├── .gitignore            # Git ignore rules
 ├── LICENSE               # MIT License with IP disclaimer
 ├── README.md             # This file
@@ -247,9 +259,20 @@ Processed sprites are saved in `assets/sprites/thumb/` (32x32) and `assets/sprit
 # Activate virtual environment
 source venv/bin/activate
 
-# Run the main application (coming soon)
+# Run the main application (requires database)
 python src/main.py
+
+# Or run the UI demo without database
+python examples/ui_demo.py
 ```
+
+The application features:
+- **Grid View**: Browse Pokémon in a 4x3 grid
+- **Detail View**: View Pokémon stats, types, and information
+- **Settings**: Configure input mode and other options
+- **Keyboard Controls**: Arrow keys to navigate, Enter to select, ESC to go back
+
+See [docs/ui_guide.md](docs/ui_guide.md) for complete UI documentation.
 
 ### Running Tests
 
