@@ -12,4 +12,7 @@ gpiozero>=2.0.0
 # HTTP Requests for API calls
 requests>=2.31.0
 
+# Performance Monitoring
+psutil>=5.9.0
+
 # Note: sqlite3 is part of Python's standard library (no installation needed)
