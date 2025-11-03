@@ -110,15 +110,18 @@ def detect_pi_model():
     """
     try:
         with open('/proc/device-tree/model', 'r') as f:
-            model = f.read()
-            if 'Pi 4' in model or 'Pi 400' in model:
+            model = f.read().lower()
+            # Check for Pi 4 variants (including Compute Module 4, Pi 400)
+            if any(variant in model for variant in ['pi 4', 'pi 400', 'compute module 4']):
                 return 'pi4'
-            elif 'Pi 3' in model:
+            # Check for Pi 3 variants (including Pi 3A+, 3B, 3B+, Compute Module 3)
+            elif any(variant in model for variant in ['pi 3', 'compute module 3']):
                 return 'pi3'
     except FileNotFoundError:
         # Not running on Raspberry Pi
         pass
-    except Exception as e:
+    except (IOError, OSError) as e:
+        # File system error reading device tree
         print(f"Warning: Could not detect Pi model: {e}")
     
     return DEFAULT_PROFILE

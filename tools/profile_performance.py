@@ -130,7 +130,8 @@ class ProfiledApp:
         # Create font
         try:
             font = pygame.font.Font(None, 20)
-        except:
+        except (pygame.error, RuntimeError):
+            # Font creation failed, skip overlay
             return
         
         # Prepare text

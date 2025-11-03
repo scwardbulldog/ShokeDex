@@ -66,8 +66,9 @@ class PerformanceMonitor:
             memory_info = self.process.memory_info()
             memory_mb = memory_info.rss / (1024 * 1024)  # Convert to MB
             self.memory_history.append(memory_mb)
-        except Exception as e:
-            # Gracefully handle errors (process might not be accessible)
+        except (psutil.NoSuchProcess, psutil.AccessDenied) as e:
+            # Process might have terminated or we don't have permission
+            # This is expected in some scenarios, so we silently continue
             pass
     
     def get_stats(self) -> Dict[str, float]:
