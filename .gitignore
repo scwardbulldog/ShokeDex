@@ -84,3 +84,7 @@ assets/sprites/detail/*.png
 
 # Demo output
 examples/demo_output/
+
+# Performance profiling output
+data/performance_profile_*.txt
+data/latency_test_*.txt
