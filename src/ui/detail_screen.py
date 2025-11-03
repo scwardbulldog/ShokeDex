@@ -7,6 +7,7 @@ from typing import Optional, Dict, List
 from .screen import Screen
 from .colors import Colors
 from ..input_manager import InputAction
+from .sprite_loader import load_detail
 
 
 class DetailScreen(Screen):
@@ -197,12 +198,30 @@ class DetailScreen(Screen):
         
         # Draw sprite placeholder
         sprite_rect = pygame.Rect(180, 75, 120, 120)
-        pygame.draw.rect(surface, Colors.BORDER, sprite_rect, 2)
-        
-        # Draw "Sprite" text in center
-        sprite_text = self.small_font.render("Sprite", True, Colors.TEXT_SECONDARY)
-        sprite_text_rect = sprite_text.get_rect(center=sprite_rect.center)
-        surface.blit(sprite_text, sprite_text_rect)
+        # Attempt to load and draw the detail sprite; fall back to placeholder
+        try:
+            sprite_surf = load_detail(self.pokemon_id)
+            if sprite_surf:
+                # Scale to sprite_rect size if necessary
+                try:
+                    if sprite_surf.get_size() != (sprite_rect.width, sprite_rect.height):
+                        sprite_surf = pygame.transform.smoothscale(sprite_surf, (sprite_rect.width, sprite_rect.height))
+                except Exception:
+                    pass
+
+                surface.blit(sprite_surf, sprite_rect.topleft)
+            else:
+                pygame.draw.rect(surface, Colors.BORDER, sprite_rect, 2)
+                # Draw "Sprite" text in center
+                sprite_text = self.small_font.render("Sprite", True, Colors.TEXT_SECONDARY)
+                sprite_text_rect = sprite_text.get_rect(center=sprite_rect.center)
+                surface.blit(sprite_text, sprite_text_rect)
+        except Exception:
+            # If pygame unavailable or load fails, show placeholder
+            pygame.draw.rect(surface, Colors.BORDER, sprite_rect, 2)
+            sprite_text = self.small_font.render("Sprite", True, Colors.TEXT_SECONDARY)
+            sprite_text_rect = sprite_text.get_rect(center=sprite_rect.center)
+            surface.blit(sprite_text, sprite_text_rect)
         
         # Draw types
         if self.types:

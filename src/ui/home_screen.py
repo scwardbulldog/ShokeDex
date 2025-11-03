@@ -7,6 +7,7 @@ from typing import List, Optional, Tuple
 from .screen import Screen
 from .colors import Colors
 from ..input_manager import InputAction
+from .sprite_loader import load_thumb
 
 
 class HomeScreen(Screen):
@@ -377,15 +378,36 @@ class HomeScreen(Screen):
         # Draw sprite border
         color = Colors.SELECTION_TEXT if is_selected else Colors.BORDER
         pygame.draw.rect(surface, color, sprite_rect, 1)
-        
-        # Draw Pokemon ID (in sprite area for now)
-        id_text = self.small_font.render(
-            f"#{pokemon['id']:03d}",
-            True,
-            color
-        )
-        id_rect = id_text.get_rect(center=sprite_rect.center)
-        surface.blit(id_text, id_rect)
+
+        # Attempt to load and draw thumbnail
+        try:
+            thumb_surf = load_thumb(pokemon['id'])
+            if thumb_surf:
+                try:
+                    if thumb_surf.get_size() != (sprite_size, sprite_size):
+                        thumb_surf = pygame.transform.smoothscale(thumb_surf, (sprite_size, sprite_size))
+                except Exception:
+                    pass
+
+                surface.blit(thumb_surf, (sprite_x, sprite_y))
+            else:
+                # Draw Pokemon ID (in sprite area as fallback)
+                id_text = self.small_font.render(
+                    f"#{pokemon['id']:03d}",
+                    True,
+                    color
+                )
+                id_rect = id_text.get_rect(center=sprite_rect.center)
+                surface.blit(id_text, id_rect)
+        except Exception:
+            # On any error (pygame missing, load fail), draw ID placeholder
+            id_text = self.small_font.render(
+                f"#{pokemon['id']:03d}",
+                True,
+                color
+            )
+            id_rect = id_text.get_rect(center=sprite_rect.center)
+            surface.blit(id_text, id_rect)
         
         # Draw Pokemon name
         name_color = Colors.SELECTION_TEXT if is_selected else Colors.TEXT_PRIMARY
