@@ -38,7 +38,19 @@ class HomeScreen(Screen):
         
         # Pokemon data
         self.pokemon_list: List[dict] = []
+        self.filtered_list: List[dict] = []
         self.total_pokemon = 0
+        
+        # Search state
+        self.search_active = False
+        self.search_query = ""
+        
+        # Favorites (stub - will be loaded from settings/database later)
+        self.favorites: set = set()
+        self.recent_views: List[int] = []  # Pokemon IDs
+        
+        # View mode (all, favorites, recent)
+        self.view_mode = "all"  # Can be "all", "favorites", "recent"
         
         # Fonts (will be initialized in on_enter)
         self.title_font: Optional[pygame.font.Font] = None
@@ -48,7 +60,7 @@ class HomeScreen(Screen):
         # Layout dimensions (for 480x320 display)
         self.cell_width = 120
         self.cell_height = 90
-        self.grid_start_y = 40
+        self.grid_start_y = 60  # Increased to accommodate search bar
         
     def on_enter(self):
         """Called when screen becomes active."""
@@ -87,9 +99,56 @@ class HomeScreen(Screen):
                 for i in range(1, 151)
             ]
             self.total_pokemon = len(self.pokemon_list)
+        
+        # Initialize filtered list
+        self._apply_filters()
+    
+    def _apply_filters(self):
+        """Apply current search and view filters to Pokemon list."""
+        # Start with full list
+        result = self.pokemon_list
+        
+        # Apply view mode filter
+        if self.view_mode == "favorites" and self.favorites:
+            result = [p for p in result if p['id'] in self.favorites]
+        elif self.view_mode == "recent" and self.recent_views:
+            # Show recent views in order
+            result = [p for p in result if p['id'] in self.recent_views]
+            result.sort(key=lambda p: self.recent_views.index(p['id']))
+        
+        # Apply search filter
+        if self.search_query:
+            query_lower = self.search_query.lower()
+            result = [
+                p for p in result
+                if query_lower in p['name'].lower() or
+                   query_lower in str(p['id'])
+            ]
+        
+        self.filtered_list = result
+        self.total_pokemon = len(result)
+        
+        # Reset selection if out of bounds
+        if self.selected_index >= self.total_pokemon and self.total_pokemon > 0:
+            self.selected_index = 0
+            self.page = 0
     
     def handle_input(self, action: InputAction):
         """Handle input actions."""
+        # If search is active, handle search-specific input
+        if self.search_active:
+            if action == InputAction.BACK:
+                # Clear search or deactivate
+                if self.search_query:
+                    self.search_query = ""
+                    self._apply_filters()
+                else:
+                    self.search_active = False
+                return
+            # For actual typing, we'd need text input events
+            # This is handled in the render loop for now
+            return
+        
         if action == InputAction.UP:
             self._move_selection(-self.grid_cols)
         elif action == InputAction.DOWN:
@@ -130,9 +189,20 @@ class HomeScreen(Screen):
     def _select_pokemon(self):
         """Handle Pokemon selection."""
         if 0 <= self.selected_index < self.total_pokemon:
-            pokemon = self.pokemon_list[self.selected_index]
+            pokemon = self.filtered_list[self.selected_index]
             
-            # Import here to avoid circular import
+            # Add to recent views
+            if pokemon['id'] not in self.recent_views:
+                self.recent_views.insert(0, pokemon['id'])
+                # Keep only last 12 recent views
+                self.recent_views = self.recent_views[:12]
+            elif pokemon['id'] in self.recent_views:
+                # Move to front if already in list
+                self.recent_views.remove(pokemon['id'])
+                self.recent_views.insert(0, pokemon['id'])
+            
+            # Lazy import to avoid circular dependency
+            # DetailScreen -> ScreenManager -> HomeScreen cycle
             from .detail_screen import DetailScreen
             
             detail_screen = DetailScreen(
@@ -160,20 +230,34 @@ class HomeScreen(Screen):
         
         # Draw title
         title_text = self.title_font.render("ShokeDex", True, Colors.TEXT_PRIMARY)
-        title_rect = title_text.get_rect(center=(240, 20))
+        title_rect = title_text.get_rect(center=(240, 15))
         surface.blit(title_text, title_rect)
+        
+        # Draw search/filter bar
+        self._render_search_bar(surface)
         
         # Draw grid
         self._render_grid(surface)
         
-        # Draw page indicator
-        total_pages = (self.total_pokemon + self.items_per_page - 1) // self.items_per_page
+        # Draw page indicator and view mode
+        total_pages = max(1, (self.total_pokemon + self.items_per_page - 1) // self.items_per_page)
         page_text = self.small_font.render(
             f"Page {self.page + 1}/{total_pages}",
             True,
             Colors.TEXT_SECONDARY
         )
         surface.blit(page_text, (10, 300))
+        
+        # Draw view mode indicator
+        view_mode_text = f"View: {self.view_mode.capitalize()}"
+        if self.search_query:
+            view_mode_text += f" (Search: {self.search_query})"
+        mode_render = self.small_font.render(
+            view_mode_text,
+            True,
+            Colors.TEXT_SECONDARY
+        )
+        surface.blit(mode_render, (140, 300))
         
         # Draw help text
         help_text = self.small_font.render(
@@ -184,8 +268,56 @@ class HomeScreen(Screen):
         help_rect = help_text.get_rect(right=470, bottom=315)
         surface.blit(help_text, help_rect)
     
+    def _render_search_bar(self, surface: pygame.Surface):
+        """Render search/filter bar."""
+        bar_y = 35
+        bar_height = 18
+        
+        # Draw search indicator
+        search_icon = "🔍" if self.search_query or self.search_active else "⊡"
+        search_text = self.small_font.render(
+            f"{search_icon} {self.search_query}",
+            True,
+            Colors.TEXT_PRIMARY if self.search_active else Colors.TEXT_SECONDARY
+        )
+        surface.blit(search_text, (10, bar_y))
+        
+        # Draw view mode buttons (favorites, recent, all)
+        button_x = 280
+        button_width = 60
+        for mode in ["all", "recent", "fav"]:
+            is_active = (self.view_mode == mode or 
+                        (mode == "fav" and self.view_mode == "favorites"))
+            
+            btn_rect = pygame.Rect(button_x, bar_y - 2, button_width, bar_height)
+            
+            # Draw button background
+            if is_active:
+                pygame.draw.rect(surface, Colors.SELECTION_BG, btn_rect)
+            pygame.draw.rect(surface, Colors.BORDER, btn_rect, 1)
+            
+            # Draw button text
+            btn_color = Colors.BLACK if is_active else Colors.TEXT_SECONDARY
+            mode_name = "Fav" if mode == "fav" else mode.capitalize()
+            btn_text = self.small_font.render(mode_name, True, btn_color)
+            btn_text_rect = btn_text.get_rect(center=btn_rect.center)
+            surface.blit(btn_text, btn_text_rect)
+            
+            button_x += button_width + 5
+    
     def _render_grid(self, surface: pygame.Surface):
         """Render the Pokemon grid."""
+        if self.total_pokemon == 0:
+            # Show "no results" message
+            no_results = self.text_font.render(
+                "No Pokémon found",
+                True,
+                Colors.TEXT_SECONDARY
+            )
+            no_results_rect = no_results.get_rect(center=(240, 160))
+            surface.blit(no_results, no_results_rect)
+            return
+        
         start_idx = self.page * self.items_per_page
         end_idx = min(start_idx + self.items_per_page, self.total_pokemon)
         
@@ -199,13 +331,17 @@ class HomeScreen(Screen):
             y = self.grid_start_y + row * self.cell_height
             
             # Get Pokemon data
-            pokemon = self.pokemon_list[i]
+            pokemon = self.filtered_list[i]
+            
+            # Check if favorited or recently viewed
+            is_favorite = pokemon['id'] in self.favorites
+            is_recent = pokemon['id'] in self.recent_views
             
             # Determine if this cell is selected
             is_selected = (i == self.selected_index)
             
             # Draw cell
-            self._render_cell(surface, pokemon, x, y, is_selected)
+            self._render_cell(surface, pokemon, x, y, is_selected, is_favorite, is_recent)
     
     def _render_cell(
         self,
@@ -213,7 +349,9 @@ class HomeScreen(Screen):
         pokemon: dict,
         x: int,
         y: int,
-        is_selected: bool
+        is_selected: bool,
+        is_favorite: bool = False,
+        is_recent: bool = False
     ):
         """Render a single grid cell."""
         # Draw selection background
@@ -221,6 +359,14 @@ class HomeScreen(Screen):
             rect = pygame.Rect(x + 2, y + 2, self.cell_width - 4, self.cell_height - 4)
             pygame.draw.rect(surface, Colors.SELECTION_BG, rect)
             pygame.draw.rect(surface, Colors.BORDER, rect, 2)
+        
+        # Draw favorite/recent indicator
+        if is_favorite:
+            fav_text = self.small_font.render("★", True, Colors.YELLOW)
+            surface.blit(fav_text, (x + 5, y + 3))
+        elif is_recent:
+            recent_text = self.small_font.render("•", True, Colors.LIGHT_BLUE)
+            surface.blit(recent_text, (x + 5, y + 3))
         
         # Draw sprite placeholder (centered in cell)
         sprite_size = 48

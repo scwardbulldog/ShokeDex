@@ -84,7 +84,19 @@ class ShokeDexApp:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
+            elif event.type == pygame.TEXTINPUT:
+                # Pass text input to current screen if it has the method
+                current_screen = self.screen_manager.get_current()
+                if current_screen and hasattr(current_screen, 'handle_text_input'):
+                    current_screen.handle_text_input(event.text)
             elif event.type == pygame.KEYDOWN:
+                # Handle backspace specially for text input
+                current_screen = self.screen_manager.get_current()
+                if event.key == pygame.K_BACKSPACE:
+                    if current_screen and hasattr(current_screen, 'handle_backspace'):
+                        current_screen.handle_backspace()
+                        continue
+                
                 # Process input through input manager
                 action = self.input_manager.process_event(event)
                 
