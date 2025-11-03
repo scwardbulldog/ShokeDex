@@ -16,16 +16,18 @@ class SettingsScreen(Screen):
     Currently includes network sync toggle and input mode selection.
     """
     
-    def __init__(self, screen_manager, input_manager=None):
+    def __init__(self, screen_manager, input_manager=None, sync_manager=None):
         """
         Initialize SettingsScreen.
         
         Args:
             screen_manager: ScreenManager instance
             input_manager: InputManager instance (optional)
+            sync_manager: SyncManager instance (optional)
         """
         super().__init__(screen_manager)
         self.input_manager = input_manager
+        self.sync_manager = sync_manager
         
         # Settings
         self.settings = {
@@ -85,6 +87,11 @@ class SettingsScreen(Screen):
         # Load current input mode if available
         if self.input_manager:
             self.settings['input_mode'] = self.input_manager.get_mode_name()
+        
+        # Load sync state if available
+        if self.sync_manager:
+            sync_info = self.sync_manager.get_sync_info()
+            self.settings['network_sync'] = sync_info['enabled']
     
     def handle_input(self, action: InputAction):
         """Handle input actions."""
@@ -157,11 +164,14 @@ class SettingsScreen(Screen):
                 self.settings['input_mode'] = 'keyboard'
                 self.input_manager.mode = InputMode.KEYBOARD
         elif key == 'network_sync':
-            # Stub for network sync
-            if self.settings['network_sync']:
-                print("Network sync enabled (stub)")
+            # Handle network sync toggle
+            if self.sync_manager:
+                self.sync_manager.enable_sync(self.settings['network_sync'])
+                if self.settings['network_sync'] and self.sync_manager.is_online():
+                    # Start sync if online
+                    self.sync_manager.start_sync()
             else:
-                print("Network sync disabled")
+                print(f"Network sync {'enabled' if self.settings['network_sync'] else 'disabled'} (stub)")
         elif key == 'volume':
             # Stub for volume control
             print(f"Volume set to {self.settings['volume']}%")

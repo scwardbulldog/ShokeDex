@@ -8,6 +8,8 @@ from .home_screen import HomeScreen
 from .list_screen import ListScreen
 from .detail_screen import DetailScreen
 from .settings_screen import SettingsScreen
+from .search_screen import SearchScreen
+from .stub_screen import StubScreen
 
 __all__ = [
     'Screen',
@@ -16,4 +18,6 @@ __all__ = [
     'ListScreen',
     'DetailScreen',
     'SettingsScreen',
+    'SearchScreen',
+    'StubScreen',
 ]
