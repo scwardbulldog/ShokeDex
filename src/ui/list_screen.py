@@ -7,6 +7,7 @@ from typing import List, Optional
 from .screen import Screen
 from .colors import Colors
 from ..input_manager import InputAction
+from .sprite_loader import load_thumb
 
 
 class ListScreen(Screen):
@@ -199,6 +200,22 @@ class ListScreen(Screen):
             text_color
         )
         surface.blit(id_text, (20, y + 8))
+
+        # Draw thumbnail if available
+        try:
+            thumb_surf = load_thumb(pokemon['id'])
+            if thumb_surf:
+                # Scale to thumbnail size (32x32) if necessary
+                try:
+                    if thumb_surf.get_size() != (32, 32):
+                        thumb_surf = pygame.transform.smoothscale(thumb_surf, (32, 32))
+                except Exception:
+                    pass
+
+                surface.blit(thumb_surf, (44, y + 2))
+        except Exception:
+            # Fail silently if pygame isn't available or loading fails
+            pass
         
         # Draw Pokemon name
         name_text = self.text_font.render(
