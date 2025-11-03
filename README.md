@@ -192,15 +192,23 @@ ShokeDex/
 │   ├── data_loading_guide.md # Guide for loading Pokémon data
 │   ├── ui_guide.md        # UI system and screen documentation
 │   ├── hardware_guide.md  # Hardware assembly instructions
+│   ├── pi_installation_guide.md # Raspberry Pi setup guide
+│   ├── pi_optimization_guide.md # Performance tuning guide
 │   ├── api_usage.md       # API integration guide
 │   └── troubleshooting.md # Common issues and solutions
 ├── tests/                 # Unit and integration tests
 │   ├── __init__.py
 │   ├── test_database.py   # Database module tests
 │   ├── test_input_manager.py # Input manager tests
+│   ├── test_performance_monitor.py # Performance monitoring tests
 │   └── test_*.py          # Additional test modules
+├── tools/                 # Performance and testing tools
+│   ├── profile_performance.py # Performance profiling tool
+│   ├── test_input_latency.py # Input latency tester
+│   └── README.md          # Tools documentation
 ├── examples/              # Example scripts
 │   ├── database_usage.py  # Database usage examples
+│   ├── config_example.py  # Configuration example
 │   └── ui_demo.py         # UI demo (no database needed)
 ├── .gitignore            # Git ignore rules
 ├── LICENSE               # MIT License with IP disclaimer
@@ -283,6 +291,32 @@ python -m unittest discover tests -v
 # Run specific test module
 python -m unittest tests.test_database -v
 ```
+
+### Performance Profiling and Optimization
+
+ShokeDex includes tools for profiling and optimizing performance on Raspberry Pi:
+
+```bash
+# Profile application performance (runs for 60 seconds)
+python tools/profile_performance.py 60
+
+# Test button input latency
+python tools/test_input_latency.py keyboard 10  # Development
+python tools/test_input_latency.py gpio 10      # On Raspberry Pi
+
+# View detailed tool documentation
+cat tools/README.md
+```
+
+**Performance Documentation:**
+- [Raspberry Pi Installation Guide](docs/pi_installation_guide.md) - Complete setup instructions
+- [Performance Optimization Guide](docs/pi_optimization_guide.md) - Tuning tips and best practices
+- [Hardware Assembly Guide](docs/hardware_guide.md) - GPIO wiring and button setup
+- [Tools README](tools/README.md) - Profiling and testing tools
+
+**Target Performance:**
+- **Raspberry Pi 3B+**: 30 FPS, <80% CPU, <150MB RAM, <50ms input latency
+- **Raspberry Pi 4**: 60 FPS, <60% CPU, <200MB RAM, <30ms input latency
 
 ### Code Style
 
