@@ -201,7 +201,8 @@ class HomeScreen(Screen):
                 self.recent_views.remove(pokemon['id'])
                 self.recent_views.insert(0, pokemon['id'])
             
-            # Import here to avoid circular import
+            # Lazy import to avoid circular dependency
+            # DetailScreen -> ScreenManager -> HomeScreen cycle
             from .detail_screen import DetailScreen
             
             detail_screen = DetailScreen(

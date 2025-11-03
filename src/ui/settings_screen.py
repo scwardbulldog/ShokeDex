@@ -22,8 +22,11 @@ class SettingsScreen(Screen):
         
         Args:
             screen_manager: ScreenManager instance
-            input_manager: InputManager instance (optional)
-            sync_manager: SyncManager instance (optional)
+            input_manager: InputManager instance (optional, None disables input mode switching)
+            sync_manager: SyncManager instance (optional, None shows stub sync controls)
+        
+        When optional dependencies are None, the corresponding settings will still
+        be displayed but will use stub/mock behavior instead of real functionality.
         """
         super().__init__(screen_manager)
         self.input_manager = input_manager

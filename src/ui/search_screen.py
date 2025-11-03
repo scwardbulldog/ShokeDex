@@ -150,6 +150,7 @@ class SearchScreen(Screen):
         if 0 <= self.selected_index < len(self.results):
             pokemon = self.results[self.selected_index]
             
+            # Lazy import to avoid circular dependency
             from .detail_screen import DetailScreen
             
             detail_screen = DetailScreen(

@@ -56,8 +56,9 @@ class SyncManager:
         Returns:
             True if online, False otherwise
         """
-        # Stub: Always return False for now
-        # In real implementation, this would check network connectivity
+        # TODO: Implement real network connectivity check
+        # Could use: socket connection test, ping, or requests.get with timeout
+        # For now, always return False (offline mode)
         return False
     
     def can_sync(self) -> bool:
@@ -88,16 +89,18 @@ class SyncManager:
         if self.status == SyncStatus.SYNCING:
             return False
         
+        # TODO: Implement real sync logic
+        # Future implementation should:
+        # 1. Check for new Pokemon data from PokéAPI
+        # 2. Download missing sprites
+        # 3. Update database with new entries
+        # 4. Handle version conflicts
+        # 5. Report progress via callbacks
+        
         # Stub: Simulate sync operation
         print("Sync started (stub)")
         self.status = SyncStatus.SYNCING
         self.error_message = None
-        
-        # In real implementation, this would:
-        # 1. Check for new Pokemon data
-        # 2. Download sprites
-        # 3. Update database
-        # 4. Handle conflicts
         
         # Simulate completion
         self._complete_sync(success=True)
