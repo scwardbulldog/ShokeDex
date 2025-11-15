@@ -1,0 +1,269 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>1</epicId>
+    <storyId>1.1</storyId>
+    <title>Project Foundation Setup</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-15</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/1-1-project-foundation-setup.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>developer</asA>
+    <iWant>the project structure, dependencies, and core managers initialized</iWant>
+    <soThat>all subsequent features can be built on a solid foundation</soThat>
+    <tasks>
+- [ ] Task 1: Initialize Core Managers (AC: #1)
+  - [ ] Implement StateManager as singleton with JSON persistence in `data/shokedex_state.json`
+  - [ ] Implement InputManager with keyboard/GPIO abstraction using InputAction enum
+  - [ ] Implement ScreenManager with screen stack navigation pattern
+  - [ ] Implement SpriteLoader with LRU cache (max 50 sprites)
+  - [ ] Add graceful degradation if GPIO unavailable (keyboard fallback)
+
+- [ ] Task 2: Database Connection (AC: #1)
+  - [ ] Initialize database connection in main.py startup
+  - [ ] Validate schema exists and is correct version
+  - [ ] Add error handling for database connection failures
+  - [ ] Test parameterized query pattern is enforced
+
+- [ ] Task 3: Directory Structure Setup (AC: #1)
+  - [ ] Create data/ directory if missing
+  - [ ] Create assets/sprites/ directory structure if missing
+  - [ ] Validate sprite assets are accessible
+  - [ ] Log warnings for missing directories or assets
+
+- [ ] Task 4: Configuration Loading (AC: #1)
+  - [ ] Load configuration from environment variables or config file
+  - [ ] Set defaults for: display resolution, target FPS, input mode
+  - [ ] Validate configuration values (resolution, FPS > 0, etc.)
+  - [ ] Log loaded configuration for debugging
+
+- [ ] Task 5: Application Lifecycle (AC: #2)
+  - [ ] Create main.py entry point with pygame initialization
+  - [ ] Initialize ScreenManager with HomeScreen as initial screen
+  - [ ] Implement main game loop at 30+ FPS target
+  - [ ] Add proper cleanup in finally block (save state, close DB)
+  - [ ] Test startup completes without errors
+
+- [ ] Task 6: Testing (AC: #1, #2)
+  - [ ] Unit test: StateManager singleton pattern
+  - [ ] Unit test: InputManager keyboard/GPIO abstraction
+  - [ ] Unit test: SpriteLoader LRU cache eviction
+  - [ ] Integration test: Full application startup
+  - [ ] Performance test: Verify 30+ FPS in game loop
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+AC #1: Core Manager Initialization
+- Given: a fresh development environment
+- When: the application is initialized
+- Then: all core managers (StateManager, InputManager, ScreenManager, SpriteLoader) are instantiated as singletons
+- And: the database connection is established and validated
+- And: all required directories exist (data/, assets/sprites/, etc.)
+- And: configuration is loaded from environment or defaults
+
+AC #2: Application Startup
+- Given: core managers are initialized
+- When: the application starts
+- Then: the application can start without errors
+- And: HomeScreen is set as the initial screen
+- And: the main game loop runs at 30+ FPS
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <artifact path="docs/PRD.md" title="ShokeDex Product Requirements Document" section="Project Classification">
+        Technology Stack: Python 3.11+ with pygame for graphics, SQLite for local data storage, GPIO controls for physical buttons, Small LCD displays (480x320 to 800x480 resolution), Offline-first architecture. Platform: Raspberry Pi 3B+ or newer with Raspberry Pi OS (Bookworm - Debian 12 based).
+      </artifact>
+      <artifact path="docs/PRD.md" title="ShokeDex Product Requirements Document" section="Non-Functional Requirements">
+        NFR-P1: System shall maintain 30+ FPS on Raspberry Pi 3B+ during all operations.
+        NFR-P2: Button press response time shall be &lt; 100ms.
+        NFR-P3: System shall boot and display a Pokémon within 5 seconds of power-on.
+        NFR-P4: System shall operate within Raspberry Pi 3B+ memory constraints (1GB RAM).
+        NFR-R1: System shall run continuously without crashes. Graceful error handling for all edge cases.
+        NFR-U1: System shall require no setup or configuration by user. Zero configuration appliance simplicity.
+      </artifact>
+      <artifact path="docs/architecture.md" title="ShokeDex Architecture" section="Manager Architecture Pattern">
+        All manager classes (StateManager, AudioManager, InputManager) follow singleton pattern. Manager instances are created ONCE at application startup and passed to ScreenManager. Screens access managers through self.screen_manager.state_manager, etc. Never create new manager instances - always use injected singletons.
+      </artifact>
+      <artifact path="docs/architecture.md" title="ShokeDex Architecture" section="Screen Lifecycle &amp; Navigation">
+        All screens extend base Screen class. Lifecycle: __init__() → on_enter() → render() loop → handle_input() → on_exit(). HomeScreen is the initial screen (always boot to browse view). ScreenManager handles screen stack for navigation.
+      </artifact>
+      <artifact path="docs/architecture.md" title="ShokeDex Architecture" section="Database Pattern">
+        SQLite database at data/pokedex.db. ALWAYS use parameterized queries - never string formatting. Connection managed by Database class using context manager pattern. Schema validation on startup.
+      </artifact>
+      <artifact path="docs/sprint-artifacts/tech-spec-epic-1-generation-navigation.md" title="Epic 1 Tech Spec" section="System Architecture Alignment">
+        Architecture Components Involved: src/ui/home_screen.py, src/state_manager.py, src/data/database.py, src/ui/screen_manager.py, src/input_manager.py. Manager singleton pattern for cross-cutting concerns. StateManager integration follows manager access pattern via screen_manager. Must maintain 30+ FPS on Raspberry Pi 3B+.
+      </artifact>
+    </docs>
+    <code>
+      <artifact path="src/main.py" kind="application" symbol="ShokeDexApp" lines="38-218" reason="Entry point demonstrating proper manager initialization pattern and lifecycle">
+        Main application class showing correct initialization order: pygame.init() → StateManager() → AudioManager(volume) → InputManager(mode) → ScreenManager(display) → Database → HomeScreen(managers) → main loop with FPS control → cleanup with state save.
+      </artifact>
+      <artifact path="src/state_manager.py" kind="manager" symbol="StateManager" lines="1-297" reason="Complete StateManager implementation with JSON persistence">
+        StateManager class provides session state persistence with JSON file I/O. Manages last_viewed (pokemon_id, generation), favorites, recent views, preferences (input_mode, volume), and usage stats. Includes _load_state(), save_state(), validation, and graceful corruption handling.
+      </artifact>
+      <artifact path="src/input_manager.py" kind="manager" symbol="InputManager" reason="Input abstraction layer for keyboard/GPIO">
+        InputManager abstracts keyboard and GPIO inputs to InputAction enum. Supports InputMode.KEYBOARD and InputMode.GPIO with graceful fallback. Provides process_event() for pygame events, register_handler() for action callbacks, and mode switching.
+      </artifact>
+      <artifact path="src/ui/screen_manager.py" kind="manager" symbol="ScreenManager" lines="11-120" reason="Screen stack navigation coordinator">
+        ScreenManager manages screen stack with push/pop/replace operations. Handles screen lifecycle (on_enter/on_exit), routes input/update/render to active screen, and provides manager references to screens via constructor injection.
+      </artifact>
+      <artifact path="src/ui/screen.py" kind="base-class" symbol="Screen" lines="1-70" reason="Abstract base class defining screen interface">
+        Screen base class with abstract methods: handle_input(action), update(delta_time), render(surface). Includes lifecycle hooks on_enter() and on_exit(). All UI screens must extend this class.
+      </artifact>
+      <artifact path="src/ui/home_screen.py" kind="screen" symbol="HomeScreen" lines="1-272" reason="Initial screen implementation showing manager access pattern">
+        HomeScreen demonstrates proper manager usage: accesses StateManager via self.screen_manager.state_manager, implements screen lifecycle, handles InputAction events, renders Pokemon grid, and integrates with Database for data loading.
+      </artifact>
+      <artifact path="src/data/database.py" kind="database" symbol="Database" lines="15-350" reason="SQLite context manager with parameterized queries">
+        Database class provides connection management via context manager, create_schema() for initialization, and query methods (get_pokemon_by_id, get_pokemon_stats, get_pokemon_by_generation). All queries use parameterized statements for SQL injection prevention.
+      </artifact>
+      <artifact path="src/ui/sprite_loader.py" kind="utility" symbol="load_thumb, load_detail" reason="Sprite loading utilities for Pokemon images">
+        Provides load_thumb() and load_detail() functions for lazy-loading Pokemon sprites. Returns pygame.Surface objects with caching. Handles missing files gracefully with placeholder surfaces.
+      </artifact>
+    </code>
+    <dependencies>
+      <python>
+        <package name="pygame" version="&gt;=2.5.0" purpose="Graphics rendering, event loop, display management, hardware acceleration">Core UI framework for rendering screens and handling input events</package>
+        <package name="Pillow" version="&gt;=10.0.0" purpose="Image loading and processing for sprite assets">Used by sprite_loader to load and convert Pokemon sprite images</package>
+        <package name="gpiozero" version="&gt;=2.0.0" purpose="GPIO button interface for hardware mode">Required for physical button controls on Raspberry Pi, optional on desktop</package>
+        <package name="requests" version="&gt;=2.31.0" purpose="HTTP client for PokéAPI (setup only)">Used by data loader during initial database seeding, not at runtime</package>
+      </python>
+      <system>
+        <dependency name="SQLite3" version="3.x (Python stdlib)" purpose="Embedded database for Pokemon data">No installation required, included with Python standard library</dependency>
+        <dependency name="Raspberry Pi OS" version="Bookworm (Debian 12)" purpose="Target platform with Python 3.11+ and GPIO support">Required for production deployment, desktop OS works for development</dependency>
+      </system>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+1. **Manager Singleton Pattern**: All managers (StateManager, InputManager, AudioManager) MUST be instantiated exactly once in main.py and passed to ScreenManager. Screens access via self.screen_manager.{manager_name}. Never create new manager instances in screens.
+
+2. **Screen Lifecycle Order**: Screens MUST follow lifecycle: __init__() → on_enter() → update()/render()/handle_input() loop → on_exit(). HomeScreen is ALWAYS the root screen (never popped from stack).
+
+3. **Database Query Safety**: ALL database queries MUST use parameterized statements with "?" placeholders. NEVER use string formatting or f-strings for SQL queries. Example: cursor.execute("SELECT * FROM pokemon WHERE id = ?", (pokemon_id,))
+
+4. **Performance Requirements**: Application MUST maintain 30+ FPS on Raspberry Pi 3B+ (NFR-P1). Button press response MUST be &lt; 100ms (NFR-P2). Startup time MUST be &lt; 5 seconds (NFR-P3).
+
+5. **Memory Constraints**: Application MUST operate within 1GB RAM on Raspberry Pi 3B+ (NFR-P4). Use lazy loading for sprites and LRU caching (max 50 sprites).
+
+6. **Error Handling**: Graceful degradation required: missing database → create schema, missing sprites → text placeholder, GPIO unavailable → keyboard fallback, corrupted state file → reset to defaults.
+
+7. **Zero Configuration**: Application MUST work immediately on first run with no user setup (NFR-U1). Create default state file if missing, initialize database if empty, use sensible defaults for all settings.
+
+8. **State Persistence**: StateManager.save_state() MUST be called in screen on_exit() methods and in main.py finally block. State file uses atomic write (temp file + rename) to prevent corruption.
+
+9. **Directory Structure**: Application MUST create required directories if missing (data/, assets/sprites/). Log warnings for missing assets but don't crash.
+
+10. **Testing Requirements**: Unit tests for manager singleton behavior, parameterized queries, LRU cache. Integration test for full startup sequence. Performance test validates 30+ FPS.
+  </constraints>
+
+  <interfaces>
+    <interface name="StateManager API" kind="class-interface">
+      <signature>
+class StateManager:
+    def __init__(self, state_file: Optional[str] = None)
+    def save_state(self) -&gt; bool
+    def get_last_viewed_id(self) -&gt; int
+    def get_last_viewed_generation(self) -&gt; int
+    def set_last_viewed(self, pokemon_id: int, generation: Optional[int] = None)
+    def get_volume(self) -&gt; float
+    def set_volume(self, volume: float)
+    def get_input_mode(self) -&gt; str
+    def set_input_mode(self, mode: str)
+    def increment_session(self)
+      </signature>
+      <path>src/state_manager.py</path>
+    </interface>
+
+    <interface name="InputManager API" kind="class-interface">
+      <signature>
+class InputManager:
+    def __init__(self, mode: InputMode = InputMode.KEYBOARD)
+    def process_event(self, event: pygame.event.Event) -&gt; InputAction
+    def register_handler(self, action: InputAction, callback: Callable)
+    def get_mode_name(self) -&gt; str
+    def cleanup(self)
+
+class InputAction(Enum):
+    UP, DOWN, LEFT, RIGHT, SELECT, BACK, START, NONE
+      </signature>
+      <path>src/input_manager.py</path>
+    </interface>
+
+    <interface name="ScreenManager API" kind="class-interface">
+      <signature>
+class ScreenManager:
+    def __init__(self, display_surface: pygame.Surface)
+    def push(self, screen: Screen)
+    def pop(self) -&gt; Optional[Screen]
+    def replace(self, screen: Screen)
+    def get_current(self) -&gt; Optional[Screen]
+    def handle_input(self, action: InputAction)
+    def update(self, delta_time: float)
+    def render(self)
+      </signature>
+      <path>src/ui/screen_manager.py</path>
+    </interface>
+
+    <interface name="Screen Base Class" kind="abstract-class">
+      <signature>
+class Screen(ABC):
+    def __init__(self, screen_manager)
+    @abstractmethod
+    def handle_input(self, action: InputAction)
+    @abstractmethod
+    def update(self, delta_time: float)
+    @abstractmethod
+    def render(self, surface: pygame.Surface)
+    def on_enter(self)  # Called when screen becomes active
+    def on_exit(self)   # Called when screen becomes inactive
+      </signature>
+      <path>src/ui/screen.py</path>
+    </interface>
+
+    <interface name="Database API" kind="class-interface">
+      <signature>
+class Database:
+    def __init__(self, db_path: Optional[str] = None)
+    def __enter__(self)  # Context manager
+    def __exit__(self, exc_type, exc_val, exc_tb)
+    def create_schema(self)
+    def execute(self, query: str, params: tuple = ()) -&gt; sqlite3.Cursor
+    def get_pokemon_by_id(self, pokemon_id: int) -&gt; Optional[Dict]
+    def get_pokemon_stats(self, pokemon_id: int) -&gt; List[Dict]
+    def get_pokemon_by_generation(self, generation: int) -&gt; List[Dict]
+      </signature>
+      <path>src/data/database.py</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+Use Python unittest framework for all tests. Test files named test_{module_name}.py in tests/ directory. Test classes named Test{ClassName}. Test methods named test_{method_name}_{scenario}. All manager tests must verify singleton behavior (only one instance). All database tests must use parameterized queries. Integration tests verify full component interaction. Performance tests validate NFR targets (30+ FPS, &lt;100ms latency, &lt;5s startup).
+    </standards>
+    <locations>
+tests/test_state_manager.py - StateManager unit tests
+tests/test_input_manager.py - InputManager unit tests  
+tests/test_database.py - Database query tests
+tests/test_sprite_processor.py - Sprite loading tests
+tests/test_mvp_features.py - Integration tests
+tests/test_performance_monitor.py - Performance validation
+    </locations>
+    <ideas>
+- **AC #1 - Manager Initialization**: Test StateManager singleton (create twice, verify same instance). Test InputManager mode switching (keyboard/GPIO). Test ScreenManager screen stack operations (push/pop/replace). Test Database context manager (with block opens/closes connection). Test sprite loader LRU cache eviction (load 51 sprites, verify 1st evicted).
+
+- **AC #1 - Database Connection**: Test database creation if missing. Test schema validation. Test connection failure recovery. Test parameterized query enforcement (reject string-formatted queries). Mock Database class to test error scenarios.
+
+- **AC #1 - Directory Structure**: Test data/ creation on first run. Test assets/sprites/ validation. Test warning logs for missing directories. Test graceful operation with missing sprites (placeholder rendering).
+
+- **AC #1 - Configuration Loading**: Test default configuration values. Test environment variable overrides. Test invalid value handling (clamp to valid ranges). Test configuration logging.
+
+- **AC #2 - Application Startup**: Integration test full startup sequence (pygame init → managers → database → HomeScreen → main loop). Test main loop runs at 30+ FPS. Test cleanup on exit (state saved, connections closed). Performance test startup time &lt; 5 seconds on Raspberry Pi.
+
+- **Edge Cases**: Test corrupted state file recovery. Test missing database (creates schema). Test GPIO unavailable (fallback to keyboard). Test rapid screen transitions (no memory leaks). Test state save failures (log error, continue operation).
+    </ideas>
+  </tests>
+</story-context>

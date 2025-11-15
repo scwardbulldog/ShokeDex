@@ -44,8 +44,8 @@ development_status:
   # Value: Establishes technical foundation for all subsequent features
   # Tech Spec: Combined with Epic 2 in tech-spec-epic-1-generation-navigation.md
   epic-1-foundation-infrastructure: contexted
-  1-1-project-foundation-setup: backlog
-  1-2-generation-badge-ui-component: backlog
+  1-1-project-foundation-setup: ready-for-dev
+  1-2-generation-badge-ui-component: ready-for-dev
   1-3-generation-filtering-and-database-queries: backlog
   1-4-lr-button-generation-switching: backlog
   1-5-state-persistence-for-generation-and-pokemon: backlog

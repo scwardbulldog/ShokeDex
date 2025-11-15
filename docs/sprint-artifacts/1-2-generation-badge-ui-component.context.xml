@@ -1,0 +1,289 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>1</epicId>
+    <storyId>1.2</storyId>
+    <title>Generation Badge UI Component</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-15</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/1-2-generation-badge-ui-component.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>user</asA>
+    <iWant>to see which generation (Kanto/Johto/Hoenn) I'm currently browsing</iWant>
+    <soThat>I know which region's Pokémon I'm viewing</soThat>
+    <tasks>
+- [ ] Task 1: Create GenerationBadge Component (AC: #1, #2)
+  - [ ] Create `GenerationBadge` class or component in `src/ui/home_screen.py` or separate module
+  - [ ] Accept parameters: generation (1-3), current_pokemon_id, total_pokemon_count
+  - [ ] Implement render method returning pygame.Surface
+  - [ ] Position badge in top-left or top-center (coordinate TBD based on HomeScreen layout)
+  - [ ] Ensure badge doesn't overlap Pokémon sprite or other UI elements
+
+- [ ] Task 2: Define Generation Display Data (AC: #1)
+  - [ ] Create GENERATION_NAMES constant: {1: "KANTO", 2: "JOHTO", 3: "HOENN"}
+  - [ ] Create GENERATION_RANGES constant: {1: (1,151), 2: (152,251), 3: (252,386)}
+  - [ ] Create GENERATION_TOTALS constant: {1: 151, 2: 100, 3: 135}
+  - [ ] Add logic to format position counter: f"#{pokemon_id:03d}/{total:03d}"
+
+- [ ] Task 3: Implement Badge Styling (AC: #2)
+  - [ ] Create badge background: pygame.Surface with rgba(26, 47, 74, 0.9)
+  - [ ] Draw 2px electric blue (#00d4ff) border using pygame.draw.rect()
+  - [ ] Add corner accent lines (45° diagonal cuts) - use pygame.draw.line()
+  - [ ] Use Orbitron Bold font (24px) for generation name
+  - [ ] Use Share Tech Mono font (18px) for position counter
+  - [ ] Ensure text is white (#ffffff) for readability
+
+- [ ] Task 4: Load Generation Logo Assets (AC: #2, #3)
+  - [ ] Define logo asset paths:
+    - `assets/icons/badge_kanto.png` for Generation 1
+    - `assets/icons/badge_johto.png` for Generation 2
+    - `assets/icons/badge_hoenn.png` for Generation 3
+  - [ ] Load logo using Pillow/pygame image loading
+  - [ ] Scale logo to fit within badge (approximately 40x40px)
+  - [ ] Position logo on left side of badge
+
+- [ ] Task 5: Implement Asset Fallback Logic (AC: #3)
+  - [ ] Wrap logo loading in try/except block
+  - [ ] On FileNotFoundError or image loading error:
+    - Log warning: f"Generation badge asset not found: {asset_path}"
+    - Set logo_surface to None
+    - Continue rendering badge with text-only
+  - [ ] Test fallback by temporarily removing asset files
+
+- [ ] Task 6: Integrate Badge into HomeScreen (AC: #1, #2, #3)
+  - [ ] Add `self.generation_badge = GenerationBadge(...)` in HomeScreen.__init__()
+  - [ ] Update badge in HomeScreen._switch_generation() when generation changes
+  - [ ] Update badge in HomeScreen scrolling logic when pokemon_id changes
+  - [ ] Call badge.render() in HomeScreen.render() method
+  - [ ] Blit badge surface to screen at configured position
+
+- [ ] Task 7: Testing (AC: #1, #2, #3)
+  - [ ] Unit test: GenerationBadge rendering for each generation (1, 2, 3)
+  - [ ] Unit test: Badge text formatting with various pokemon_ids
+  - [ ] Unit test: Asset fallback behavior (mock missing files)
+  - [ ] Visual test: Verify badge appearance matches UX spec (colors, borders, fonts)
+  - [ ] Integration test: Badge updates correctly when switching generations
+  - [ ] Integration test: Badge position counter updates during scrolling
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+AC #1: Badge Visibility and Positioning
+- Given: HomeScreen is displaying Pokémon from a specific generation
+- When: the screen renders
+- Then: a generation badge is visible in the top-left or top-center area
+- And: the badge shows the current region name ("KANTO", "JOHTO", or "HOENN")
+- And: the badge shows position counter format: "#025/151" (current Pokémon number / total in generation)
+
+AC #2: Badge Styling and Visual Design
+- Given: the generation badge is displayed
+- When: the badge renders
+- Then: the badge uses holographic blue styling with background rgba(26, 47, 74, 0.9)
+- And: the badge has a 2px solid electric blue (#00d4ff) border
+- And: corner accent lines are visible (45° cuts per UX spec)
+- And: the badge displays the appropriate region logo (Pokéball for Kanto, GS Ball for Johto, Master Ball for Hoenn)
+
+AC #3: Badge Asset Fallback
+- Given: badge logo assets may be unavailable
+- When: badge assets are missing
+- Then: a text-only badge is displayed with region name and counter
+- And: a warning is logged indicating missing assets
+- And: the application continues without crashing
+- And: badge maintains consistent styling (background, border, text)
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <artifact path="docs/ux-design-specification.md" title="ShokeDex UX Design Specification" section="2. Visual Foundation - Anime Pokédex Aesthetic">
+        Holographic Blue Color System: Deep Space Black #0a0e1a (background), Electric Blue #00d4ff (primary UI, borders, accents), Bright Cyan #4df7ff (highlights, active states, glow effects), Ice Blue #a8e6ff (text on dark, secondary information). Generation badge uses background rgba(26, 47, 74, 0.9) with 2px solid electric blue border, corner accent lines (45° cuts), and holographic styling with glow effects.
+      </artifact>
+      <artifact path="docs/ux-design-specification.md" title="ShokeDex UX Design Specification" section="5. Component Library - Generation Badge">
+        Generation Badge component shows current region (Kanto/Johto/Hoenn) with logo and position counter. Visual style: Background rgba(26, 47, 74, 0.9), Border 2px #00d4ff, Corner accents 45° angle cuts, Region name Orbitron Bold 18px, Position counter Share Tech Mono 14px. Placement: Top-left or top-center of screen. Regions: Kanto (Red/Blue aesthetic, Pokéball icon), Johto (Gold/Silver aesthetic, GS Ball icon), Hoenn (Ruby/Sapphire aesthetic, Master Ball icon).
+      </artifact>
+      <artifact path="docs/sprint-artifacts/tech-spec-epic-1-generation-navigation.md" title="Epic 1 Tech Spec" section="Generation Badge Data">
+        Generation badge internal data structure: generation (1, 2, or 3), name ("Kanto", "Johto", "Hoenn"), position (current Pokemon position in generation), total (total Pokemon in generation: 151, 100, 135), logo_path (path to generation logo asset). Badge component rendered in HomeScreen._render_generation_badge() method. GENERATION_RANGES constant: {1: (1,151), 2: (152,251), 3: (252,386)}.
+      </artifact>
+      <artifact path="docs/epics.md" title="ShokeDex Epics" section="Story 1.2: Generation Badge UI Component">
+        Badge positioned to not overlap Pokémon sprite. Logo assets in assets/icons/generation/ directory. Position counter updates in real-time during scrolling. If badge assets missing, fallback to text-only badge with warning logged. Uses GENERATION_RANGES constant for boundary values. Badge component demonstrates graceful degradation pattern.
+      </artifact>
+      <artifact path="docs/architecture.md" title="ShokeDex Architecture" section="Generation Navigation Architecture">
+        Generation boundaries: Kanto #1-151, Johto #152-251, Hoenn #252-386. Generation badge shows current region with logo and position counter. Badge visual indicator for active generation uses holographic blue glow effect. Always use parameterized queries with GENERATION_RANGES constant.
+      </artifact>
+    </docs>
+    <code>
+      <artifact path="src/ui/home_screen.py" kind="screen" symbol="HomeScreen" lines="1-450" reason="Current HomeScreen implementation showing grid layout and rendering patterns">
+        HomeScreen class displays Pokemon in 4x3 grid with search/filter bar, view mode buttons, and page navigation. Current rendering includes _render_search_bar(), _render_grid(), and _render_cell() methods. Grid starts at y=60, with cells at 120x100 pixels. Screen has title at y=15. Badge would integrate into render() method before grid rendering. Class already has database reference for querying Pokemon data.
+      </artifact>
+      <artifact path="src/ui/colors.py" kind="constants" symbol="Colors" lines="1-70" reason="Existing color scheme needs holographic blue additions">
+        Current Colors class uses retro Gameboy-inspired palette (greens, blues, reds, yellows). Need to add holographic blue colors: DEEP_SPACE_BLACK = (10, 14, 26), DARK_BLUE = (26, 47, 74), ELECTRIC_BLUE = (0, 212, 255), BRIGHT_CYAN = (77, 247, 255), ICE_BLUE = (168, 230, 255), HOLOGRAM_WHITE = (232, 244, 248). Badge will use these new constants for anime Pokédex aesthetic.
+      </artifact>
+      <artifact path="src/ui/sprite_loader.py" kind="utility" symbol="load_thumb, load_detail" lines="1-100" reason="Pattern for loading and caching image assets">
+        Provides load_thumb() and load_detail() functions with LRU caching in _CACHE dict. Uses _get_assets_base() to resolve asset paths relative to project root. Loads images with pygame.image.load() and converts with convert_alpha(). Returns None on failure with graceful error handling. Badge logo loading should follow same pattern.
+      </artifact>
+      <artifact path="src/state_manager.py" kind="manager" symbol="StateManager" lines="1-300" reason="State tracking for generation persistence">
+        StateManager tracks last_viewed with pokemon_id and generation fields. Provides get_last_viewed_generation() returning int (1-3) and set_last_viewed(pokemon_id, generation) for updates. Badge will read current generation from StateManager via self.screen_manager.state_manager.get_last_viewed_generation().
+      </artifact>
+      <artifact path="src/data/database.py" kind="database" symbol="get_pokemon_by_generation" lines="307-320" reason="Query pattern for generation filtering">
+        Database.get_pokemon_by_generation(generation) queries Pokemon by generation using parameterized query: WHERE p.generation = ? ORDER BY p.id. Returns list of dicts with id, name, types. Badge needs to count results to determine total Pokemon in generation for position counter.
+      </artifact>
+      <artifact path="src/input_manager.py" kind="manager" symbol="InputAction" lines="13-25" reason="Input actions for future generation switching">
+        InputAction enum defines LEFT and RIGHT actions for L/R button generation switching. InputManager.process_event() converts pygame events to InputAction. Badge display will be updated when LEFT/RIGHT actions trigger generation changes in Story 1.4.
+      </artifact>
+    </code>
+    <dependencies>
+      <python>
+        <package name="pygame" version=">=2.5.0" purpose="Graphics rendering, Surface creation, font rendering, shape drawing">Badge rendering with pygame.Surface, pygame.draw.rect for borders, pygame.draw.line for corner accents, pygame.font for text rendering</package>
+        <package name="Pillow" version=">=10.0.0" purpose="Image loading for badge logos">Optional: Load generation logo PNG files if pygame.image.load insufficient. Provides PIL.Image for advanced image processing</package>
+      </python>
+      <assets>
+        <asset path="assets/icons/badge_kanto.png" size="40x40px" purpose="Generation 1 (Kanto) badge logo - Pokéball icon">Optional: If missing, badge falls back to text-only display</asset>
+        <asset path="assets/icons/badge_johto.png" size="40x40px" purpose="Generation 2 (Johto) badge logo - GS Ball icon">Optional: If missing, badge falls back to text-only display</asset>
+        <asset path="assets/icons/badge_hoenn.png" size="40x40px" purpose="Generation 3 (Hoenn) badge logo - Master Ball icon">Optional: If missing, badge falls back to text-only display</asset>
+      </assets>
+      <fonts>
+        <font name="Orbitron Bold" size="18-24px" purpose="Generation name (KANTO, JOHTO, HOENN) display">Download from Google Fonts or use pygame default font as fallback</font>
+        <font name="Share Tech Mono" size="14-18px" purpose="Position counter (#025/151) display">Download from Google Fonts or use pygame monospace font as fallback</font>
+      </fonts>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+1. **Component Placement**: Badge MUST NOT overlap Pokémon sprite (hero element at center). Position at top-left (10-20px from edges) or top-center. Test on 480x320 resolution to verify spacing.
+
+2. **Holographic Blue Styling**: Badge MUST use UX spec colors exactly: background rgba(26, 47, 74, 0.9), border 2px #00d4ff, text #ffffff. Add holographic blue colors to Colors class before badge implementation.
+
+3. **Position Counter Format**: Counter MUST show format "#XXX/YYY" where XXX is current Pokemon ID (zero-padded 3 digits) and YYY is total in generation (151 for Kanto, 100 for Johto, 135 for Hoenn).
+
+4. **Asset Fallback**: Badge MUST render text-only version if logo assets missing. No crashes from missing files. Log warning with asset path. Maintain same styling (background, border, text) in fallback mode.
+
+5. **Generation Constants**: Use GENERATION_RANGES constant {1: (1,151), 2: (152,251), 3: (252,386)} for boundary logic. Derive totals: 151, 100, 135. Never hardcode ranges in multiple places.
+
+6. **Font Fallback**: If custom fonts (Orbitron, Share Tech Mono) unavailable, use pygame.font.SysFont() with "Arial" or "Courier" as fallback. Test badge is readable with default fonts.
+
+7. **Performance**: Badge rendering MUST NOT impact 30+ FPS target. Pre-render static badge elements (background, border, logo) once. Only re-render text when Pokemon ID changes.
+
+8. **State Integration**: Badge reads generation from StateManager.get_last_viewed_generation(). Do NOT maintain separate generation state in badge component. Single source of truth pattern.
+
+9. **Component Lifecycle**: Badge created in HomeScreen.__init__(), updated in _switch_generation() (Story 1.4), and rendered in render() method. Badge is part of HomeScreen, not a separate Screen.
+
+10. **Testing Requirements**: Unit test badge rendering for each generation with various Pokemon IDs. Test asset fallback by mocking file not found. Visual test on actual display to verify colors, fonts, positioning match UX spec.
+  </constraints>
+
+  <interfaces>
+    <interface name="GenerationBadge Component API" kind="class-interface">
+      <signature>
+class GenerationBadge:
+    def __init__(self, generation: int, pokemon_id: int, total: int, logo_path: Optional[str] = None):
+        """Initialize badge with generation data.
+        
+        Args:
+            generation: 1 (Kanto), 2 (Johto), or 3 (Hoenn)
+            pokemon_id: Current Pokemon National Dex number
+            total: Total Pokemon in generation (151, 100, or 135)
+            logo_path: Optional path to generation logo asset
+        """
+    
+    def update(self, pokemon_id: int):
+        """Update position counter when Pokemon changes.
+        
+        Args:
+            pokemon_id: New Pokemon ID to display
+        """
+    
+    def render(self, surface: pygame.Surface, x: int, y: int):
+        """Render badge to surface at specified position.
+        
+        Args:
+            surface: pygame Surface to render on
+            x: X coordinate (top-left corner)
+            y: Y coordinate (top-left corner)
+        """
+      </signature>
+      <path>src/ui/home_screen.py or src/ui/components/generation_badge.py</path>
+    </interface>
+
+    <interface name="Generation Constants" kind="module-constants">
+      <signature>
+# Generation boundaries
+GENERATION_RANGES = {
+    1: (1, 151),    # Kanto: Bulbasaur to Mew
+    2: (152, 251),  # Johto: Chikorita to Celebi
+    3: (252, 386)   # Hoenn: Treecko to Deoxys
+}
+
+# Generation display names
+GENERATION_NAMES = {
+    1: "KANTO",
+    2: "JOHTO",
+    3: "HOENN"
+}
+
+# Total Pokemon per generation
+GENERATION_TOTALS = {
+    1: 151,
+    2: 100,
+    3: 135
+}
+      </signature>
+      <path>src/ui/home_screen.py or shared constants module</path>
+    </interface>
+
+    <interface name="Holographic Blue Colors" kind="class-constants">
+      <signature>
+class Colors:
+    # Holographic Blue System (add to existing Colors class)
+    DEEP_SPACE_BLACK = (10, 14, 26)       # #0a0e1a - Background
+    DARK_BLUE = (26, 47, 74)              # #1a2f4a - Panels
+    ELECTRIC_BLUE = (0, 212, 255)         # #00d4ff - Primary UI, borders
+    BRIGHT_CYAN = (77, 247, 255)          # #4df7ff - Highlights, glow
+    ICE_BLUE = (168, 230, 255)            # #a8e6ff - Secondary text
+    HOLOGRAM_WHITE = (232, 244, 248)      # #e8f4f8 - Primary text
+      </signature>
+      <path>src/ui/colors.py</path>
+    </interface>
+
+    <interface name="StateManager Generation Access" kind="class-method">
+      <signature>
+class StateManager:
+    def get_last_viewed_generation(self) -> int:
+        """Get last viewed generation (1, 2, or 3)."""
+        return self.state['last_viewed']['generation']
+    
+    def set_last_viewed(self, pokemon_id: int, generation: Optional[int] = None):
+        """Update last viewed Pokemon and generation."""
+        # Auto-detect generation if not provided
+        # Update in-memory state
+      </signature>
+      <path>src/state_manager.py</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+Use Python unittest or pytest framework for all tests. Test files named test_generation_badge.py in tests/ directory. Test badge rendering with mock pygame.Surface. Test position counter formatting with edge cases (ID 1, 151, 152, 251, 252, 386). Test asset fallback by mocking FileNotFoundError. Visual tests verify colors/fonts match UX spec on actual display. Integration tests verify badge updates when generation changes.
+    </standards>
+    <locations>
+tests/test_generation_badge.py - Badge component unit tests
+tests/test_home_screen.py - HomeScreen integration with badge
+tests/test_colors.py - Verify holographic blue colors added
+tests/test_visual_badge.py - Manual visual verification script
+    </locations>
+    <ideas>
+- **AC #1 - Badge Visibility**: Test badge renders at correct position (top-left or top-center). Test badge shows correct generation name for each generation (Kanto, Johto, Hoenn). Test position counter format "#XXX/YYY" with various Pokemon IDs (1, 25, 151, 152, 386). Verify counter updates when Pokemon ID changes.
+
+- **AC #2 - Badge Styling**: Test background color matches rgba(26, 47, 74, 0.9). Test border is 2px solid #00d4ff. Test corner accent lines drawn at 45° angles. Test logo loads and displays for each generation. Mock pygame.draw.rect and pygame.draw.line calls to verify drawing operations.
+
+- **AC #3 - Asset Fallback**: Mock FileNotFoundError when loading logo. Verify badge renders text-only without logo. Verify warning logged with asset path. Verify no crash occurs. Test badge maintains styling in fallback mode (background, border, text still rendered).
+
+- **Integration Tests**: Test badge updates when switching generations (calls update() with new generation and Pokemon ID). Test badge reads generation from StateManager. Test badge renders in HomeScreen.render() without overlapping sprite.
+
+- **Visual Tests**: Run app on 480x320 display, verify badge colors match UX mockup. Verify fonts are readable (Orbitron, Share Tech Mono or fallbacks). Verify badge positioned correctly relative to other UI elements. Verify holographic glow effect visible on active generation.
+
+- **Edge Cases**: Test with Pokemon ID at generation boundaries (151→152, 251→252). Test with invalid generation values (0, 4) - should clamp or error. Test badge with extremely long generation names (internationalization). Test badge rendering on different display resolutions (640x480, 800x480).
+
+- **Performance Tests**: Measure badge render time (should be &lt; 5ms). Test badge doesn't cause frame drops. Profile memory usage with badge active. Test badge updates don't block main thread.
+    </ideas>
+  </tests>
+</story-context>
