@@ -1,4 +1,4 @@
-# generated: 2025-11-15
+# generated: November 15, 2025
 # project: ShokeDex
 # project_key: shokedex-mvp
 # tracking_system: file-system
@@ -29,7 +29,7 @@
 # - SM typically drafts next story after previous one is 'done' to incorporate learnings
 # - Dev moves story to 'review', SM reviews, then Dev moves to 'done'
 
-generated: 2025-11-15
+generated: November 15, 2025
 project: ShokeDex
 project_key: shokedex-mvp
 tracking_system: file-system
@@ -44,11 +44,19 @@ development_status:
   # Value: Establishes technical foundation for all subsequent features
   # Tech Spec: Combined with Epic 2 in tech-spec-epic-1-generation-navigation.md
   epic-1-foundation-infrastructure: contexted
+  1-1-project-foundation-setup: backlog
+  1-2-generation-badge-ui-component: backlog
+  1-3-generation-filtering-and-database-queries: backlog
+  1-4-lr-button-generation-switching: backlog
+  1-5-state-persistence-for-generation-and-pokemon: backlog
+  1-6-up-down-scrolling-within-generation: backlog
+  1-7-performance-optimization-and-3-press-navigation-rule: backlog
   epic-1-retrospective: optional
 
-  # Epic 2: Core Browsing Experience
+  # Epic 2: Core Browsing Experience (Combined with Epic 1)
   # Value: Browse and navigate through all 386 Pokémon efficiently
   # Tech Spec: Combined with Epic 1 in tech-spec-epic-1-generation-navigation.md
+  # Note: Stories are numbered under Epic 1 since they share tech spec
   epic-2-core-browsing: contexted
   epic-2-retrospective: optional
 
@@ -57,6 +65,13 @@ development_status:
   # Tech Spec: tech-spec-epic-2-detail-view-with-audio.md
   # Note: Audio cry playback descoped to Epic 8
   epic-3-detail-view: contexted
+  3-1-detail-screen-layout-and-sprite-display: backlog
+  3-2-six-base-stats-with-visual-progress-bars: backlog
+  3-3-type-badge-display-on-detail-view: backlog
+  3-4-physical-measurements-display: backlog
+  3-5-pokedex-description-text-display: backlog
+  3-6-adjacent-pokemon-navigation-in-detail-view: backlog
+  3-7-detail-view-performance-and-visual-polish: backlog
   epic-3-retrospective: optional
 
   # Epic 4: State Persistence
@@ -64,12 +79,24 @@ development_status:
   # Tech Spec: tech-spec-epic-3-state-persistence.md
   # Note: Favorites/history descoped to Epic 9
   epic-4-state-persistence: contexted
+  4-1-first-boot-state-initialization: backlog
+  4-2-last-viewed-pokemon-persistence: backlog
+  4-3-boot-to-homescreen-behavior: backlog
+  4-4-volume-and-input-mode-preferences: backlog
+  4-5-state-file-corruption-recovery: backlog
+  4-6-state-persistence-performance-and-reliability: backlog
   epic-4-retrospective: optional
 
   # Epic 5: Evolution System
   # Value: Displays evolution chains showing Pokémon transformations
   # Tech Spec: tech-spec-epic-5-evolution-system.md
   epic-5-evolution-system: contexted
+  5-1-three-stage-evolution-chain-display: backlog
+  5-2-branching-evolution-display: backlog
+  5-3-single-stage-pokemon-handling: backlog
+  5-4-evolution-requirement-display-level-stone-trade: backlog
+  5-5-navigation-to-evolution-relatives: backlog
+  5-6-evolution-system-performance-and-data-accuracy: backlog
   epic-5-retrospective: optional
 
   # ==========================================
