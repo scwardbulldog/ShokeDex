@@ -1,0 +1,105 @@
+# generated: 2025-11-15
+# project: ShokeDex
+# project_key: shokedex-mvp
+# tracking_system: file-system
+# story_location: docs/sprint-artifacts
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic exists in epic file but not contexted
+#   - contexted: Epic tech context created (required before drafting stories)
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - drafted: Story file created in stories folder
+#   - ready-for-dev: Draft approved and story context created
+#   - in-progress: Developer actively working on implementation
+#   - review: Under SM review (via code-review workflow)
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - completed: Retrospective has been done
+#
+# WORKFLOW NOTES:
+# ===============
+# - Epics should be 'contexted' before stories can be 'drafted'
+# - Stories can be worked in parallel if team capacity allows
+# - SM typically drafts next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', SM reviews, then Dev moves to 'done'
+
+generated: 2025-11-15
+project: ShokeDex
+project_key: shokedex-mvp
+tracking_system: file-system
+story_location: docs/sprint-artifacts
+
+development_status:
+  # ==========================================
+  # MVP EPICS (Priority 1-2)
+  # ==========================================
+  
+  # Epic 1: Foundation & Infrastructure
+  # Value: Establishes technical foundation for all subsequent features
+  # Tech Spec: Combined with Epic 2 in tech-spec-epic-1-generation-navigation.md
+  epic-1-foundation-infrastructure: contexted
+  epic-1-retrospective: optional
+
+  # Epic 2: Core Browsing Experience
+  # Value: Browse and navigate through all 386 Pokémon efficiently
+  # Tech Spec: Combined with Epic 1 in tech-spec-epic-1-generation-navigation.md
+  epic-2-core-browsing: contexted
+  epic-2-retrospective: optional
+
+  # Epic 3: Detail View Implementation
+  # Value: Shows complete Pokémon information with sprites and stats
+  # Tech Spec: tech-spec-epic-2-detail-view-with-audio.md
+  # Note: Audio cry playback descoped to Epic 8
+  epic-3-detail-view: contexted
+  epic-3-retrospective: optional
+
+  # Epic 4: State Persistence
+  # Value: Device remembers last viewed Pokémon and preferences
+  # Tech Spec: tech-spec-epic-3-state-persistence.md
+  # Note: Favorites/history descoped to Epic 9
+  epic-4-state-persistence: contexted
+  epic-4-retrospective: optional
+
+  # Epic 5: Evolution System
+  # Value: Displays evolution chains showing Pokémon transformations
+  # Tech Spec: tech-spec-epic-5-evolution-system.md
+  epic-5-evolution-system: contexted
+  epic-5-retrospective: optional
+
+  # ==========================================
+  # POST-MVP EPICS (Priority 3+)
+  # ==========================================
+
+  # Epic 6: Enhanced Visual Identity [POST-MVP]
+  # Value: Polishes visual experience with type badges
+  epic-6-enhanced-visual: backlog
+  epic-6-retrospective: optional
+
+  # Epic 7: Interactive Features [POST-MVP]
+  # Value: Adds quiz mode and relationships view
+  epic-7-interactive-features: backlog
+  epic-7-retrospective: optional
+
+  # Epic 8: Audio Integration [POST-MVP]
+  # Value: Pokémon cry audio playback (descoped from Epic 3)
+  # Dependencies: Epic 3 complete, audio assets sourced
+  epic-8-audio-integration: backlog
+  epic-8-retrospective: optional
+
+  # Epic 9: User Preferences & History [POST-MVP]
+  # Value: Favorites list and recent history tracking (descoped from Epic 4)
+  # Dependencies: Epic 4 complete
+  epic-9-preferences-history: backlog
+  epic-9-retrospective: optional
+
+  # Epic 10: Screensaver Mode [POST-MVP]
+  # Value: Always-interesting display piece with cycling Pokémon
+  # Dependencies: Epic 3 complete, optionally Epic 8
+  epic-10-screensaver: backlog
+  epic-10-retrospective: optional
