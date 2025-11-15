@@ -15,4 +15,9 @@ requests>=2.31.0
 # Performance Monitoring
 psutil>=5.9.0
 
+# Testing Framework
+pytest>=7.4.0
+pytest-cov>=4.1.0
+pytest-xdist>=3.3.0
+
 # Note: sqlite3 is part of Python's standard library (no installation needed)

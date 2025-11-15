@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShokeDex - Screen Mockups</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Rajdhani:wght@400;500;600&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Rajdhani', sans-serif;
+            background: linear-gradient(135deg, #0a0e1a 0%, #1a2f4a 100%);
+            color: #e8f4f8;
+            padding: 40px 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 48px;
+            font-weight: 700;
+            text-align: center;
+            color: #4df7ff;
+            text-shadow: 0 0 20px rgba(77, 247, 255, 0.6);
+            margin-bottom: 16px;
+        }
+
+        .subtitle {
+            text-align: center;
+            font-size: 20px;
+            color: #a8e6ff;
+            margin-bottom: 48px;
+        }
+
+        /* Navigation */
+        .nav-controls {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            margin-bottom: 32px;
+            flex-wrap: wrap;
+        }
+
+        .nav-btn {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 16px;
+            font-weight: 500;
+            padding: 12px 24px;
+            background: rgba(26, 47, 74, 0.8);
+            color: #00d4ff;
+            border: 2px solid #00d4ff;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 0 15px rgba(0, 212, 255, 0.3);
+        }
+
+        .nav-btn:hover {
+            background: rgba(0, 212, 255, 0.2);
+            box-shadow: 0 0 25px rgba(0, 212, 255, 0.6);
+            transform: translateY(-2px);
+        }
+
+        .nav-btn.active {
+            background: #00d4ff;
+            color: #0a0e1a;
+            box-shadow: 0 0 30px rgba(0, 212, 255, 0.8);
+        }
+
+        /* Device Frame */
+        .mockup-section {
+            margin: 40px auto;
+            text-align: center;
+        }
+
+        .screen-label {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 24px;
+            color: #4df7ff;
+            margin-bottom: 24px;
+            text-transform: uppercase;
+        }
+
+        .device-container {
+            display: inline-block;
+            padding: 40px;
+            background: rgba(26, 47, 74, 0.4);
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+        }
+
+        .device {
+            width: 480px;
+            height: 320px;
+            background: #0a0e1a;
+            border: 6px solid #1a2f4a;
+            border-radius: 8px;
+            box-shadow: 
+                0 0 0 2px #00d4ff,
+                0 0 40px rgba(0, 212, 255, 0.4),
+                inset 0 0 20px rgba(0, 0, 0, 0.8);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Scan lines effect */
+        .device::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(transparent 50%, rgba(0, 212, 255, 0.03) 50%);
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        .screen {
+            width: 100%;
+            height: 100%;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        /* Screen Header */
+        .screen-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #00d4ff;
+            margin-bottom: 12px;
+            position: relative;
+        }
+
+        .screen-header::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #4df7ff;
+            opacity: 0.5;
+        }
+
+        .gen-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(26, 47, 74, 0.9);
+            border: 2px solid #00d4ff;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+            color: #4df7ff;
+            box-shadow: 0 0 15px rgba(0, 212, 255, 0.4);
+        }
+
+        .gen-icon {
+            font-size: 18px;
+        }
+
+        .dex-number {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 16px;
+            color: #a8e6ff;
+            letter-spacing: 1px;
+        }
+
+        /* Screen Content */
+        .screen-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        /* Sprite Frame */
+        .sprite-container {
+            position: relative;
+            margin-bottom: 16px;
+        }
+
+        .sprite-frame {
+            width: 200px;
+            height: 200px;
+            background: rgba(10, 14, 26, 0.8);
+            border: 3px solid #00d4ff;
+            border-radius: 4px;
+            box-shadow: 
+                0 0 25px rgba(77, 247, 255, 0.5),
+                inset 0 0 20px rgba(0, 212, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .sprite-frame::before {
+            content: '';
+            position: absolute;
+            top: -3px;
+            left: -3px;
+            right: -3px;
+            bottom: -3px;
+            border: 1px solid #4df7ff;
+            border-radius: 4px;
+            opacity: 0.5;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.7; }
+        }
+
+        .sprite-frame img {
+            max-width: 90%;
+            max-height: 90%;
+            image-rendering: pixelated;
+            filter: drop-shadow(0 0 10px rgba(77, 247, 255, 0.3));
+        }
+
+        .sprite-placeholder {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 72px;
+            color: #4df7ff;
+            text-shadow: 0 0 20px rgba(77, 247, 255, 0.6);
+        }
+
+        /* Pokemon Info */
+        .pokemon-name {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 28px;
+            font-weight: 700;
+            color: #e8f4f8;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            letter-spacing: 2px;
+            text-shadow: 0 0 15px rgba(232, 244, 248, 0.4);
+        }
+
+        .type-badges {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+        }
+
+        .type-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 16px;
+            border-radius: 4px;
+            font-family: 'Rajdhani', sans-serif;
+            font-weight: 700;
+            font-size: 14px;
+            text-transform: uppercase;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Screen Footer */
+        .screen-footer {
+            padding-top: 12px;
+            border-top: 2px solid #00d4ff;
+            display: flex;
+            justify-content: space-around;
+            gap: 12px;
+            position: relative;
+        }
+
+        .screen-footer::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #4df7ff;
+            opacity: 0.5;
+        }
+
+        .button-prompt {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 500;
+        }
+
+        .btn-icon {
+            font-family: 'Share Tech Mono', monospace;
+            font-weight: bold;
+            padding: 3px 8px;
+            border-radius: 2px;
+            border: 2px solid;
+            font-size: 12px;
+        }
+
+        .btn-icon.primary {
+            color: #ff6b35;
+            border-color: #ff6b35;
+            box-shadow: 0 0 10px rgba(255, 107, 53, 0.4);
+        }
+
+        .btn-icon.secondary {
+            color: #718096;
+            border-color: #718096;
+        }
+
+        .btn-icon.nav {
+            color: #00d4ff;
+            border-color: #00d4ff;
+        }
+
+        /* Detail Screen Specific */
+        .detail-layout {
+            display: grid;
+            grid-template-columns: 140px 1fr;
+            gap: 16px;
+            width: 100%;
+            align-items: start;
+        }
+
+        .detail-sprite {
+            width: 140px;
+            height: 140px;
+        }
+
+        .stats-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .stat-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .stat-label {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 13px;
+            color: #a8e6ff;
+            width: 70px;
+            text-align: right;
+        }
+
+        .stat-bar {
+            flex: 1;
+            height: 16px;
+            background: rgba(45, 55, 72, 0.8);
+            border: 1px solid #718096;
+            border-radius: 2px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .stat-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00d4ff 0%, #4df7ff 100%);
+            box-shadow: 0 0 8px rgba(77, 247, 255, 0.6);
+            transition: width 0.3s;
+        }
+
+        .stat-fill.high {
+            background: linear-gradient(90deg, #ff6b35 0%, #ffd23f 100%);
+            box-shadow: 0 0 8px rgba(255, 107, 53, 0.6);
+        }
+
+        .stat-value {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 12px;
+            color: #e8f4f8;
+            width: 32px;
+            text-align: right;
+        }
+
+        .info-section {
+            margin-top: 12px;
+            padding: 8px 12px;
+            background: rgba(26, 47, 74, 0.6);
+            border: 1px solid #00d4ff;
+            border-radius: 4px;
+        }
+
+        .info-label {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 11px;
+            color: #a8e6ff;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .info-text {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 12px;
+            color: #e8f4f8;
+            line-height: 1.4;
+        }
+
+        .physical-stats {
+            display: flex;
+            gap: 16px;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 11px;
+            color: #a8e6ff;
+        }
+
+        /* Relationships Screen */
+        .relationships-layout {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            width: 100%;
+        }
+
+        .evolution-section {
+            background: rgba(26, 47, 74, 0.6);
+            border: 1px solid #00d4ff;
+            border-radius: 4px;
+            padding: 8px;
+        }
+
+        .section-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 12px;
+            color: #4df7ff;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .evolution-chain {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        .evo-pokemon {
+            text-align: center;
+        }
+
+        .evo-sprite {
+            width: 64px;
+            height: 64px;
+            background: rgba(10, 14, 26, 0.8);
+            border: 2px solid #00d4ff;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 4px;
+            box-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
+        }
+
+        .evo-sprite.current {
+            border-color: #ff6b35;
+            box-shadow: 0 0 15px rgba(255, 107, 53, 0.5);
+        }
+
+        .evo-sprite-icon {
+            font-size: 32px;
+        }
+
+        .evo-name {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 10px;
+            color: #a8e6ff;
+        }
+
+        .evo-number {
+            font-size: 9px;
+            color: #718096;
+        }
+
+        .evo-arrow {
+            font-size: 20px;
+            color: #00d4ff;
+        }
+
+        .evo-method {
+            font-size: 9px;
+            color: #a8e6ff;
+        }
+
+        .type-matchups {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+
+        .matchup-group {
+            background: rgba(10, 14, 26, 0.6);
+            padding: 6px;
+            border-radius: 4px;
+        }
+
+        .matchup-label {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 11px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+        }
+
+        .matchup-label.strong { color: #6bff6b; }
+        .matchup-label.weak { color: #ff6b35; }
+
+        .matchup-types {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+
+        .mini-type {
+            font-size: 16px;
+        }
+
+        /* Quiz Screen */
+        .quiz-header {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 20px;
+            color: #ffd23f;
+            text-align: center;
+            margin-bottom: 16px;
+            text-shadow: 0 0 15px rgba(255, 210, 63, 0.6);
+        }
+
+        .silhouette {
+            filter: brightness(0) drop-shadow(0 0 20px #4df7ff);
+        }
+
+        .mystery-name {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 28px;
+            color: #718096;
+            margin-bottom: 8px;
+        }
+
+        .quiz-score {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 14px;
+            color: #a8e6ff;
+            margin-top: 12px;
+        }
+
+        /* Visibility toggles */
+        .mockup-screen {
+            display: none;
+        }
+
+        .mockup-screen.active {
+            display: block;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .device {
+                width: 100%;
+                max-width: 480px;
+                height: auto;
+                aspect-ratio: 3/2;
+            }
+            
+            .device-container {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 ShokeDex Screen Mockups</h1>
+        <p class="subtitle">Interactive Design Direction - Anime Pokédex Aesthetic</p>
+
+        <!-- Navigation -->
+        <div class="nav-controls">
+            <button class="nav-btn active" onclick="showScreen('browse')">Browse Screen</button>
+            <button class="nav-btn" onclick="showScreen('detail')">Detail Screen</button>
+            <button class="nav-btn" onclick="showScreen('relationships')">Relationships Screen</button>
+            <button class="nav-btn" onclick="showScreen('quiz')">Quiz Screen</button>
+        </div>
+
+        <!-- Browse Screen Mockup -->
+        <div id="browse-screen" class="mockup-screen active">
+            <div class="mockup-section">
+                <div class="screen-label">Browse Screen - Main Navigation</div>
+                <div class="device-container">
+                    <div class="device">
+                        <div class="screen">
+                            <div class="screen-header">
+                                <div class="gen-badge">
+                                    <span class="gen-icon">🔴</span>
+                                    <span>KANTO</span>
+                                </div>
+                                <div class="dex-number">#025/151</div>
+                            </div>
+
+                            <div class="screen-content">
+                                <div class="sprite-container">
+                                    <div class="sprite-frame">
+                                        <div class="sprite-placeholder">⚡</div>
+                                    </div>
+                                </div>
+                                <div class="pokemon-name">PIKACHU</div>
+                                <div class="type-badges">
+                                    <div class="type-badge" style="background: #ffd23f; color: #0a0e1a;">
+                                        <span>⚡</span>
+                                        <span>ELECTRIC</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="screen-footer">
+                                <div class="button-prompt">
+                                    <span class="btn-icon nav">[L/R]</span>
+                                    <span style="color: #00d4ff;">Generation</span>
+                                </div>
+                                <div class="button-prompt">
+                                    <span class="btn-icon nav">[↑↓]</span>
+                                    <span style="color: #00d4ff;">Navigate</span>
+                                </div>
+                                <div class="button-prompt">
+                                    <span class="btn-icon primary">[A]</span>
+                                    <span style="color: #ff6b35;">Details</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div style="margin-top: 24px; color: #a8e6ff; text-align: center; max-width: 600px; margin-left: auto; margin-right: auto;">
+                    <strong style="color: #4df7ff;">Design Focus:</strong> Large sprite dominates (50-60% of screen). Clean, uncluttered layout. Always shows a Pokémon - never blank. Generation badge provides context. Type badges use vibrant colors. Button prompts at bottom show available actions.
+                </div>
+            </div>
+        </div>
+
+        <!-- Detail Screen Mockup -->
+        <div id="detail-screen" class="mockup-screen">
+            <div class="mockup-section">
+                <div class="screen-label">Detail Screen - Complete Stats</div>
+                <div class="device-container">
+                    <div class="device">
+                        <div class="screen">
+                            <div class="screen-header">
+                                <div class="pokemon-name" style="font-size: 20px; margin: 0;">PIKACHU</div>
+                                <div class="dex-number">#025</div>
+                            </div>
+
+                            <div class="screen-content" style="justify-content: flex-start; align-items: stretch;">
+                                <div class="detail-layout">
+                                    <div>
+                                        <div class="sprite-frame detail-sprite">
+                                            <div class="sprite-placeholder" style="font-size: 56px;">⚡</div>
+                                        </div>
+                                        <div style="margin-top: 8px; text-align: center;">
+                                            <div class="type-badge" style="background: #ffd23f; color: #0a0e1a; font-size: 11px; padding: 4px 10px;">
+                                                <span>⚡</span>
+                                                <span>ELECTRIC</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="stats-panel">
+                                        <div class="stat-row">
+                                            <div class="stat-label">HP</div>
+                                            <div class="stat-bar">
+                                                <div class="stat-fill" style="width: 35%;"></div>
+                                            </div>
+                                            <div class="stat-value">35</div>
+                                        </div>
+                                        <div class="stat-row">
+                                            <div class="stat-label">Attack</div>
+                                            <div class="stat-bar">
+                                                <div class="stat-fill" style="width: 55%;"></div>
+                                            </div>
+                                            <div class="stat-value">55</div>
+                                        </div>
+                                        <div class="stat-row">
+                                            <div class="stat-label">Defense</div>
+                                            <div class="stat-bar">
+                                                <div class="stat-fill" style="width: 40%;"></div>
+                                            </div>
+                                            <div class="stat-value">40</div>
+                                        </div>
+                                        <div class="stat-row">
+                                            <div class="stat-label">Sp. Attack</div>
+                                            <div class="stat-bar">
+                                                <div class="stat-fill" style="width: 50%;"></div>
+                                            </div>
+                                            <div class="stat-value">50</div>
+                                        </div>
+                                        <div class="stat-row">
+                                            <div class="stat-label">Sp. Defense</div>
+                                            <div class="stat-bar">
+                                                <div class="stat-fill" style="width: 50%;"></div>
+                                            </div>
+                                            <div class="stat-value">50</div>
+                                        </div>
+                                        <div class="stat-row">
+                                            <div class="stat-label">Speed</div>
+                                            <div class="stat-bar">
+                                                <div class="stat-fill high" style="width: 90%;"></div>
+                                            </div>
+                                            <div class="stat-value">90</div>
+                                        </div>
+
+                                        <div class="physical-stats" style="margin-top: 4px; justify-content: space-around;">
+                                            <span>HT: 0.4m</span>
+                                            <span>WT: 6.0kg</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="info-section">
+                                    <div class="info-label">Pokédex Entry</div>
+                                    <div class="info-text">
+                                        When several of these Pokémon gather, their electricity can build and cause lightning storms.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="screen-footer">
+                                <div class="button-prompt">
+                                    <span class="btn-icon nav">[←→]</span>
+                                    <span style="color: #00d4ff;">Next/Prev</span>
+                                </div>
+                                <div class="button-prompt">
+                                    <span class="btn-icon secondary">[B]</span>
+                                    <span style="color: #718096;">Back</span>
+                                </div>
+                                <div class="button-prompt">
+                                    <span class="btn-icon primary">[A]</span>
+                                    <span style="color: #ff6b35;">Evolution</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div style="margin-top: 24px; color: #a8e6ff; text-align: center; max-width: 600px; margin-left: auto; margin-right: auto;">
+                    <strong style="color: #4df7ff;">Design Focus:</strong> Two-column layout maximizes info density. Sprite smaller than browse view but still prominent. Stat bars with visual feedback (high stats glow orange). Description uses authentic Pokédex text. Can navigate to adjacent Pokémon without returning to browse.
+                </div>
+            </div>
+        </div>
+
+        <!-- Relationships Screen Mockup -->
+        <div id="relationships-screen" class="mockup-screen">
+            <div class="mockup-section">
+                <div class="screen-label">Relationships Screen - Evolution & Type Matchups</div>
+                <div class="device-container">
+                    <div class="device">
+                        <div class="screen">
+                            <div class="screen-header">
+                                <div class="pokemon-name" style="font-size: 16px; margin: 0;">PIKACHU RELATIONSHIPS</div>
+                                <div class="dex-number">#025</div>
+                            </div>
+
+                            <div class="screen-content relationships-layout" style="justify-content: flex-start;">
+                                <div class="evolution-section">
+                                    <div class="section-title">Evolution Chain</div>
+                                    <div class="evolution-chain">
+                                        <div class="evo-pokemon">
+                                            <div class="evo-sprite">
+                                                <div class="evo-sprite-icon">⚡</div>
+                                            </div>
+                                            <div class="evo-name">PICHU</div>
+                                            <div class="evo-number">#172</div>
+                                        </div>
+                                        <div>
+                                            <div class="evo-arrow">→</div>
+                                            <div class="evo-method">Friendship</div>
+                                        </div>
+                                        <div class="evo-pokemon">
+                                            <div class="evo-sprite current">
+                                                <div class="evo-sprite-icon">⚡</div>
+                                            </div>
+                                            <div class="evo-name" style="color: #ff6b35; font-weight: bold;">PIKACHU</div>
+                                            <div class="evo-number">#025</div>
+                                        </div>
+                                        <div>
+                                            <div class="evo-arrow">→</div>
+                                            <div class="evo-method">Thunder Stone</div>
+                                        </div>
+                                        <div class="evo-pokemon">
+                                            <div class="evo-sprite">
+                                                <div class="evo-sprite-icon">⚡</div>
+                                            </div>
+                                            <div class="evo-name">RAICHU</div>
+                                            <div class="evo-number">#026</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="evolution-section">
+                                    <div class="section-title">Type Matchups - ⚡ Electric</div>
+                                    <div class="type-matchups">
+                                        <div class="matchup-group">
+                                            <div class="matchup-label strong">Strong Against</div>
+                                            <div class="matchup-types">
+                                                <span class="mini-type" title="Water">💧</span>
+                                                <span class="mini-type" title="Flying">🦅</span>
+                                            </div>
+                                        </div>
+                                        <div class="matchup-group">
+                                            <div class="matchup-label weak">Weak Against</div>
+                                            <div class="matchup-types">
+                                                <span class="mini-type" title="Ground">🌍</span>
+                                            </div>
+                                        </div>
+                                        <div class="matchup-group">
+                                            <div class="matchup-label" style="color: #00d4ff;">Resists</div>
+                                            <div class="matchup-types">
+                                                <span class="mini-type" title="Electric">⚡</span>
+                                                <span class="mini-type" title="Flying">🦅</span>
+                                                <span class="mini-type" title="Steel">⚙️</span>
+                                            </div>
+                                        </div>
+                                        <div class="matchup-group">
+                                            <div class="matchup-label" style="color: #718096;">Ineffective</div>
+                                            <div class="matchup-types">
+                                                <span class="mini-type" title="Electric">⚡</span>
+                                                <span class="mini-type" title="Grass">🌿</span>
+                                                <span class="mini-type" title="Dragon">🐉</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="screen-footer">
+                                <div class="button-prompt">
+                                    <span class="btn-icon nav">[←→]</span>
+                                    <span style="color: #00d4ff;">Next/Prev</span>
+                                </div>
+                                <div class="button-prompt">
+                                    <span class="btn-icon secondary">[B]</span>
+                                    <span style="color: #718096;">Back</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div style="margin-top: 24px; color: #a8e6ff; text-align: center; max-width: 600px; margin-left: auto; margin-right: auto;">
+                    <strong style="color: #4df7ff;">Design Focus:</strong> Unified view combines evolution chain and type matchups. Evolution chain shows context with "You are here" indicator. Type matchups use emoji icons for quick visual scanning. Current Pokémon highlighted with orange border. Compact but information-rich.
+                </div>
+            </div>
+        </div>
+
+        <!-- Quiz Screen Mockup -->
+        <div id="quiz-screen" class="mockup-screen">
+            <div class="mockup-section">
+                <div class="screen-label">Quiz Screen - "Who's That Pokémon?"</div>
+                <div class="device-container">
+                    <div class="device">
+                        <div class="screen">
+                            <div class="quiz-header">WHO'S THAT POKÉMON?</div>
+
+                            <div class="screen-content">
+                                <div class="sprite-container">
+                                    <div class="sprite-frame">
+                                        <div class="sprite-placeholder silhouette">⚡</div>
+                                    </div>
+                                </div>
+                                <div class="mystery-name">??? ??????</div>
+                                <div style="font-family: 'Rajdhani', sans-serif; font-size: 14px; color: #a8e6ff;">
+                                    Scroll to guess...
+                                </div>
+                                <div class="quiz-score">Score: 8/10</div>
+                            </div>
+
+                            <div class="screen-footer">
+                                <div class="button-prompt">
+                                    <span class="btn-icon nav">[↑↓]</span>
+                                    <span style="color: #00d4ff;">Scroll</span>
+                                </div>
+                                <div class="button-prompt">
+                                    <span class="btn-icon primary">[A]</span>
+                                    <span style="color: #ff6b35;">Guess</span>
+                                </div>
+                                <div class="button-prompt">
+                                    <span class="btn-icon secondary">[B]</span>
+                                    <span style="color: #718096;">Exit</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div style="margin-top: 24px; color: #a8e6ff; text-align: center; max-width: 600px; margin-left: auto; margin-right: auto;">
+                    <strong style="color: #4df7ff;">Design Focus:</strong> Classic anime "Who's That Pokémon?" segment brought to life. Silhouette creates mystery. User scrolls through Pokédex to guess. On correct answer, reveals with color sprite and plays cry (audio). Score tracking adds game element. Fun secondary mode.
+                </div>
+            </div>
+        </div>
+
+        <!-- Design Notes -->
+        <div style="margin: 60px auto; max-width: 800px; background: rgba(26, 47, 74, 0.6); border: 2px solid #00d4ff; border-radius: 8px; padding: 32px; box-shadow: 0 0 30px rgba(0, 212, 255, 0.3);">
+            <h2 style="font-family: 'Orbitron', sans-serif; font-size: 28px; color: #4df7ff; margin-bottom: 20px;">Design Philosophy</h2>
+            
+            <div style="margin-bottom: 20px;">
+                <h3 style="font-family: 'Rajdhani', sans-serif; font-size: 20px; color: #a8e6ff; margin-bottom: 12px;">Authentic Anime Pokédex Experience</h3>
+                <p style="font-size: 16px; line-height: 1.6; color: #e8f4f8;">
+                    Every pixel answers the question: <strong style="color: #4df7ff;">"Would Ash have seen this on Dexter's screen?"</strong> The holographic blue aesthetic, geometric borders, glowing effects, and retro-futuristic typography recreate the iconic anime Pokédex display.
+                </p>
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <h3 style="font-family: 'Rajdhani', sans-serif; font-size: 20px; color: #a8e6ff; margin-bottom: 12px;">Visual-First Design</h3>
+                <p style="font-size: 16px; line-height: 1.6; color: #e8f4f8;">
+                    <strong style="color: #4df7ff;">Pokémon sprites dominate (50-60% of screen space).</strong> This isn't a data table with small icons - it's a window into the Pokémon world. Information supports the visual, not the other way around.
+                </p>
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <h3 style="font-family: 'Rajdhani', sans-serif; font-size: 20px; color: #a8e6ff; margin-bottom: 12px;">Appliance Simplicity</h3>
+                <p style="font-size: 16px; line-height: 1.6; color: #e8f4f8;">
+                    No settings menus. No configuration. No help screens. <strong style="color: #4df7ff;">Pick it up and it just works.</strong> Button prompts at the bottom show available actions. Navigation is intuitive through exploration.
+                </p>
+            </div>
+
+            <div>
+                <h3 style="font-family: 'Rajdhani', sans-serif; font-size: 20px; color: #a8e6ff; margin-bottom: 12px;">3-Press Navigation Rule</h3>
+                <p style="font-size: 16px; line-height: 1.6; color: #e8f4f8;">
+                    Any Pokémon is reachable within 3 button presses from any screen. <strong style="color: #4df7ff;">Efficient navigation without complexity.</strong> L/R switches generations. Up/Down scrolls. A dives deeper. B goes back. That's it.
+                </p>
+            </div>
+        </div>
+
+        <div style="text-align: center; padding: 40px 0; color: #718096; font-size: 14px;">
+            <p>ShokeDex UX Design Specification v1.0</p>
+            <p style="margin-top: 8px;">Created November 14, 2025 | King & Sally (UX Designer)</p>
+        </div>
+    </div>
+
+    <script>
+        function showScreen(screenName) {
+            // Hide all screens
+            document.querySelectorAll('.mockup-screen').forEach(screen => {
+                screen.classList.remove('active');
+            });
+            
+            // Remove active class from all buttons
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Show selected screen
+            document.getElementById(screenName + '-screen').classList.add('active');
+            
+            // Add active class to clicked button
+            event.target.classList.add('active');
+        }
+    </script>
+</body>
+</html>

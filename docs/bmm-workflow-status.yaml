@@ -24,16 +24,16 @@ workflow_path: "method-greenfield.yaml"
 workflow_status:
   # Phase 0: Discovery (Optional)
   brainstorm-project: "docs/bmm-brainstorming-session-2025-11-13.md"  # agent: analyst
-  research: required  # agent: analyst
+  research: skipped  # pet project, no market validation needed
   
   # Phase 1: Planning
-  prd: required  # agent: pm
+  prd: "docs/PRD.md"  # agent: pm
   validate-prd: optional  # agent: pm
-  create-design: conditional  # agent: ux-designer
+  create-design: docs/ux-design-specification.md  # agent: ux-designer
   
   # Phase 2: Solutioning
-  create-architecture: required  # agent: architect
-  test-design: recommended  # agent: tea
+  create-architecture: docs/architecture.md
+  test-design: docs/test-design-system.md  # agent: tea
   validate-architecture: optional  # agent: architect
   solutioning-gate-check: required  # agent: architect
   

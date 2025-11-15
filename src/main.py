@@ -16,6 +16,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from src.input_manager import InputManager, InputMode, InputAction
 from src.ui import ScreenManager, HomeScreen
 from src.data.database import Database
+from src.state_manager import StateManager
+from src.audio_manager import AudioManager
 
 
 # Display configuration (optimized for 480x320 LCD)
@@ -43,8 +45,27 @@ class ShokeDexApp:
         # Set up clock for FPS control
         self.clock = pygame.time.Clock()
         
-        # Initialize input manager (start with keyboard mode)
-        self.input_manager = InputManager(mode=InputMode.KEYBOARD)
+        # Initialize state manager
+        self.state_manager = StateManager()
+        self.state_manager.increment_session()
+        
+        # Initialize audio manager
+        volume = self.state_manager.get_volume()
+        self.audio_manager = AudioManager(volume=volume)
+        
+        # Log audio status
+        if self.audio_manager.is_enabled():
+            print(f"Audio system ready (volume: {volume:.0%})")
+            missing = self.audio_manager.get_missing_cries()
+            if missing:
+                print(f"Warning: Missing {len(missing)} cry audio files")
+        else:
+            print("Audio system disabled")
+        
+        # Initialize input manager (use saved preference)
+        input_mode_str = self.state_manager.get_input_mode()
+        input_mode = InputMode.GPIO if input_mode_str == 'gpio' else InputMode.KEYBOARD
+        self.input_manager = InputManager(mode=input_mode)
         
         # Initialize screen manager
         self.screen_manager = ScreenManager(self.screen)
@@ -53,7 +74,13 @@ class ShokeDexApp:
         self.database = self._init_database()
         
         # Set up initial screen
-        home_screen = HomeScreen(self.screen_manager, self.database)
+        # Pass audio manager and state manager to screen
+        home_screen = HomeScreen(
+            self.screen_manager, 
+            self.database,
+            audio_manager=self.audio_manager,
+            state_manager=self.state_manager
+        )
         self.screen_manager.push(home_screen)
         
         # Application state
@@ -156,6 +183,13 @@ class ShokeDexApp:
     def cleanup(self):
         """Clean up resources before exit."""
         print("Shutting down...")
+        
+        # Save state
+        if self.state_manager.save_state():
+            print("State saved successfully")
+        
+        # Clean up audio
+        self.audio_manager.cleanup()
         
         # Clean up input manager
         self.input_manager.cleanup()

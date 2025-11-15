@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShokeDex - Anime Pokédex Color Theme</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Rajdhani:wght@400;500&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Rajdhani', sans-serif;
+            background: linear-gradient(135deg, #0a0e1a 0%, #1a2f4a 100%);
+            color: #e8f4f8;
+            padding: 40px 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 48px;
+            font-weight: 700;
+            text-align: center;
+            color: #4df7ff;
+            text-shadow: 0 0 20px rgba(77, 247, 255, 0.6);
+            margin-bottom: 16px;
+        }
+
+        .subtitle {
+            text-align: center;
+            font-size: 20px;
+            color: #a8e6ff;
+            margin-bottom: 48px;
+        }
+
+        /* Color Palette Section */
+        .palette-section {
+            background: rgba(26, 47, 74, 0.6);
+            border: 2px solid #00d4ff;
+            border-radius: 8px;
+            padding: 32px;
+            margin-bottom: 40px;
+            box-shadow: 0 0 30px rgba(0, 212, 255, 0.3);
+        }
+
+        .palette-section h2 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 32px;
+            color: #4df7ff;
+            margin-bottom: 24px;
+            text-transform: uppercase;
+        }
+
+        .color-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 20px;
+            margin-bottom: 32px;
+        }
+
+        .color-swatch {
+            text-align: center;
+        }
+
+        .color-box {
+            width: 100%;
+            height: 100px;
+            border: 2px solid #00d4ff;
+            border-radius: 4px;
+            margin-bottom: 12px;
+            box-shadow: 0 0 15px rgba(0, 212, 255, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .color-name {
+            font-family: 'Rajdhani', sans-serif;
+            font-weight: 500;
+            font-size: 18px;
+            color: #e8f4f8;
+            margin-bottom: 4px;
+        }
+
+        .color-hex {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 14px;
+            color: #a8e6ff;
+        }
+
+        .color-usage {
+            font-size: 14px;
+            color: #718096;
+            margin-top: 8px;
+        }
+
+        /* Components Section */
+        .components-section {
+            background: rgba(26, 47, 74, 0.6);
+            border: 2px solid #00d4ff;
+            border-radius: 8px;
+            padding: 32px;
+            margin-bottom: 40px;
+            box-shadow: 0 0 30px rgba(0, 212, 255, 0.3);
+        }
+
+        .components-section h2 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 32px;
+            color: #4df7ff;
+            margin-bottom: 24px;
+            text-transform: uppercase;
+        }
+
+        .component-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+        }
+
+        /* Button Examples */
+        .btn {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 18px;
+            font-weight: 500;
+            padding: 12px 32px;
+            border: 2px solid;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            display: inline-block;
+            margin: 8px;
+        }
+
+        .btn-primary {
+            background: #ff6b35;
+            color: #e8f4f8;
+            border-color: #ff6b35;
+            box-shadow: 0 0 15px rgba(255, 107, 53, 0.4);
+        }
+
+        .btn-primary:hover {
+            box-shadow: 0 0 25px rgba(255, 107, 53, 0.8);
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: #00d4ff;
+            border-color: #00d4ff;
+            box-shadow: 0 0 15px rgba(0, 212, 255, 0.3);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(0, 212, 255, 0.1);
+            box-shadow: 0 0 25px rgba(0, 212, 255, 0.6);
+        }
+
+        .btn-back {
+            background: transparent;
+            color: #718096;
+            border-color: #718096;
+        }
+
+        .btn-back:hover {
+            color: #a8e6ff;
+            border-color: #a8e6ff;
+        }
+
+        /* Type Badges */
+        .type-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-family: 'Rajdhani', sans-serif;
+            font-weight: 700;
+            font-size: 14px;
+            text-transform: uppercase;
+            margin: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        /* Stat Bar Example */
+        .stat-bar-container {
+            margin: 16px 0;
+        }
+
+        .stat-row {
+            display: flex;
+            align-items: center;
+            margin: 12px 0;
+            gap: 12px;
+        }
+
+        .stat-label {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 16px;
+            color: #a8e6ff;
+            width: 100px;
+        }
+
+        .stat-bar {
+            flex: 1;
+            height: 20px;
+            background: rgba(45, 55, 72, 0.8);
+            border: 1px solid #718096;
+            border-radius: 2px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .stat-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00d4ff 0%, #4df7ff 100%);
+            box-shadow: 0 0 10px rgba(77, 247, 255, 0.6);
+            transition: width 0.3s;
+        }
+
+        .stat-value {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 14px;
+            color: #e8f4f8;
+            width: 40px;
+            text-align: right;
+        }
+
+        /* Info Panel Example */
+        .info-panel {
+            background: rgba(26, 47, 74, 0.85);
+            border: 2px solid #00d4ff;
+            border-radius: 4px;
+            padding: 20px;
+            margin: 16px 0;
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+        }
+
+        .info-panel-header {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 20px;
+            color: #4df7ff;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #00d4ff;
+        }
+
+        .info-panel-content {
+            font-size: 16px;
+            color: #a8e6ff;
+            line-height: 1.6;
+        }
+
+        /* Sprite Frame Example */
+        .sprite-frame {
+            width: 200px;
+            height: 200px;
+            background: rgba(10, 14, 26, 0.8);
+            border: 3px solid #00d4ff;
+            border-radius: 4px;
+            box-shadow: 0 0 25px rgba(77, 247, 255, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 20px auto;
+            position: relative;
+        }
+
+        .sprite-frame::before {
+            content: '';
+            position: absolute;
+            top: -3px;
+            left: -3px;
+            right: -3px;
+            bottom: -3px;
+            border: 1px solid #4df7ff;
+            border-radius: 4px;
+            opacity: 0.5;
+        }
+
+        .sprite-placeholder {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 18px;
+            color: #4df7ff;
+            text-align: center;
+        }
+
+        /* Button Prompt Example */
+        .button-prompts {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            padding: 20px;
+            background: rgba(10, 14, 26, 0.6);
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+
+        .button-prompt {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .button-icon {
+            font-family: 'Share Tech Mono', monospace;
+            font-weight: bold;
+            padding: 4px 8px;
+            border-radius: 2px;
+            border: 2px solid;
+        }
+
+        .button-icon.primary {
+            color: #ff6b35;
+            border-color: #ff6b35;
+            box-shadow: 0 0 10px rgba(255, 107, 53, 0.4);
+        }
+
+        .button-icon.secondary {
+            color: #718096;
+            border-color: #718096;
+        }
+
+        .button-icon.nav {
+            color: #00d4ff;
+            border-color: #00d4ff;
+        }
+
+        /* Scan lines effect */
+        .scan-lines {
+            position: relative;
+        }
+
+        .scan-lines::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(transparent 50%, rgba(0, 212, 255, 0.03) 50%);
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* Generation Badge Example */
+        .gen-badge {
+            display: inline-block;
+            background: rgba(26, 47, 74, 0.9);
+            border: 2px solid #00d4ff;
+            padding: 12px 20px;
+            border-radius: 4px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 18px;
+            font-weight: 700;
+            color: #4df7ff;
+            box-shadow: 0 0 15px rgba(0, 212, 255, 0.4);
+            margin: 12px;
+        }
+
+        .gen-counter {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 14px;
+            color: #a8e6ff;
+            margin-left: 12px;
+        }
+
+        /* Mock Device Frame */
+        .device-frame {
+            width: 480px;
+            height: 320px;
+            background: #0a0e1a;
+            border: 4px solid #1a2f4a;
+            border-radius: 8px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+            margin: 40px auto;
+            padding: 16px;
+            position: relative;
+        }
+
+        .device-screen {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .screen-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            border-bottom: 2px solid #00d4ff;
+            margin-bottom: 12px;
+        }
+
+        .screen-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 20px;
+            color: #4df7ff;
+        }
+
+        .screen-number {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 14px;
+            color: #a8e6ff;
+        }
+
+        .screen-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .pokemon-name {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 24px;
+            font-weight: 700;
+            color: #e8f4f8;
+            margin: 16px 0 8px 0;
+            text-transform: uppercase;
+        }
+
+        .screen-footer {
+            padding: 8px 12px;
+            border-top: 2px solid #00d4ff;
+            font-size: 14px;
+            color: #a8e6ff;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .device-frame {
+                width: 100%;
+                max-width: 480px;
+                height: auto;
+                aspect-ratio: 3/2;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 ShokeDex Color Theme</h1>
+        <p class="subtitle">Anime Pokédex Holographic Display Aesthetic</p>
+
+        <!-- Color Palette -->
+        <div class="palette-section">
+            <h2>Primary Color Palette</h2>
+            <div class="color-grid">
+                <div class="color-swatch">
+                    <div class="color-box" style="background: #0a0e1a; color: #4df7ff;">
+                        #0a0e1a
+                    </div>
+                    <div class="color-name">Deep Space Black</div>
+                    <div class="color-hex">#0a0e1a</div>
+                    <div class="color-usage">Background</div>
+                </div>
+                <div class="color-swatch">
+                    <div class="color-box" style="background: #1a2f4a; color: #4df7ff;">
+                        #1a2f4a
+                    </div>
+                    <div class="color-name">Dark Blue</div>
+                    <div class="color-hex">#1a2f4a</div>
+                    <div class="color-usage">Panels</div>
+                </div>
+                <div class="color-swatch">
+                    <div class="color-box" style="background: #00d4ff; color: #0a0e1a;">
+                        #00d4ff
+                    </div>
+                    <div class="color-name">Electric Blue</div>
+                    <div class="color-hex">#00d4ff</div>
+                    <div class="color-usage">Primary UI</div>
+                </div>
+                <div class="color-swatch">
+                    <div class="color-box" style="background: #4df7ff; color: #0a0e1a;">
+                        #4df7ff
+                    </div>
+                    <div class="color-name">Bright Cyan</div>
+                    <div class="color-hex">#4df7ff</div>
+                    <div class="color-usage">Highlights</div>
+                </div>
+                <div class="color-swatch">
+                    <div class="color-box" style="background: #a8e6ff; color: #0a0e1a;">
+                        #a8e6ff
+                    </div>
+                    <div class="color-name">Ice Blue</div>
+                    <div class="color-hex">#a8e6ff</div>
+                    <div class="color-usage">Secondary Text</div>
+                </div>
+                <div class="color-swatch">
+                    <div class="color-box" style="background: #e8f4f8; color: #0a0e1a;">
+                        #e8f4f8
+                    </div>
+                    <div class="color-name">Hologram White</div>
+                    <div class="color-hex">#e8f4f8</div>
+                    <div class="color-usage">Primary Text</div>
+                </div>
+            </div>
+
+            <h2 style="margin-top: 32px;">Accent Colors</h2>
+            <div class="color-grid">
+                <div class="color-swatch">
+                    <div class="color-box" style="background: #ff6b35; color: #e8f4f8;">
+                        #ff6b35
+                    </div>
+                    <div class="color-name">Plasma Orange</div>
+                    <div class="color-hex">#ff6b35</div>
+                    <div class="color-usage">Actions, Energy</div>
+                </div>
+                <div class="color-swatch">
+                    <div class="color-box" style="background: #ffd23f; color: #0a0e1a;">
+                        #ffd23f
+                    </div>
+                    <div class="color-name">Neon Yellow</div>
+                    <div class="color-hex">#ffd23f</div>
+                    <div class="color-usage">Cautions</div>
+                </div>
+                <div class="color-swatch">
+                    <div class="color-box" style="background: #718096; color: #e8f4f8;">
+                        #718096
+                    </div>
+                    <div class="color-name">Steel Gray</div>
+                    <div class="color-hex">#718096</div>
+                    <div class="color-usage">Borders, Inactive</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- UI Components -->
+        <div class="components-section">
+            <h2>UI Components</h2>
+            
+            <h3 style="color: #a8e6ff; margin: 24px 0 16px; font-family: 'Rajdhani', sans-serif;">Buttons</h3>
+            <div style="text-align: center;">
+                <button class="btn btn-primary">Primary Action</button>
+                <button class="btn btn-secondary">Secondary</button>
+                <button class="btn btn-back">Back</button>
+            </div>
+
+            <h3 style="color: #a8e6ff; margin: 32px 0 16px; font-family: 'Rajdhani', sans-serif;">Type Badges</h3>
+            <div style="text-align: center;">
+                <span class="type-badge" style="background: #ff6b35;">⚡ Electric</span>
+                <span class="type-badge" style="background: #4d9fff;">💧 Water</span>
+                <span class="type-badge" style="background: #6bff6b; color: #0a0e1a;">🌿 Grass</span>
+                <span class="type-badge" style="background: #ff4757;">🥊 Fighting</span>
+                <span class="type-badge" style="background: #b24dff;">☠️ Poison</span>
+                <span class="type-badge" style="background: #8d4dff;">🐉 Dragon</span>
+            </div>
+
+            <h3 style="color: #a8e6ff; margin: 32px 0 16px; font-family: 'Rajdhani', sans-serif;">Generation Badge</h3>
+            <div style="text-align: center;">
+                <span class="gen-badge">
+                    🔴 KANTO<span class="gen-counter">#025/151</span>
+                </span>
+                <span class="gen-badge">
+                    🟡 JOHTO<span class="gen-counter">#152/251</span>
+                </span>
+                <span class="gen-badge">
+                    🔵 HOENN<span class="gen-counter">#252/386</span>
+                </span>
+            </div>
+
+            <h3 style="color: #a8e6ff; margin: 32px 0 16px; font-family: 'Rajdhani', sans-serif;">Stat Bars</h3>
+            <div class="stat-bar-container">
+                <div class="stat-row">
+                    <div class="stat-label">HP</div>
+                    <div class="stat-bar">
+                        <div class="stat-fill" style="width: 35%;"></div>
+                    </div>
+                    <div class="stat-value">35</div>
+                </div>
+                <div class="stat-row">
+                    <div class="stat-label">Attack</div>
+                    <div class="stat-bar">
+                        <div class="stat-fill" style="width: 55%;"></div>
+                    </div>
+                    <div class="stat-value">55</div>
+                </div>
+                <div class="stat-row">
+                    <div class="stat-label">Defense</div>
+                    <div class="stat-bar">
+                        <div class="stat-fill" style="width: 40%;"></div>
+                    </div>
+                    <div class="stat-value">40</div>
+                </div>
+                <div class="stat-row">
+                    <div class="stat-label">Sp. Attack</div>
+                    <div class="stat-bar">
+                        <div class="stat-fill" style="width: 50%;"></div>
+                    </div>
+                    <div class="stat-value">50</div>
+                </div>
+                <div class="stat-row">
+                    <div class="stat-label">Sp. Defense</div>
+                    <div class="stat-bar">
+                        <div class="stat-fill" style="width: 50%;"></div>
+                    </div>
+                    <div class="stat-value">50</div>
+                </div>
+                <div class="stat-row">
+                    <div class="stat-label">Speed</div>
+                    <div class="stat-bar">
+                        <div class="stat-fill" style="width: 90%; background: linear-gradient(90deg, #ff6b35 0%, #ffd23f 100%); box-shadow: 0 0 15px rgba(255, 107, 53, 0.6);"></div>
+                    </div>
+                    <div class="stat-value">90</div>
+                </div>
+            </div>
+
+            <h3 style="color: #a8e6ff; margin: 32px 0 16px; font-family: 'Rajdhani', sans-serif;">Info Panel</h3>
+            <div class="info-panel scan-lines">
+                <div class="info-panel-header">POKÉMON DATA</div>
+                <div class="info-panel-content">
+                    When several of these Pokémon gather, their electricity can build and cause lightning storms. This electric-type Pokémon is known for its incredible speed and shocking attacks.
+                </div>
+            </div>
+
+            <h3 style="color: #a8e6ff; margin: 32px 0 16px; font-family: 'Rajdhani', sans-serif;">Button Prompts</h3>
+            <div class="button-prompts">
+                <div class="button-prompt">
+                    <span class="button-icon primary">[A]</span>
+                    <span style="color: #ff6b35;">Select</span>
+                </div>
+                <div class="button-prompt">
+                    <span class="button-icon secondary">[B]</span>
+                    <span style="color: #718096;">Back</span>
+                </div>
+                <div class="button-prompt">
+                    <span class="button-icon nav">[↑↓]</span>
+                    <span style="color: #00d4ff;">Navigate</span>
+                </div>
+                <div class="button-prompt">
+                    <span class="button-icon nav">[L/R]</span>
+                    <span style="color: #00d4ff;">Generation</span>
+                </div>
+            </div>
+
+            <h3 style="color: #a8e6ff; margin: 32px 0 16px; font-family: 'Rajdhani', sans-serif;">Sprite Display Frame</h3>
+            <div class="sprite-frame">
+                <div class="sprite-placeholder">
+                    POKÉMON<br>SPRITE<br>200×200px
+                </div>
+            </div>
+        </div>
+
+        <!-- Mock Device Screen -->
+        <div class="palette-section">
+            <h2>Full Screen Example - Browse View</h2>
+            <div class="device-frame scan-lines">
+                <div class="device-screen">
+                    <div class="screen-header">
+                        <div>
+                            <span class="gen-badge" style="font-size: 14px; padding: 6px 12px; margin: 0;">
+                                🔴 KANTO
+                            </span>
+                        </div>
+                        <div class="screen-number">#025/151</div>
+                    </div>
+                    
+                    <div class="screen-content">
+                        <div class="sprite-frame" style="width: 180px; height: 180px; margin: 12px auto;">
+                            <div class="sprite-placeholder" style="font-size: 14px;">
+                                [PIKACHU<br>SPRITE]
+                            </div>
+                        </div>
+                        <div class="pokemon-name">PIKACHU</div>
+                        <div style="text-align: center;">
+                            <span class="type-badge" style="background: #ffd23f; color: #0a0e1a; font-size: 12px; padding: 6px 12px;">⚡ ELECTRIC</span>
+                        </div>
+                    </div>
+                    
+                    <div class="screen-footer">
+                        <div style="display: flex; justify-content: space-between; font-size: 12px;">
+                            <span style="color: #00d4ff;">[L/R] Generation</span>
+                            <span style="color: #00d4ff;">[↑↓] Navigate</span>
+                            <span style="color: #ff6b35;">[A] Details</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Design Philosophy -->
+        <div class="info-panel" style="margin: 40px 0;">
+            <div class="info-panel-header">Design Philosophy</div>
+            <div class="info-panel-content">
+                <p style="margin-bottom: 16px;">
+                    <strong style="color: #4df7ff;">Authentic Anime Pokédex Aesthetic</strong><br>
+                    This color theme recreates the holographic display seen in Pokémon anime Season 1, answering the question: "Would Ash have seen this on Dexter's screen?"
+                </p>
+                <p style="margin-bottom: 16px;">
+                    <strong style="color: #4df7ff;">Retro-Futuristic Visual Language</strong><br>
+                    Combines 90s anime vision of future technology with modern UX principles. Electric blue glows, geometric borders, and clean typography create a distinctive aesthetic that's both nostalgic and functional.
+                </p>
+                <p>
+                    <strong style="color: #4df7ff;">Visual Hierarchy Through Color</strong><br>
+                    • Plasma Orange (#ff6b35) = Primary actions<br>
+                    • Electric Blue (#00d4ff) = UI structure & navigation<br>
+                    • Hologram White (#e8f4f8) = Critical information<br>
+                    • Ice Blue (#a8e6ff) = Supporting details
+                </p>
+            </div>
+        </div>
+
+        <div style="text-align: center; padding: 40px 0; color: #718096; font-size: 14px;">
+            <p>ShokeDex UX Design Specification v1.0</p>
+            <p style="margin-top: 8px;">Created November 14, 2025</p>
+        </div>
+    </div>
+</body>
+</html>
