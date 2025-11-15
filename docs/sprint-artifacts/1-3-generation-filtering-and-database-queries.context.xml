@@ -1,0 +1,329 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<story-context version="1.0" generated="2025-11-15">
+  <metadata>
+    <story-id>1.3</story-id>
+    <story-key>1-3-generation-filtering-and-database-queries</story-key>
+    <epic-id>1</epic-id>
+    <title>Generation Filtering and Database Queries</title>
+    <status>ready-for-dev</status>
+  </metadata>
+
+  <user-story>
+    <as-a>user</as-a>
+    <i-want>to see only Pokémon from the current generation</i-want>
+    <so-that>I can browse regional Pokédexes just like in the games</so-that>
+  </user-story>
+
+  <acceptance-criteria>
+    <criterion id="AC-1" priority="high">
+      <description>Generation Boundary Filtering</description>
+      <given>a user is browsing Pokémon</given>
+      <when>a specific generation is selected</when>
+      <then>only Pokémon within that generation's ID range are displayed</then>
+      <and>Kanto shows Pokémon #1-151 (Bulbasaur through Mew)</and>
+      <and>Johto shows Pokémon #152-251 (Chikorita through Celebi)</and>
+      <and>Hoenn shows Pokémon #252-386 (Treecko through Deoxys)</and>
+    </criterion>
+    <criterion id="AC-2" priority="high">
+      <description>Database Query Performance</description>
+      <given>the application queries Pokémon by generation</given>
+      <when>the database query executes</when>
+      <then>the query uses parameterized BETWEEN statement for security</then>
+      <and>query completes in &lt; 50ms</and>
+      <and>scroll position resets to first Pokémon when switching generations</and>
+    </criterion>
+  </acceptance-criteria>
+
+  <story-tasks>
+    <task id="T1" priority="high" ac-ref="AC-1">
+      <description>Define Generation Range Constants</description>
+      <subtasks>
+        <subtask>Create GENERATION_RANGES constant dict in shared config or HomeScreen</subtask>
+        <subtask>Map generations to ID boundaries: {1: (1,151), 2: (152,251), 3: (252,386)}</subtask>
+        <subtask>Add GENERATION_NAMES constant: {1: "Kanto", 2: "Johto", 3: "Hoenn"}</subtask>
+        <subtask>Document generation boundary rationale (matches original game regions)</subtask>
+      </subtasks>
+    </task>
+    <task id="T2" priority="high" ac-ref="AC-1,AC-2">
+      <description>Implement Database Query Method</description>
+      <subtasks>
+        <subtask>Add Database.get_pokemon_by_generation(generation: int) method</subtask>
+        <subtask>Use SQL: SELECT id, name, sprite_path FROM pokemon WHERE id BETWEEN ? AND ? ORDER BY id</subtask>
+        <subtask>Use GENERATION_RANGES[generation] to get (start, end) parameters</subtask>
+        <subtask>Return List[Dict] with keys: id, name, sprite_path</subtask>
+        <subtask>Validate generation parameter (must be 1, 2, or 3) - raise ValueError if invalid</subtask>
+      </subtasks>
+    </task>
+    <task id="T3" priority="high" ac-ref="AC-1,AC-2">
+      <description>Integrate Query in HomeScreen</description>
+      <subtasks>
+        <subtask>Add HomeScreen._load_pokemon_by_generation(generation: int) method</subtask>
+        <subtask>Call db.get_pokemon_by_generation(self.current_generation) in on_enter()</subtask>
+        <subtask>Store results in self.pokemon_list for rendering</subtask>
+        <subtask>Update self.current_generation attribute tracking current filter</subtask>
+        <subtask>Reset scroll position to index 0 when generation changes</subtask>
+      </subtasks>
+    </task>
+    <task id="T4" priority="medium" ac-ref="AC-2">
+      <description>Scroll Position Reset Logic</description>
+      <subtasks>
+        <subtask>In _switch_generation() method, set self.selected_index = 0</subtask>
+        <subtask>Update displayed Pokémon to first in new generation</subtask>
+        <subtask>Ensure position counter reflects first Pokémon (#001/151 for Kanto)</subtask>
+        <subtask>Clear any sprite pre-loading cache when switching generations</subtask>
+      </subtasks>
+    </task>
+    <task id="T5" priority="high" ac-ref="AC-2">
+      <description>SQL Security Validation</description>
+      <subtasks>
+        <subtask>Verify all queries use parameterized statements with ? placeholders</subtask>
+        <subtask>Never use string formatting or f-strings in SQL queries</subtask>
+        <subtask>Add input validation for generation parameter before database call</subtask>
+        <subtask>Write unit test attempting SQL injection (should fail safely)</subtask>
+      </subtasks>
+    </task>
+    <task id="T6" priority="high" ac-ref="AC-1,AC-2">
+      <description>Testing</description>
+      <subtasks>
+        <subtask>Unit test: test_generation_ranges_constant() - verify dict values correct</subtask>
+        <subtask>Unit test: test_get_pokemon_by_generation_kanto() - returns 151 Pokémon</subtask>
+        <subtask>Unit test: test_get_pokemon_by_generation_johto() - returns 100 Pokémon</subtask>
+        <subtask>Unit test: test_get_pokemon_by_generation_hoenn() - returns 135 Pokémon</subtask>
+        <subtask>Unit test: test_parameterized_query_safety() - SQL injection prevention</subtask>
+        <subtask>Unit test: test_invalid_generation_raises_error() - generation 0 or 4 raises ValueError</subtask>
+        <subtask>Performance test: test_query_performance() - measure query time, assert &lt; 50ms</subtask>
+        <subtask>Integration test: test_home_screen_filters_by_generation() - full flow</subtask>
+      </subtasks>
+    </task>
+  </story-tasks>
+
+  <artifacts>
+    <docs>
+      <artifact path="docs/PRD.md" title="Product Requirements Document" section="FR2.1-Generation-Based-Browsing">
+        <snippet>System shall organize Pokémon by generation: Kanto (1-151), Johto (152-251), Hoenn (252-386). User shall be able to switch between generations using L/R buttons. Current generation shall be visually indicated with generation badge/logo.</snippet>
+      </artifact>
+      <artifact path="docs/architecture.md" title="System Architecture" section="Generation Navigation Architecture">
+        <snippet>Generation Boundaries: Kanto: 1-151, Johto: 152-251, Hoenn: 252-386. Database Query Pattern: Always use BETWEEN ? AND ? with parameterized queries. Never hardcode ranges in SQL strings. Performance Requirement: Query must complete in &lt; 50ms (per NFR-P1, NFR-P2).</snippet>
+      </artifact>
+      <artifact path="docs/architecture.md" title="Database Access Pattern" section="Data Architecture">
+        <snippet>SQL Safety: ALWAYS use parameterized queries: cursor.execute("SELECT * FROM pokemon WHERE id = ?", (pokemon_id,)). NEVER use string formatting: f"SELECT * FROM pokemon WHERE id = {pokemon_id}". Close cursors: Let context manager handle it.</snippet>
+      </artifact>
+      <artifact path="docs/database_schema.md" title="Database Schema" section="pokemon table">
+        <snippet>pokemon table columns: id (INTEGER PRIMARY KEY - National Dex number 1-386), name (TEXT NOT NULL), generation (INTEGER - Generation number 1-3), sprite_path (TEXT - Relative path to sprite). Query pattern for generation filtering: WHERE id BETWEEN ? AND ? covers generation boundaries. id is PRIMARY KEY → automatically indexed → fast query.</snippet>
+      </artifact>
+      <artifact path="docs/sprint-artifacts/tech-spec-epic-1-generation-navigation.md" title="Epic 1 Tech Spec" section="Data Models and Contracts">
+        <snippet>GENERATION_RANGES = {1: (1, 151), 2: (152, 251), 3: (252, 386)}. Database Query Contract: SELECT id, name, sprite_path FROM pokemon WHERE id BETWEEN ? AND ? ORDER BY id; Parameters: (gen_start, gen_end) from GENERATION_RANGES. Query Return Format: List[Tuple[int, str, str]] with (id, name, sprite_path).</snippet>
+      </artifact>
+      <artifact path="docs/sprint-artifacts/1-1-project-foundation-setup.md" title="Story 1.1 - Foundation Setup" section="Dev-Notes">
+        <snippet>Database Connection Available: Database class is initialized in main.py with context manager pattern ready to use. Architecture Pattern Established: Use parameterized queries with cursor.execute("SELECT ... WHERE id BETWEEN ? AND ?", (start, end)). Security Requirement: All SQL queries must use parameterized statements - no string formatting. HomeScreen Class Ready: Story 1.1 created HomeScreen as initial screen with basic structure.</snippet>
+      </artifact>
+    </docs>
+    <code>
+      <artifact path="src/data/database.py" kind="database" symbol="Database" lines="15-350" reason="SQLite context manager with parameterized queries">
+        Database class provides connection management via context manager, create_schema() for initialization, and existing query methods (get_pokemon_by_id, get_pokemon_stats, get_pokemon_by_generation). All queries use parameterized statements for SQL injection prevention. The get_pokemon_by_generation() method already exists but needs modification to use BETWEEN id ranges instead of generation column.
+      </artifact>
+      <artifact path="src/ui/home_screen.py" kind="screen" symbol="HomeScreen" lines="1-450" reason="Main UI screen requiring generation filtering integration">
+        HomeScreen displays Pokemon grid, handles input via InputAction, and loads data from database. Currently loads all Pokemon via _load_pokemon() method. Needs new _load_pokemon_by_generation() method, current_generation tracking, and integration with StateManager for persistence.
+      </artifact>
+      <artifact path="src/state_manager.py" kind="manager" symbol="StateManager" lines="1-279" reason="Session state persistence for last viewed generation">
+        StateManager handles JSON-based state persistence. Has methods get_last_viewed() and set_last_viewed(pokemon_id) but needs extension for generation tracking. State schema includes last_viewed.generation field ready to use.
+      </artifact>
+      <artifact path="src/ui/sprite_loader.py" kind="utility" symbol="load_thumb" lines="1-100" reason="Sprite loading utilities for Pokemon images">
+        Provides load_thumb() function for lazy-loading Pokemon sprites. Returns pygame.Surface objects with caching. Handles missing files gracefully with placeholder surfaces. Used by HomeScreen for rendering grid cells.
+      </artifact>
+      <artifact path="tests/test_database.py" kind="test" symbol="TestDatabase" lines="1-200" reason="Existing database test suite to extend">
+        Comprehensive test suite covering database operations: connection, schema, queries, context manager. Need to add tests for generation filtering: test_get_pokemon_by_generation_kanto/johto/hoenn, test_parameterized_query_safety, test_invalid_generation_raises_error.
+      </artifact>
+    </code>
+    <dependencies>
+      <python>
+        <package name="pygame" version="2.5.0+" usage="Graphics rendering, Surface management, event handling"/>
+        <package name="sqlite3" version="stdlib" usage="Database queries with parameterized statements"/>
+        <package name="typing" version="stdlib" usage="Type hints for Dict, List, Tuple"/>
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <interfaces>
+    <interface name="Database.get_pokemon_by_generation">
+      <signature>def get_pokemon_by_generation(self, generation: int) -&gt; List[Dict[str, Any]]</signature>
+      <description>Fetch all Pokemon within generation ID boundaries using BETWEEN query</description>
+      <parameters>
+        <param name="generation" type="int">Generation number (1, 2, or 3)</param>
+      </parameters>
+      <returns>List of dicts with keys: id, name, sprite_path, types (optional)</returns>
+      <raises>ValueError if generation not in range 1-3</raises>
+      <path>src/data/database.py</path>
+      <notes>Current implementation uses WHERE p.generation = ? which queries generation column. Need to change to WHERE id BETWEEN ? AND ? for Story 1.3 requirements using GENERATION_RANGES constant.</notes>
+    </interface>
+    <interface name="HomeScreen._load_pokemon_by_generation">
+      <signature>def _load_pokemon_by_generation(self, generation: int) -&gt; None</signature>
+      <description>Load Pokemon for specified generation from database and update display</description>
+      <parameters>
+        <param name="generation" type="int">Generation number (1, 2, or 3)</param>
+      </parameters>
+      <returns>None - updates self.pokemon_list and self.filtered_list</returns>
+      <path>src/ui/home_screen.py</path>
+      <notes>New method to add. Replaces current _load_pokemon() for generation-specific loading.</notes>
+    </interface>
+    <interface name="StateManager.get_last_viewed_generation">
+      <signature>def get_last_viewed_generation(self) -&gt; int</signature>
+      <description>Retrieve last viewed generation from saved state</description>
+      <returns>Generation number (1, 2, or 3), defaults to 1 if not set</returns>
+      <path>src/state_manager.py</path>
+      <notes>Method needs to be added. State schema already has last_viewed.generation field.</notes>
+    </interface>
+    <interface name="StateManager.set_last_viewed">
+      <signature>def set_last_viewed(self, pokemon_id: int, generation: int = None) -&gt; None</signature>
+      <description>Update last viewed Pokemon and optionally generation</description>
+      <parameters>
+        <param name="pokemon_id" type="int">National Dex number of viewed Pokemon</param>
+        <param name="generation" type="int">Optional generation number to save</param>
+      </parameters>
+      <path>src/state_manager.py</path>
+      <notes>Existing method needs generation parameter added for Story 1.3.</notes>
+    </interface>
+  </interfaces>
+
+  <constraints>
+    <architectural>
+      <constraint id="ARCH-001" critical="true">
+        All database queries MUST use parameterized statements with ? placeholders. NEVER use f-strings or string formatting in SQL queries to prevent SQL injection attacks.
+      </constraint>
+      <constraint id="ARCH-002" critical="true">
+        Generation boundaries are hardcoded: Kanto 1-151, Johto 152-251, Hoenn 252-386. These ID ranges match original Pokemon game regions per architecture decision ADR-005.
+      </constraint>
+      <constraint id="ARCH-003" critical="false">
+        Database queries must use BETWEEN operator with ID ranges, not generation column, for Story 1.3. This enables efficient indexed queries on PRIMARY KEY id column.
+      </constraint>
+      <constraint id="ARCH-004" critical="true">
+        Manager instances (StateManager, Database) accessed via ScreenManager injection. Never create new manager instances in screens - use self.screen_manager.state_manager pattern.
+      </constraint>
+    </architectural>
+    <performance>
+      <constraint id="PERF-001" target="50ms">
+        Database generation query must complete in less than 50ms on Raspberry Pi 3B+. Use indexed id column and BETWEEN operator for fast range queries.
+      </constraint>
+      <constraint id="PERF-002" target="30fps">
+        Screen rendering must maintain 30+ FPS during Pokemon loading and display. Lazy-load sprites, cache results, avoid N+1 queries.
+      </constraint>
+    </performance>
+    <security>
+      <constraint id="SEC-001" critical="true">
+        Validate generation parameter as integer in range 1-3 before database query. Raise ValueError for invalid values to prevent unexpected behavior.
+      </constraint>
+      <constraint id="SEC-002" critical="true">
+        All user inputs must be sanitized before database operations. Use parameterized queries exclusively - no direct string interpolation.
+      </constraint>
+    </security>
+  </constraints>
+
+  <tests>
+    <standards>
+      Test framework: pytest (already configured in pytest.ini). Unit tests in tests/test_database.py and tests/test_home_screen.py (create if missing). Use fixtures for database setup with in-memory SQLite. Mock StateManager for HomeScreen tests. Performance tests measure actual query time and assert &lt; 50ms threshold.
+    </standards>
+    <locations>
+      <location>tests/test_database.py</location>
+      <location>tests/test_home_screen.py</location>
+      <location>tests/test_mvp_features.py</location>
+    </locations>
+    <ideas>
+      <idea ac-ref="AC-1">
+        test_generation_ranges_constant: Verify GENERATION_RANGES dict has correct values {1: (1,151), 2: (152,251), 3: (252,386)}
+      </idea>
+      <idea ac-ref="AC-1">
+        test_get_pokemon_by_generation_kanto: Query generation 1, assert returns 151 Pokemon with ids 1-151 in order
+      </idea>
+      <idea ac-ref="AC-1">
+        test_get_pokemon_by_generation_johto: Query generation 2, assert returns 100 Pokemon with ids 152-251
+      </idea>
+      <idea ac-ref="AC-1">
+        test_get_pokemon_by_generation_hoenn: Query generation 3, assert returns 135 Pokemon with ids 252-386
+      </idea>
+      <idea ac-ref="AC-2">
+        test_parameterized_query_safety: Attempt SQL injection with malicious generation value like "1; DROP TABLE pokemon;", verify ValueError raised and table still exists
+      </idea>
+      <idea ac-ref="AC-2">
+        test_invalid_generation_raises_error: Pass generation=0 or generation=4, assert ValueError raised with clear message
+      </idea>
+      <idea ac-ref="AC-2">
+        test_query_performance: Measure query execution time for each generation, assert all complete in &lt; 50ms
+      </idea>
+      <idea ac-ref="AC-1,AC-2">
+        test_home_screen_filters_by_generation: Integration test - create HomeScreen with database, set generation to 2, verify only Johto Pokemon displayed
+      </idea>
+      <idea ac-ref="AC-2">
+        test_scroll_position_resets: Switch generation in HomeScreen, verify selected_index reset to 0 and first Pokemon displayed
+      </idea>
+    </ideas>
+  </tests>
+
+  <implementation-notes>
+    <note priority="high" category="database">
+      The Database.get_pokemon_by_generation() method already exists but currently uses WHERE p.generation = ? which queries the generation column. For Story 1.3, this needs to change to WHERE id BETWEEN ? AND ? using GENERATION_RANGES constant to query by ID range instead. This enables faster queries using the PRIMARY KEY index and aligns with architecture decision.
+    </note>
+    <note priority="high" category="constants">
+      Define GENERATION_RANGES and GENERATION_NAMES constants. Decision: Place in src/ui/home_screen.py initially (single use location). If other screens need generation filtering later, extract to src/config.py or shared constants module.
+    </note>
+    <note priority="medium" category="state">
+      StateManager.state schema already has last_viewed.generation field in JSON structure. Need to add get_last_viewed_generation() method to retrieve it and update set_last_viewed() to accept optional generation parameter. Default to generation 1 if not set in state file.
+    </note>
+    <note priority="medium" category="testing">
+      Create tests/test_home_screen.py if it doesn't exist. Mock Database and StateManager for unit tests. Use pytest fixtures for setup. Performance tests should run on actual Raspberry Pi if available, or flag as "performance check needed on Pi" in CI.
+    </note>
+    <note priority="high" category="security">
+      SQL injection prevention is CRITICAL. Every database query must use parameterized statements. Add explicit test case test_parameterized_query_safety() that attempts injection and verifies it fails safely. Document this pattern in all query methods.
+    </note>
+    <note priority="low" category="ui">
+      HomeScreen currently has _load_pokemon() method loading all Pokemon. Replace or extend with _load_pokemon_by_generation(). Consider deprecating old method or renaming to _load_all_pokemon() for clarity if all-generation view needed later.
+    </note>
+    <note priority="medium" category="integration">
+      Story 1.2 (generation badge UI) and Story 1.4 (L/R button switching) will integrate with the database queries implemented in this story. Ensure GENERATION_RANGES constant is accessible to those stories. Consider returning generation metadata (name, total count) from database for badge display.
+    </note>
+  </implementation-notes>
+
+  <related-stories>
+    <story id="1.1" title="Project Foundation Setup" relationship="prerequisite">
+      Establishes Database class, HomeScreen structure, and manager integration patterns. This story extends those foundations with generation filtering.
+    </story>
+    <story id="1.2" title="Generation Badge UI Component" relationship="depends-on">
+      Will use GENERATION_RANGES constant and generation data from this story's queries to display badge with region name and position counter.
+    </story>
+    <story id="1.4" title="L/R Button Generation Switching" relationship="depends-on">
+      Will call the _load_pokemon_by_generation() method implemented in this story to switch between Kanto/Johto/Hoenn when L/R buttons pressed.
+    </story>
+    <story id="1.5" title="State Persistence for Generation and Pokemon" relationship="depends-on">
+      Will use the StateManager generation tracking implemented in this story to save/restore last viewed generation across power cycles.
+    </story>
+  </related-stories>
+
+  <edge-cases>
+    <case id="EDGE-001" severity="high">
+      Invalid generation parameter (0, 4, negative, non-integer): Must validate before database call and raise ValueError with clear message like "Invalid generation: must be 1, 2, or 3".
+    </case>
+    <case id="EDGE-002" severity="medium">
+      Empty database or missing Pokemon in generation range: Query returns empty list. HomeScreen should display "No Pokemon found" message instead of crashing. Don't assume 151/100/135 counts.
+    </case>
+    <case id="EDGE-003" severity="high">
+      SQL injection attempt via generation parameter: Parameterized queries prevent this. Test with malicious strings like "1; DROP TABLE pokemon;--" and verify ValueError raised on type validation before query executes.
+    </case>
+    <case id="EDGE-004" severity="low">
+      State file corrupted or missing generation field: StateManager._get_default_state() returns generation=1. Verify fallback works and logs warning without crashing.
+    </case>
+    <case id="EDGE-005" severity="medium">
+      Rapid generation switching: User presses L/R rapidly 10+ times. Each query should complete independently without race conditions. Consider debouncing or queueing if performance issues arise.
+    </case>
+    <case id="EDGE-006" severity="low">
+      Pokemon ID gaps in database: Generation query uses BETWEEN so missing IDs are fine. Query returns only existing Pokemon. No special handling needed unless total count expectations break.
+    </case>
+  </edge-cases>
+
+  <references>
+    <reference type="prd" section="FR2.1">Generation-Based Browsing functional requirement</reference>
+    <reference type="architecture" section="Generation Navigation Architecture">Database query pattern and generation boundaries</reference>
+    <reference type="architecture" section="ADR-005">Architectural decision for generation-based navigation rationale</reference>
+    <reference type="tech-spec" path="docs/sprint-artifacts/tech-spec-epic-1-generation-navigation.md">Epic 1 technical specification with data models</reference>
+    <reference type="story" path="docs/sprint-artifacts/1-1-project-foundation-setup.md">Foundation story establishing patterns used here</reference>
+    <reference type="schema" path="docs/database_schema.md">Pokemon table structure and query patterns</reference>
+  </references>
+</story-context>
