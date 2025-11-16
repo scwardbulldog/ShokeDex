@@ -223,12 +223,23 @@ class HomeScreen(Screen):
         """Called when screen becomes active."""
         super().on_enter()
         
-        # Initialize fonts
+        # Initialize fonts with custom typefaces
+        # Try to load Orbitron Bold for generation name
+        try:
+            self.badge_name_font = pygame.font.Font("assets/fonts/Orbitron-Bold.ttf", 24)
+        except:
+            self.badge_name_font = pygame.font.Font(None, 24)
+        
+        # Try to load Share Tech Mono for counter
+        try:
+            self.badge_counter_font = pygame.font.Font("assets/fonts/ShareTechMono-Regular.ttf", 18)
+        except:
+            self.badge_counter_font = pygame.font.Font(None, 18)
+        
+        # Other fonts use defaults for now
         self.title_font = pygame.font.Font(None, 32)
         self.text_font = pygame.font.Font(None, 24)
         self.small_font = pygame.font.Font(None, 16)
-        self.badge_name_font = pygame.font.Font(None, 24)  # For generation name
-        self.badge_counter_font = pygame.font.Font(None, 18)  # For position counter
         
         # Initialize generation badge
         first_pokemon_id = 1  # Default to Bulbasaur
@@ -239,11 +250,60 @@ class HomeScreen(Screen):
         self.generation_badge.name_font = self.badge_name_font
         self.generation_badge.counter_font = self.badge_counter_font
         
-        # Load Pokemon data
-        self._load_pokemon()
+        # Load Pokemon data for current generation
+        self._load_pokemon_by_generation(self.current_generation)
+    
+    def _load_pokemon_by_generation(self, generation: int):
+        """
+        Load Pokemon for specified generation from database.
+        
+        Args:
+            generation: Generation number (1, 2, or 3)
+        """
+        if self.database:
+            try:
+                with self.database as db:
+                    # Get Pokemon filtered by generation using ID ranges
+                    pokemon_data = db.get_pokemon_by_generation(generation)
+                    self.pokemon_list = [
+                        {'id': p['id'], 'name': p['name']}
+                        for p in pokemon_data
+                    ]
+                    self.total_pokemon = len(self.pokemon_list)
+            except ValueError as e:
+                # Invalid generation parameter
+                print(f"Error: {e}")
+                self.pokemon_list = []
+                self.total_pokemon = 0
+            except Exception as e:
+                print(f"Error loading Pokemon for generation {generation}: {e}")
+                self.pokemon_list = []
+                self.total_pokemon = 0
+        else:
+            # Demo data if no database - use generation ranges
+            if generation not in GENERATION_RANGES:
+                # Invalid generation even for demo mode
+                print(f"Error: Invalid generation {generation}")
+                self.pokemon_list = []
+                self.total_pokemon = 0
+            else:
+                start_id, end_id = GENERATION_RANGES[generation]
+                self.pokemon_list = [
+                    {'id': i, 'name': f"Pokemon {i}"}
+                    for i in range(start_id, end_id + 1)
+                ]
+                self.total_pokemon = len(self.pokemon_list)
+        
+        # Initialize filtered list
+        self._apply_filters()
     
     def _load_pokemon(self):
-        """Load Pokemon data from database."""
+        """
+        DEPRECATED: Use _load_pokemon_by_generation() instead.
+        
+        Load Pokemon data from database.
+        This method loads all Pokemon and is kept for backwards compatibility.
+        """
         if self.database:
             try:
                 with self.database as db:
@@ -300,6 +360,34 @@ class HomeScreen(Screen):
         if self.selected_index >= self.total_pokemon and self.total_pokemon > 0:
             self.selected_index = 0
             self.page = 0
+    
+    def _switch_generation(self, direction: int):
+        """
+        Switch to next or previous generation with circular wrapping.
+        
+        Args:
+            direction: 1 for next generation (R button), -1 for previous (L button)
+        """
+        # Calculate new generation with wrapping (1 -> 2 -> 3 -> 1)
+        self.current_generation = ((self.current_generation + direction - 1) % 3) + 1
+        
+        # Update generation badge
+        if self.generation_badge:
+            # Get first Pokemon ID in new generation
+            start_id, _ = GENERATION_RANGES[self.current_generation]
+            self.generation_badge.set_generation(self.current_generation, start_id)
+        
+        # Reset scroll position to first Pokemon in generation
+        self.selected_index = 0
+        self.page = 0
+        
+        # Reload Pokemon list for new generation
+        self._load_pokemon_by_generation(self.current_generation)
+        
+        # Save generation to state manager if available
+        if hasattr(self.screen_manager, 'state_manager') and self.screen_manager.state_manager and self.pokemon_list:
+            first_pokemon_id = self.pokemon_list[0]['id']
+            self.screen_manager.state_manager.set_last_viewed(first_pokemon_id, self.current_generation)
     
     def handle_input(self, action: InputAction):
         """Handle input actions."""

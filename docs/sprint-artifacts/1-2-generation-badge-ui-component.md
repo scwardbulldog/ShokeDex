@@ -1,6 +1,6 @@
 # Story 1.2: Generation Badge UI Component
 
-Status: review
+Status: done
 
 ## Story
 
@@ -270,10 +270,17 @@ Claude Sonnet 4.5 (Amelia - Developer Agent)
 - Updates: Position counter updates automatically during Pokemon scrolling
 
 **Asset Status:**
-- Logo assets NOT included (assets/icons/badge_kanto.png, badge_johto.png, badge_hoenn.png)
-- Badge works perfectly without logos - text-only fallback implemented
-- Warning logged when assets missing (as per AC #3)
-- Recommendation: Create or source 40x40px PNG logos for Pokéball/GS Ball/Master Ball
+- Logo assets: ✅ COMPLETE
+  - `assets/icons/badge_kanto.png` - Circular Poké Ball inspired (40x40px)
+  - `assets/icons/badge_johto.png` - Diamond GS Ball inspired (40x40px)
+  - `assets/icons/badge_hoenn.png` - Triangular Master Ball inspired (40x40px)
+  - Generated using `tools/create_badge_icons.py`
+  - Holographic blue aesthetic (#00d4ff, #4df7ff)
+- Custom fonts: ✅ COMPLETE
+  - `assets/fonts/Orbitron-Bold.ttf` (285KB) - Generation names
+  - `assets/fonts/ShareTechMono-Regular.ttf` (42KB) - Position counters
+  - Both from Google Fonts (SIL Open Font License 1.1)
+  - Graceful fallback to system fonts if loading fails
 
 **Visual Styling:**
 - Holographic blue colors added to Colors class per UX spec
@@ -281,6 +288,8 @@ Claude Sonnet 4.5 (Amelia - Developer Agent)
 - Border: 2px solid electric blue (#00d4ff)
 - Corner accents: 45° diagonal lines at all four corners
 - Text: White for generation name, ice blue for position counter
+- Custom fonts: Orbitron Bold (24px) for region names, Share Tech Mono (18px) for counters
+- Logo icons: Geometric designs in holographic blue (circle/diamond/triangle)
 
 **Performance:**
 - Badge render is lightweight (simple pygame drawing operations)
@@ -298,10 +307,19 @@ Claude Sonnet 4.5 (Amelia - Developer Agent)
 
 **NEW:**
 - `tests/test_generation_badge.py` - Comprehensive test suite (22 tests, all passing)
+- `tools/create_badge_icons.py` - Icon generation script
+- `assets/fonts/Orbitron-Bold.ttf` - Custom font for generation names (285KB)
+- `assets/fonts/ShareTechMono-Regular.ttf` - Custom font for counters (42KB)
+- `assets/fonts/README.md` - Font documentation and license info
+- `assets/icons/badge_kanto.png` - Generation 1 badge icon (40x40px)
+- `assets/icons/badge_johto.png` - Generation 2 badge icon (40x40px)
+- `assets/icons/badge_hoenn.png` - Generation 3 badge icon (40x40px)
+- `assets/icons/README.md` - Icon documentation
 
 **MODIFIED:**
 - `src/ui/colors.py` - Added holographic blue color palette (DEEP_SPACE_BLACK, DARK_BLUE, ELECTRIC_BLUE, BRIGHT_CYAN, ICE_BLUE, HOLOGRAM_WHITE)
-- `src/ui/home_screen.py` - Added GenerationBadge class, generation constants, badge initialization and rendering integration
+- `src/ui/home_screen.py` - Added GenerationBadge class, generation constants, badge initialization and rendering integration, custom font loading
+- `examples/badge_demo.py` - Updated to use custom fonts
 
 ### Change Log
 
@@ -312,3 +330,12 @@ Claude Sonnet 4.5 (Amelia - Developer Agent)
 - Added comprehensive test coverage (22 tests passing)
 - All acceptance criteria met (AC #1, #2, #3)
 - Story ready for code review
+
+**2025-11-15: Polish Assets Added**
+- Downloaded Orbitron Bold and Share Tech Mono fonts from Google Fonts
+- Created geometric badge icons for all three generations using PIL
+- Updated HomeScreen to load custom fonts with system font fallback
+- Updated badge_demo.py to showcase custom fonts and icons
+- Added documentation (README files) for fonts and icons
+- All 36 tests passing (22 badge + 14 home screen)
+- Story 1.2 COMPLETE - ready to mark as done

@@ -229,6 +229,192 @@ class TestDatabase(unittest.TestCase):
             
         # Connection should be closed after exiting context
         self.assertIsNone(db.conn)
+    
+    def test_generation_ranges_constant(self):
+        """Test GENERATION_RANGES constant has correct values"""
+        # This tests the constant defined in the method
+        with self.db as db:
+            db.create_schema()
+            
+            # Insert test Pokemon across all generations
+            pokemon_data = [
+                (1, 'Bulbasaur', 1, 7, 69, 64, 1, 1),      # Kanto start
+                (151, 'Mew', 151, 4, 40, 270, 1, 1),       # Kanto end
+                (152, 'Chikorita', 152, 9, 64, 64, 2, 1),  # Johto start
+                (251, 'Celebi', 251, 6, 50, 270, 2, 1),    # Johto end
+                (252, 'Treecko', 252, 5, 50, 62, 3, 1),    # Hoenn start
+                (386, 'Deoxys', 386, 17, 608, 270, 3, 1)   # Hoenn end
+            ]
+            db.executemany("""
+                INSERT INTO pokemon (id, name, species_id, height, weight, base_experience, generation, is_default)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, pokemon_data)
+            db.commit()
+            
+            # Test generation 1 boundaries
+            gen1 = db.get_pokemon_by_generation(1)
+            gen1_ids = [p['id'] for p in gen1]
+            self.assertIn(1, gen1_ids, "Bulbasaur (#1) should be in Kanto")
+            self.assertIn(151, gen1_ids, "Mew (#151) should be in Kanto")
+            self.assertNotIn(152, gen1_ids, "Chikorita (#152) should NOT be in Kanto")
+            
+            # Test generation 2 boundaries
+            gen2 = db.get_pokemon_by_generation(2)
+            gen2_ids = [p['id'] for p in gen2]
+            self.assertIn(152, gen2_ids, "Chikorita (#152) should be in Johto")
+            self.assertIn(251, gen2_ids, "Celebi (#251) should be in Johto")
+            self.assertNotIn(151, gen2_ids, "Mew (#151) should NOT be in Johto")
+            self.assertNotIn(252, gen2_ids, "Treecko (#252) should NOT be in Johto")
+            
+            # Test generation 3 boundaries
+            gen3 = db.get_pokemon_by_generation(3)
+            gen3_ids = [p['id'] for p in gen3]
+            self.assertIn(252, gen3_ids, "Treecko (#252) should be in Hoenn")
+            self.assertIn(386, gen3_ids, "Deoxys (#386) should be in Hoenn")
+            self.assertNotIn(251, gen3_ids, "Celebi (#251) should NOT be in Hoenn")
+    
+    def test_get_pokemon_by_generation_kanto(self):
+        """Test Kanto generation returns Pokemon #1-151"""
+        with self.db as db:
+            db.create_schema()
+            
+            # Insert all Kanto Pokemon (simplified - just IDs matter)
+            kanto_pokemon = [
+                (i, f'Pokemon{i}', i, 10, 100, 100, 1, 1)
+                for i in range(1, 152)  # 1 to 151 inclusive
+            ]
+            db.executemany("""
+                INSERT INTO pokemon (id, name, species_id, height, weight, base_experience, generation, is_default)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, kanto_pokemon)
+            db.commit()
+            
+            # Query generation 1
+            results = db.get_pokemon_by_generation(1)
+            
+            self.assertEqual(len(results), 151, "Kanto should have 151 Pokemon")
+            self.assertEqual(results[0]['id'], 1, "First Pokemon should be #1 (Bulbasaur)")
+            self.assertEqual(results[-1]['id'], 151, "Last Pokemon should be #151 (Mew)")
+    
+    def test_get_pokemon_by_generation_johto(self):
+        """Test Johto generation returns Pokemon #152-251"""
+        with self.db as db:
+            db.create_schema()
+            
+            # Insert all Johto Pokemon
+            johto_pokemon = [
+                (i, f'Pokemon{i}', i, 10, 100, 100, 2, 1)
+                for i in range(152, 252)  # 152 to 251 inclusive
+            ]
+            db.executemany("""
+                INSERT INTO pokemon (id, name, species_id, height, weight, base_experience, generation, is_default)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, johto_pokemon)
+            db.commit()
+            
+            # Query generation 2
+            results = db.get_pokemon_by_generation(2)
+            
+            self.assertEqual(len(results), 100, "Johto should have 100 Pokemon")
+            self.assertEqual(results[0]['id'], 152, "First Pokemon should be #152 (Chikorita)")
+            self.assertEqual(results[-1]['id'], 251, "Last Pokemon should be #251 (Celebi)")
+    
+    def test_get_pokemon_by_generation_hoenn(self):
+        """Test Hoenn generation returns Pokemon #252-386"""
+        with self.db as db:
+            db.create_schema()
+            
+            # Insert all Hoenn Pokemon
+            hoenn_pokemon = [
+                (i, f'Pokemon{i}', i, 10, 100, 100, 3, 1)
+                for i in range(252, 387)  # 252 to 386 inclusive
+            ]
+            db.executemany("""
+                INSERT INTO pokemon (id, name, species_id, height, weight, base_experience, generation, is_default)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, hoenn_pokemon)
+            db.commit()
+            
+            # Query generation 3
+            results = db.get_pokemon_by_generation(3)
+            
+            self.assertEqual(len(results), 135, "Hoenn should have 135 Pokemon")
+            self.assertEqual(results[0]['id'], 252, "First Pokemon should be #252 (Treecko)")
+            self.assertEqual(results[-1]['id'], 386, "Last Pokemon should be #386 (Deoxys)")
+    
+    def test_invalid_generation_raises_error(self):
+        """Test invalid generation parameter raises ValueError"""
+        with self.db as db:
+            db.create_schema()
+            
+            # Test generation 0 (invalid)
+            with self.assertRaises(ValueError) as context:
+                db.get_pokemon_by_generation(0)
+            self.assertIn("Invalid generation", str(context.exception))
+            self.assertIn("Must be 1, 2, or 3", str(context.exception))
+            
+            # Test generation 4 (invalid)
+            with self.assertRaises(ValueError) as context:
+                db.get_pokemon_by_generation(4)
+            self.assertIn("Invalid generation", str(context.exception))
+            
+            # Test negative generation (invalid)
+            with self.assertRaises(ValueError):
+                db.get_pokemon_by_generation(-1)
+    
+    def test_parameterized_query_safety(self):
+        """Test SQL injection prevention with parameterized queries"""
+        with self.db as db:
+            db.create_schema()
+            
+            # Insert test data
+            db.execute("""
+                INSERT INTO pokemon (id, name, species_id, height, weight, base_experience, generation, is_default)
+                VALUES (25, 'Pikachu', 25, 4, 60, 112, 1, 1)
+            """)
+            db.commit()
+            
+            # Attempt SQL injection with malicious generation value
+            # This should fail at type validation before reaching SQL
+            malicious_input = "1; DROP TABLE pokemon; --"
+            
+            # Should raise ValueError due to type checking (not int)
+            with self.assertRaises(ValueError):
+                db.get_pokemon_by_generation(malicious_input)
+            
+            # Verify table still exists
+            cursor = db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='pokemon'")
+            result = cursor.fetchone()
+            self.assertIsNotNone(result, "Pokemon table should still exist after injection attempt")
+            
+            # Verify data still intact
+            cursor = db.execute("SELECT COUNT(*) FROM pokemon")
+            count = cursor.fetchone()[0]
+            self.assertEqual(count, 1, "Pokemon data should be intact")
+    
+    def test_query_returns_ordered_by_id(self):
+        """Test that generation queries return Pokemon ordered by National Dex number"""
+        with self.db as db:
+            db.create_schema()
+            
+            # Insert Pokemon out of order
+            pokemon_data = [
+                (151, 'Mew', 151, 4, 40, 270, 1, 1),
+                (1, 'Bulbasaur', 1, 7, 69, 64, 1, 1),
+                (75, 'Graveler', 75, 10, 1050, 137, 1, 1),
+                (25, 'Pikachu', 25, 4, 60, 112, 1, 1)
+            ]
+            db.executemany("""
+                INSERT INTO pokemon (id, name, species_id, height, weight, base_experience, generation, is_default)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, pokemon_data)
+            db.commit()
+            
+            # Query should return ordered by ID
+            results = db.get_pokemon_by_generation(1)
+            ids = [p['id'] for p in results]
+            
+            self.assertEqual(ids, [1, 25, 75, 151], "Pokemon should be ordered by ID")
 
 
 if __name__ == '__main__':

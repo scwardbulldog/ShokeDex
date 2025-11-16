@@ -305,16 +305,44 @@ class Database:
         return [dict(row) for row in cursor.fetchall()]
         
     def get_pokemon_by_generation(self, generation: int) -> List[Dict[str, Any]]:
-        """Get all Pokémon from a specific generation"""
+        """
+        Get all Pokémon from a specific generation using ID ranges.
+        
+        Args:
+            generation: Generation number (1, 2, or 3)
+                       1 = Kanto (#1-151)
+                       2 = Johto (#152-251)
+                       3 = Hoenn (#252-386)
+        
+        Returns:
+            List of dicts with Pokemon data including types
+        
+        Raises:
+            ValueError: If generation not in range 1-3
+        """
+        # Generation ranges per architecture decision ADR-005
+        GENERATION_RANGES = {
+            1: (1, 151),    # Kanto: Bulbasaur to Mew
+            2: (152, 251),  # Johto: Chikorita to Celebi
+            3: (252, 386)   # Hoenn: Treecko to Deoxys
+        }
+        
+        # Validate generation parameter
+        if generation not in GENERATION_RANGES:
+            raise ValueError(f"Invalid generation: {generation}. Must be 1, 2, or 3.")
+        
+        start_id, end_id = GENERATION_RANGES[generation]
+        
+        # Use parameterized BETWEEN query for security and performance
         cursor = self.execute("""
             SELECT p.*, GROUP_CONCAT(DISTINCT t.name) as types
             FROM pokemon p
             LEFT JOIN pokemon_types pt ON p.id = pt.pokemon_id
             LEFT JOIN types t ON pt.type_id = t.id
-            WHERE p.generation = ?
+            WHERE p.id BETWEEN ? AND ?
             GROUP BY p.id
             ORDER BY p.id
-        """, (generation,))
+        """, (start_id, end_id))
         
         return [dict(row) for row in cursor.fetchall()]
         

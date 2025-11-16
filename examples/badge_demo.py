@@ -23,9 +23,17 @@ def main():
     screen = pygame.display.set_mode((480, 320))
     pygame.display.set_caption("GenerationBadge Demo")
     
-    # Initialize fonts
-    name_font = pygame.font.Font(None, 24)
-    counter_font = pygame.font.Font(None, 18)
+    # Initialize fonts - try to load custom fonts, fall back to defaults
+    try:
+        name_font = pygame.font.Font("assets/fonts/Orbitron-Bold.ttf", 24)
+    except:
+        name_font = pygame.font.Font(None, 24)
+    
+    try:
+        counter_font = pygame.font.Font("assets/fonts/ShareTechMono-Regular.ttf", 18)
+    except:
+        counter_font = pygame.font.Font(None, 18)
+    
     title_font = pygame.font.Font(None, 32)
     
     # Create badges for each generation
