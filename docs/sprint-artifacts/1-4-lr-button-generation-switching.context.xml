@@ -1,0 +1,276 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>1</epicId>
+    <storyId>4</storyId>
+    <title>L/R Button Generation Switching</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-15</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/1-4-lr-button-generation-switching.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>a user</asA>
+    <iWant>to switch between Kanto, Johto, and Hoenn using L/R buttons</iWant>
+    <soThat>I can quickly navigate between regional Pokédexes</soThat>
+    <tasks>
+      <task id="1" ac="1,2">Implement InputAction.LEFT and InputAction.RIGHT Handling in HomeScreen.handle_input()</task>
+      <task id="2" ac="2">Wire Up Generation Switching with Visual Transitions (fade-out, reload list, fade-in)</task>
+      <task id="3" ac="2">Implement Active Generation Badge Glow Effect (bright cyan #4df7ff for 300ms)</task>
+      <task id="4" ac="3">Integrate StateManager for Generation Persistence (save on switch, load on startup)</task>
+      <task id="5" ac="1,2">Validate Circular Wrapping Logic (Gen 1→2→3→1 and reverse)</task>
+      <task id="6" ac="4">Performance Optimization and Testing (30+ FPS, <100ms latency)</task>
+      <task id="7" ac="1-4">Testing (unit, integration, performance, regression)</task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="1">
+      <title>L Button Previous Generation Cycling</title>
+      <given>a user is on HomeScreen viewing a generation</given>
+      <when>the user presses the L button (LEFT action)</when>
+      <then>the display switches to the previous generation with circular wrapping: Kanto → Hoenn → Johto → Kanto</then>
+      <and>the generation badge updates to show the new region name</and>
+      <and>the first Pokémon of the new generation is displayed</and>
+      <and>the position counter resets to show #XXX/YYY for the new generation</and>
+    </criterion>
+    <criterion id="2">
+      <title>R Button Next Generation Cycling</title>
+      <given>a user is on HomeScreen viewing a generation</given>
+      <when>the user presses the R button (RIGHT action)</when>
+      <then>the display switches to the next generation with circular wrapping: Kanto → Johto → Hoenn → Kanto</then>
+      <and>transition completes in &lt; 300ms (meets responsiveness target)</and>
+      <and>visual transition uses fade-out (100ms) → load new list → fade-in (100ms)</and>
+      <and>active generation badge glows with bright cyan (#4df7ff)</and>
+    </criterion>
+    <criterion id="3">
+      <title>State Persistence After Generation Switch</title>
+      <given>a user switches from Kanto (generation 1) to Johto (generation 2)</given>
+      <when>the generation switch completes</when>
+      <then>StateManager.set_last_viewed() is called with the new generation number</then>
+      <and>the first Pokémon ID of the new generation is saved as last viewed</and>
+      <when>the application is restarted</when>
+      <then>HomeScreen loads showing Johto generation with the saved Pokémon</then>
+    </criterion>
+    <criterion id="4">
+      <title>Performance During Generation Switching</title>
+      <given>a user rapidly presses L or R buttons</given>
+      <when>switching between generations</when>
+      <then>frame rate maintains 30+ FPS throughout the operation</then>
+      <and>visual feedback appears within 100ms of button press</and>
+      <and>no stuttering or lag visible during sprite transitions</and>
+      <and>memory usage remains stable (no leaks from repeated switching)</and>
+    </criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/PRD.md</path>
+        <title>ShokeDex Product Requirements Document</title>
+        <section>FR2.1 - Generation-Based Browsing</section>
+        <snippet>System shall organize Pokémon by generation: Kanto (1-151), Johto (152-251), Hoenn (252-386). User shall be able to switch between generations using L/R buttons. Current generation shall be visually indicated with generation badge/logo.</snippet>
+      </doc>
+      <doc>
+        <path>docs/PRD.md</path>
+        <title>ShokeDex Product Requirements Document</title>
+        <section>FR2.4 - 3-Press Navigation Rule</section>
+        <snippet>Any Pokémon shall be reachable within 3 button presses from any screen. Navigation paths shall be optimized for efficiency.</snippet>
+      </doc>
+      <doc>
+        <path>docs/PRD.md</path>
+        <title>ShokeDex Product Requirements Document</title>
+        <section>NFR-P1: Frame Rate</section>
+        <snippet>System shall maintain 30+ FPS on Raspberry Pi 3B+ during all operations. No visible stuttering or lag during navigation or screen transitions.</snippet>
+      </doc>
+      <doc>
+        <path>docs/PRD.md</path>
+        <title>ShokeDex Product Requirements Document</title>
+        <section>NFR-P2: Input Latency</section>
+        <snippet>Button press response time shall be &lt; 100ms. User shall perceive instant feedback on all button presses.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture.md</path>
+        <title>ShokeDex Architecture</title>
+        <section>Generation Navigation Architecture</section>
+        <snippet>Generation boundaries: Kanto (1-151), Johto (152-251), Hoenn (252-386). L/R button behavior: L previous gen (3→2→1→3), R next gen (1→2→3→1). Visual indicator: Generation badge with region logo. State persistence via StateManager on generation switch.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture.md</path>
+        <title>ShokeDex Architecture</title>
+        <section>StateManager Integration</section>
+        <snippet>Usage pattern: on_enter() load last generation, _select_pokemon() update state, on_exit() save state. StateManager tracks last viewed Pokémon ID and generation.</snippet>
+      </doc>
+      <doc>
+        <path>docs/ux-design-specification.md</path>
+        <title>ShokeDex UX Design Specification</title>
+        <section>Screen Transitions</section>
+        <snippet>Generation switch should use slide transition (300ms total). Fade pattern: fade-out (100ms) → load → fade-in (100ms). Active badge glows with bright cyan (#4df7ff). Smooth visual continuity.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-1-generation-navigation.md</path>
+        <title>Epic Technical Specification: Generation Navigation Screen</title>
+        <section>Generation Switching Flow</section>
+        <snippet>Calculate new generation: ((current + direction - 1) % 3) + 1. Update self.current_generation. Trigger fade-out transition. Call _load_pokemon_by_generation(new_generation). Reset scroll position to first Pokémon. Call state_manager.set_last_viewed(first_pokemon_id, new_generation). Trigger fade-in transition. Update generation badge display.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <file>
+        <path>src/ui/home_screen.py</path>
+        <kind>screen</kind>
+        <symbol>HomeScreen</symbol>
+        <lines>1-500</lines>
+        <reason>Primary implementation location - contains _switch_generation() method (already implemented in Story 1.3), handle_input() needs L/R handlers added, GenerationBadge class needs glow effect</reason>
+      </file>
+      <file>
+        <path>src/ui/home_screen.py</path>
+        <kind>class</kind>
+        <symbol>GenerationBadge</symbol>
+        <lines>21-130</lines>
+        <reason>Badge component needs active_glow state attribute and render logic for bright cyan glow effect during transition</reason>
+      </file>
+      <file>
+        <path>src/ui/home_screen.py</path>
+        <kind>method</kind>
+        <symbol>_switch_generation</symbol>
+        <lines>325-355</lines>
+        <reason>Core generation switching logic already implemented - needs visual transition (fade-out/fade-in) added and badge glow trigger</reason>
+      </file>
+      <file>
+        <path>src/ui/home_screen.py</path>
+        <kind>method</kind>
+        <symbol>handle_input</symbol>
+        <lines>358-380</lines>
+        <reason>Needs LEFT and RIGHT InputAction cases added to call _switch_generation(-1) and _switch_generation(1) respectively</reason>
+      </file>
+      <file>
+        <path>src/input_manager.py</path>
+        <kind>module</kind>
+        <symbol>InputAction</symbol>
+        <lines>1-200</lines>
+        <reason>Already defines LEFT and RIGHT actions - verify keyboard mappings work correctly for L/R button simulation</reason>
+      </file>
+      <file>
+        <path>src/state_manager.py</path>
+        <kind>class</kind>
+        <symbol>StateManager</symbol>
+        <lines>1-300</lines>
+        <reason>Already implements set_last_viewed(pokemon_id, generation) and get_last_viewed_generation() - integration point for state persistence</reason>
+      </file>
+      <file>
+        <path>src/data/database.py</path>
+        <kind>method</kind>
+        <symbol>get_pokemon_by_generation</symbol>
+        <lines>unknown</lines>
+        <reason>Database query method for loading Pokemon by generation ID ranges - already implemented in Story 1.3</reason>
+      </file>
+      <file>
+        <path>tests/test_home_screen.py</path>
+        <kind>test</kind>
+        <symbol>test suite</symbol>
+        <lines>all</lines>
+        <reason>Needs new tests for L/R button cycling, state persistence, visual transitions, performance</reason>
+      </file>
+      <file>
+        <path>src/ui/colors.py</path>
+        <kind>constants</kind>
+        <symbol>Colors</symbol>
+        <lines>all</lines>
+        <reason>Contains color definitions including BRIGHT_CYAN (#4df7ff) for badge glow effect and ELECTRIC_BLUE for borders</reason>
+      </file>
+    </code>
+    <dependencies>
+      <python>
+        <package name="pygame" version="2.5.0+">Graphics rendering, Surface management, event loop, pygame.transform for fade effects</package>
+        <package name="Pillow" version="10.0.0+">Image loading for sprites during generation transitions</package>
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint>Must maintain 30+ FPS on Raspberry Pi 3B+ during generation switching per NFR-P1</constraint>
+    <constraint>Button press latency must be &lt; 100ms per NFR-P2 - visual feedback appears immediately</constraint>
+    <constraint>Total transition time must be &lt; 300ms per UX spec (fade-out 100ms + load + fade-in 100ms)</constraint>
+    <constraint>Use parameterized database queries only - no string formatting for security per architecture</constraint>
+    <constraint>Manager instances accessed via screen_manager - no new StateManager() instantiation per architecture pattern</constraint>
+    <constraint>Generation wrapping uses modulo arithmetic: ((current + direction - 1) % 3) + 1 per architecture</constraint>
+    <constraint>_switch_generation() already implemented in Story 1.3 - extend with visual transitions, do not rewrite</constraint>
+    <constraint>StateManager save called on screen exit (on_exit method) per architecture lifecycle pattern</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>HomeScreen.handle_input(action: InputAction)</name>
+      <kind>method</kind>
+      <signature>def handle_input(self, action: InputAction) -> None</signature>
+      <path>src/ui/home_screen.py</path>
+      <usage>Add cases for InputAction.LEFT (call _switch_generation(-1)) and InputAction.RIGHT (call _switch_generation(1))</usage>
+    </interface>
+    <interface>
+      <name>HomeScreen._switch_generation(direction: int)</name>
+      <kind>method</kind>
+      <signature>def _switch_generation(self, direction: int) -> None</signature>
+      <path>src/ui/home_screen.py</path>
+      <usage>Already implements core logic - add fade-out transition before reload, fade-in after, trigger badge glow</usage>
+    </interface>
+    <interface>
+      <name>StateManager.set_last_viewed(pokemon_id, generation)</name>
+      <kind>method</kind>
+      <signature>def set_last_viewed(self, pokemon_id: int, generation: Optional[int] = None)</signature>
+      <path>src/state_manager.py</path>
+      <usage>Call from _switch_generation() after loading new generation with first_pokemon_id and new_generation</usage>
+    </interface>
+    <interface>
+      <name>StateManager.get_last_viewed_generation()</name>
+      <kind>method</kind>
+      <signature>def get_last_viewed_generation(self) -> int</signature>
+      <path>src/state_manager.py</path>
+      <usage>Call in HomeScreen.on_enter() to restore last viewed generation on startup</usage>
+    </interface>
+    <interface>
+      <name>GenerationBadge.render(surface, x, y)</name>
+      <kind>method</kind>
+      <signature>def render(self, surface: pygame.Surface, x: int, y: int)</signature>
+      <path>src/ui/home_screen.py</path>
+      <usage>Modify to check active_glow state and render with bright cyan glow (#4df7ff) when True</usage>
+    </interface>
+    <interface>
+      <name>InputAction enum</name>
+      <kind>enum</kind>
+      <signature>class InputAction(Enum): LEFT = "left", RIGHT = "right"</signature>
+      <path>src/input_manager.py</path>
+      <usage>Already defined - keyboard maps K_LEFT and K_a to LEFT, K_RIGHT and K_d to RIGHT</usage>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      <framework>pytest</framework>
+      <location>tests/</location>
+      <pattern>test_*.py</pattern>
+      <conventions>BDD-style Given/When/Then structure, parameterized tests for multiple scenarios, mock database and state manager for isolation</conventions>
+    </standards>
+    <locations>
+      <testDir>tests/test_home_screen.py</testDir>
+      <testDir>tests/test_database.py</testDir>
+      <testDir>tests/test_state_manager.py</testDir>
+      <testDir>tests/test_performance_monitor.py</testDir>
+      <testDir>tools/profile_performance.py</testDir>
+      <testDir>tools/test_input_latency.py</testDir>
+    </locations>
+    <ideas>
+      <test ac="1" type="unit">test_left_button_cycles_generation_backward() - Verify L button cycles 1→3→2→1 with circular wrapping</test>
+      <test ac="2" type="unit">test_right_button_cycles_generation_forward() - Verify R button cycles 1→2→3→1 with circular wrapping</test>
+      <test ac="1,2" type="unit">test_generation_switch_resets_scroll_position() - Selected index and page reset to 0 when switching</test>
+      <test ac="3" type="integration">test_generation_switch_saves_state() - StateManager.set_last_viewed called with correct generation</test>
+      <test ac="3" type="integration">test_state_persistence_across_sessions() - Switch to Gen 3, exit, restart, verify Gen 3 restored</test>
+      <test ac="2" type="integration">test_generation_switch_visual_transition() - Fade effects complete within 300ms total</test>
+      <test ac="4" type="performance">test_generation_switch_performance() - Measure frame rate during rapid L/R pressing, assert 30+ FPS</test>
+      <test ac="4" type="performance">test_rapid_switching_no_memory_leak() - Switch 100 times, measure heap growth, assert &lt;10MB increase</test>
+      <test ac="2" type="visual">test_badge_glow_effect_visible() - Manual test on actual hardware to verify bright cyan glow during transition</test>
+      <test ac="all" type="regression">test_up_down_scrolling_still_works() - Verify existing UP/DOWN handlers not broken by L/R addition</test>
+      <test ac="all" type="edge">test_rapid_button_mashing_no_crash() - Rapid L/R presses don't cause race conditions or crashes</test>
+      <test ac="3" type="edge">test_state_manager_missing_graceful() - If StateManager is None, generation switch works without crash</test>
+    </ideas>
+  </tests>
+</story-context>

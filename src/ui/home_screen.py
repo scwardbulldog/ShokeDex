@@ -51,6 +51,10 @@ class GenerationBadge:
         self.pokemon_id = pokemon_id
         self.logo_surface: Optional[pygame.Surface] = None
         
+        # Glow effect state (Story 1.4)
+        self.active_glow = False
+        self.glow_timer = 0.0  # milliseconds remaining
+        
         # Try to load generation logo
         self._load_logo()
         
@@ -84,6 +88,30 @@ class GenerationBadge:
         """Update position counter when Pokemon changes."""
         self.pokemon_id = pokemon_id
     
+    def update_glow(self, delta_time: float):
+        """
+        Update glow animation timer.
+        
+        Args:
+            delta_time: Time elapsed since last update in seconds
+        """
+        if self.glow_timer > 0:
+            self.glow_timer -= delta_time * 1000  # Convert to milliseconds
+            self.active_glow = True
+        else:
+            self.active_glow = False
+            self.glow_timer = 0
+    
+    def trigger_glow(self, duration_ms: float = 300):
+        """
+        Trigger badge glow effect for specified duration.
+        
+        Args:
+            duration_ms: Duration in milliseconds (default 300ms)
+        """
+        self.glow_timer = duration_ms
+        self.active_glow = True
+    
     def set_generation(self, generation: int, pokemon_id: int):
         """Update generation and reload logo if needed."""
         if generation != self.generation:
@@ -111,21 +139,38 @@ class GenerationBadge:
         bg_color = (*Colors.DARK_BLUE, 230)  # rgba(26, 47, 74, 0.9)
         pygame.draw.rect(badge_surface, bg_color, (0, 0, badge_width, badge_height))
         
-        # Draw 2px electric blue border
-        pygame.draw.rect(badge_surface, Colors.ELECTRIC_BLUE, (0, 0, badge_width, badge_height), 2)
+        # Draw glow effect if active (Story 1.4)
+        if self.active_glow:
+            # Bright cyan glow color
+            glow_color = Colors.BRIGHT_CYAN  # #4df7ff
+            
+            # Draw outer glow border (3px wide)
+            pygame.draw.rect(badge_surface, glow_color, (0, 0, badge_width, badge_height), 3)
+            
+            # Draw semi-transparent glow aura layers for depth
+            for offset, alpha in [(8, 60), (5, 100), (3, 140)]:
+                glow_rect = pygame.Rect(-offset, -offset, 
+                                       badge_width + offset*2, badge_height + offset*2)
+                glow_layer = pygame.Surface((glow_rect.width, glow_rect.height), pygame.SRCALPHA)
+                glow_layer.fill((*glow_color, alpha))
+                badge_surface.blit(glow_layer, (glow_rect.x, glow_rect.y), special_flags=pygame.BLEND_ADD)
+        else:
+            # Draw 2px electric blue border (normal state)
+            pygame.draw.rect(badge_surface, Colors.ELECTRIC_BLUE, (0, 0, badge_width, badge_height), 2)
         
         # Draw corner accent lines (45° cuts)
         accent_length = 10
+        border_color = Colors.BRIGHT_CYAN if self.active_glow else Colors.ELECTRIC_BLUE
         # Top-left corner
-        pygame.draw.line(badge_surface, Colors.ELECTRIC_BLUE, (2, accent_length), (accent_length, 2), 2)
+        pygame.draw.line(badge_surface, border_color, (2, accent_length), (accent_length, 2), 2)
         # Top-right corner
-        pygame.draw.line(badge_surface, Colors.ELECTRIC_BLUE, 
+        pygame.draw.line(badge_surface, border_color, 
                         (badge_width - accent_length, 2), (badge_width - 2, accent_length), 2)
         # Bottom-left corner
-        pygame.draw.line(badge_surface, Colors.ELECTRIC_BLUE,
+        pygame.draw.line(badge_surface, border_color,
                         (2, badge_height - accent_length), (accent_length, badge_height - 2), 2)
         # Bottom-right corner
-        pygame.draw.line(badge_surface, Colors.ELECTRIC_BLUE,
+        pygame.draw.line(badge_surface, border_color,
                         (badge_width - accent_length, badge_height - 2), 
                         (badge_width - 2, badge_height - accent_length), 2)
         
@@ -206,6 +251,12 @@ class HomeScreen(Screen):
         # Generation navigation
         self.current_generation = 1  # Default to Kanto
         self.generation_badge: Optional[GenerationBadge] = None
+        
+        # Transition state (Story 1.4)
+        self.is_transitioning = False
+        self.transition_timer = 0.0
+        self.transition_alpha = 255
+        self.pending_generation = None
         
         # Fonts (will be initialized in on_enter)
         self.title_font: Optional[pygame.font.Font] = None
@@ -363,31 +414,24 @@ class HomeScreen(Screen):
     
     def _switch_generation(self, direction: int):
         """
-        Switch to next or previous generation with circular wrapping.
+        Switch to next or previous generation with circular wrapping and fade transitions.
+        
+        Implements visual fade-out → load → fade-in transition as specified in Story 1.4.
         
         Args:
             direction: 1 for next generation (R button), -1 for previous (L button)
         """
+        # Start fade-out transition
+        self.is_transitioning = True
+        self.transition_timer = 0.0
+        self.transition_alpha = 255
+        
         # Calculate new generation with wrapping (1 -> 2 -> 3 -> 1)
-        self.current_generation = ((self.current_generation + direction - 1) % 3) + 1
+        new_generation = ((self.current_generation + direction - 1) % 3) + 1
+        self.pending_generation = new_generation
         
-        # Update generation badge
-        if self.generation_badge:
-            # Get first Pokemon ID in new generation
-            start_id, _ = GENERATION_RANGES[self.current_generation]
-            self.generation_badge.set_generation(self.current_generation, start_id)
-        
-        # Reset scroll position to first Pokemon in generation
-        self.selected_index = 0
-        self.page = 0
-        
-        # Reload Pokemon list for new generation
-        self._load_pokemon_by_generation(self.current_generation)
-        
-        # Save generation to state manager if available
-        if hasattr(self.screen_manager, 'state_manager') and self.screen_manager.state_manager and self.pokemon_list:
-            first_pokemon_id = self.pokemon_list[0]['id']
-            self.screen_manager.state_manager.set_last_viewed(first_pokemon_id, self.current_generation)
+        # Note: Actual generation switch happens in update() during transition
+        # This allows smooth fade animation without blocking
     
     def handle_input(self, action: InputAction):
         """Handle input actions."""
@@ -410,9 +454,11 @@ class HomeScreen(Screen):
         elif action == InputAction.DOWN:
             self._move_selection(self.grid_cols)
         elif action == InputAction.LEFT:
-            self._move_selection(-1)
+            # L button: Previous generation (Story 1.4)
+            self._switch_generation(-1)
         elif action == InputAction.RIGHT:
-            self._move_selection(1)
+            # R button: Next generation (Story 1.4)
+            self._switch_generation(1)
         elif action == InputAction.SELECT:
             self._select_pokemon()
         elif action == InputAction.START:
@@ -483,7 +529,55 @@ class HomeScreen(Screen):
     
     def update(self, delta_time: float):
         """Update screen state."""
-        pass
+        # Update generation badge glow timer
+        if self.generation_badge:
+            self.generation_badge.update_glow(delta_time)
+        
+        # Handle generation switch transition (Story 1.4)
+        if self.is_transitioning:
+            self.transition_timer += delta_time
+            
+            # Phase 1: Fade out (0-0.1s)
+            if self.transition_timer < 0.1:
+                # Linear fade from 255 to 0
+                self.transition_alpha = int(255 * (1 - self.transition_timer / 0.1))
+            
+            # Phase 2: Switch generation at 0.1s mark (execute only once)
+            elif self.transition_timer >= 0.1 and self.pending_generation is not None:
+                # Perform the actual generation switch
+                self.current_generation = self.pending_generation
+                self.pending_generation = None  # Clear to prevent re-execution
+                
+                # Update generation badge
+                if self.generation_badge:
+                    start_id, _ = GENERATION_RANGES[self.current_generation]
+                    self.generation_badge.set_generation(self.current_generation, start_id)
+                    # Trigger badge glow effect
+                    self.generation_badge.trigger_glow(300)
+                
+                # Reset scroll position
+                self.selected_index = 0
+                self.page = 0
+                
+                # Reload Pokemon list for new generation
+                self._load_pokemon_by_generation(self.current_generation)
+                
+                # Save to state manager
+                if hasattr(self.screen_manager, 'state_manager') and self.screen_manager.state_manager and self.pokemon_list:
+                    first_pokemon_id = self.pokemon_list[0]['id']
+                    self.screen_manager.state_manager.set_last_viewed(first_pokemon_id, self.current_generation)
+            
+            # Phase 3: Fade in (0.1-0.2s) - happens after switch
+            if self.transition_timer >= 0.1 and self.transition_timer < 0.2:
+                # Linear fade from 0 to 255
+                fade_progress = (self.transition_timer - 0.1) / 0.1
+                self.transition_alpha = int(255 * fade_progress)
+            
+            # Phase 4: Complete transition (>= 0.2s)
+            elif self.transition_timer >= 0.2:
+                self.is_transitioning = False
+                self.transition_alpha = 255
+                self.transition_timer = 0.0
     
     def render(self, surface: pygame.Surface):
         """Render the screen."""
@@ -502,8 +596,21 @@ class HomeScreen(Screen):
         # Draw search/filter bar
         self._render_search_bar(surface)
         
-        # Draw grid
-        self._render_grid(surface)
+        # Apply transition alpha if transitioning
+        if self.is_transitioning and self.transition_alpha < 255:
+            # Create a copy surface for alpha blending
+            content_surface = pygame.Surface((480, 320), pygame.SRCALPHA)
+            content_surface.fill((0, 0, 0, 0))  # Transparent
+            
+            # Render grid to content surface
+            self._render_grid(content_surface)
+            
+            # Apply alpha to content surface
+            content_surface.set_alpha(self.transition_alpha)
+            surface.blit(content_surface, (0, 0))
+        else:
+            # Normal rendering without alpha
+            self._render_grid(surface)
         
         # Draw page indicator and view mode
         total_pages = max(1, (self.total_pokemon + self.items_per_page - 1) // self.items_per_page)

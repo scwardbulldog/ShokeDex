@@ -13,6 +13,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.ui.home_screen import HomeScreen, GENERATION_RANGES, GENERATION_NAMES
 from src.data.database import Database
+from src.input_manager import InputAction
 
 
 class TestHomeScreenGenerationFiltering(unittest.TestCase):
@@ -113,16 +114,19 @@ class TestHomeScreenGenerationFiltering(unittest.TestCase):
         
         # Switch to next (Johto)
         self.screen._switch_generation(1)
+        self.screen.update(0.21)  # Complete transition
         self.assertEqual(self.screen.current_generation, 2, "Should switch to Johto")
         self.assertEqual(len(self.screen.pokemon_list), 100, "Should have 100 Johto Pokemon")
         
         # Switch to next (Hoenn)
         self.screen._switch_generation(1)
+        self.screen.update(0.21)
         self.assertEqual(self.screen.current_generation, 3, "Should switch to Hoenn")
         self.assertEqual(len(self.screen.pokemon_list), 135, "Should have 135 Hoenn Pokemon")
         
         # Switch to next (wrap to Kanto)
         self.screen._switch_generation(1)
+        self.screen.update(0.21)
         self.assertEqual(self.screen.current_generation, 1, "Should wrap back to Kanto")
         self.assertEqual(len(self.screen.pokemon_list), 151, "Should have 151 Kanto Pokemon")
     
@@ -134,16 +138,19 @@ class TestHomeScreenGenerationFiltering(unittest.TestCase):
         
         # Switch to previous (Hoenn - wraps around)
         self.screen._switch_generation(-1)
+        self.screen.update(0.21)  # Complete transition
         self.assertEqual(self.screen.current_generation, 3, "Should wrap to Hoenn")
         self.assertEqual(len(self.screen.pokemon_list), 135, "Should have 135 Hoenn Pokemon")
         
         # Switch to previous (Johto)
         self.screen._switch_generation(-1)
+        self.screen.update(0.21)
         self.assertEqual(self.screen.current_generation, 2, "Should switch to Johto")
         self.assertEqual(len(self.screen.pokemon_list), 100, "Should have 100 Johto Pokemon")
         
         # Switch to previous (Kanto)
         self.screen._switch_generation(-1)
+        self.screen.update(0.21)
         self.assertEqual(self.screen.current_generation, 1, "Should switch to Kanto")
         self.assertEqual(len(self.screen.pokemon_list), 151, "Should have 151 Kanto Pokemon")
     
@@ -156,6 +163,7 @@ class TestHomeScreenGenerationFiltering(unittest.TestCase):
         
         # Switch to Johto
         self.screen._switch_generation(1)
+        self.screen.update(0.21)  # Complete transition
         
         # Should reset to first Pokemon
         self.assertEqual(self.screen.selected_index, 0, "Selected index should reset to 0")
@@ -184,6 +192,7 @@ class TestHomeScreenGenerationFiltering(unittest.TestCase):
         
         # Switch to Johto
         self.screen._switch_generation(1)
+        self.screen.update(0.21)  # Complete transition - this triggers state save
         
         # StateManager should be called with first Pokemon of new generation
         self.mock_screen_manager.state_manager.set_last_viewed.assert_called()
@@ -233,6 +242,272 @@ class TestGenerationRangeConstants(unittest.TestCase):
         
         self.assertEqual(GENERATION_RANGES[1][0], 1, "Should start at Pokemon #1")
         self.assertEqual(gen3_end, 386, "Should end at Pokemon #386")
+
+
+class TestLRButtonGenerationSwitching(unittest.TestCase):
+    """Test L/R button generation switching functionality (Story 1.4)"""
+    
+    def setUp(self):
+        """Set up test database and HomeScreen with pygame mocking"""
+        # Create temporary database
+        self.temp_dir = tempfile.mkdtemp()
+        self.db_path = os.path.join(self.temp_dir, 'test.db')
+        self.db = Database(self.db_path)
+        
+        # Create schema and populate with test data
+        with self.db as db:
+            db.create_schema()
+            
+            # Insert Pokemon from all three generations
+            pokemon_data = []
+            
+            # Kanto: 1-151
+            for i in range(1, 152):
+                pokemon_data.append((i, f'Pokemon{i}', i, 10, 100, 100, 1, 1))
+            
+            # Johto: 152-251
+            for i in range(152, 252):
+                pokemon_data.append((i, f'Pokemon{i}', i, 10, 100, 100, 2, 1))
+            
+            # Hoenn: 252-386
+            for i in range(252, 387):
+                pokemon_data.append((i, f'Pokemon{i}', i, 10, 100, 100, 3, 1))
+            
+            db.executemany("""
+                INSERT INTO pokemon (id, name, species_id, height, weight, base_experience, generation, is_default)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, pokemon_data)
+            db.commit()
+        
+        # Create mock screen manager with state manager
+        self.mock_screen_manager = Mock()
+        self.mock_screen_manager.width = 480
+        self.mock_screen_manager.height = 320
+        self.mock_screen_manager.database = self.db
+        self.mock_screen_manager.state_manager = Mock()
+        self.mock_screen_manager.input_manager = Mock()
+        
+        # Mock pygame for tests
+        with patch('pygame.display.set_mode'), \
+             patch('pygame.font.Font'):
+            self.screen = HomeScreen(self.mock_screen_manager, database=self.db)
+            self.screen.on_enter()
+    
+    def tearDown(self):
+        """Clean up temporary database"""
+        if os.path.exists(self.db_path):
+            os.remove(self.db_path)
+        os.rmdir(self.temp_dir)
+    
+    def test_left_button_cycles_generation_backward(self):
+        """
+        Test L button cycles generations backward: Kanto → Hoenn → Johto → Kanto
+        AC#1 from Story 1.4
+        """
+        # Start at Kanto (generation 1)
+        self.screen.current_generation = 1
+        self.screen._load_pokemon_by_generation(1)
+        self.assertEqual(self.screen.current_generation, 1, "Should start at Kanto")
+        
+        # Press L button (LEFT action) - should go to Hoenn (gen 3)
+        self.screen.handle_input(InputAction.LEFT)
+        # Simulate transition completion
+        self.screen.update(0.2)  # Complete 200ms transition
+        self.assertEqual(self.screen.current_generation, 3, "Should cycle to Hoenn")
+        self.assertEqual(len(self.screen.pokemon_list), 135, "Should have 135 Hoenn Pokemon")
+        
+        # Press L again - should go to Johto (gen 2)
+        self.screen.handle_input(InputAction.LEFT)
+        self.screen.update(0.2)
+        self.assertEqual(self.screen.current_generation, 2, "Should cycle to Johto")
+        self.assertEqual(len(self.screen.pokemon_list), 100, "Should have 100 Johto Pokemon")
+        
+        # Press L again - should wrap back to Kanto (gen 1)
+        self.screen.handle_input(InputAction.LEFT)
+        self.screen.update(0.2)
+        self.assertEqual(self.screen.current_generation, 1, "Should wrap back to Kanto")
+        self.assertEqual(len(self.screen.pokemon_list), 151, "Should have 151 Kanto Pokemon")
+    
+    def test_right_button_cycles_generation_forward(self):
+        """
+        Test R button cycles generations forward: Kanto → Johto → Hoenn → Kanto
+        AC#2 from Story 1.4
+        """
+        # Start at Kanto
+        self.screen.current_generation = 1
+        self.screen._load_pokemon_by_generation(1)
+        self.assertEqual(self.screen.current_generation, 1, "Should start at Kanto")
+        
+        # Press R button (RIGHT action) - should go to Johto (gen 2)
+        self.screen.handle_input(InputAction.RIGHT)
+        self.screen.update(0.2)
+        self.assertEqual(self.screen.current_generation, 2, "Should cycle to Johto")
+        self.assertEqual(len(self.screen.pokemon_list), 100, "Should have 100 Johto Pokemon")
+        
+        # Press R again - should go to Hoenn (gen 3)
+        self.screen.handle_input(InputAction.RIGHT)
+        self.screen.update(0.2)
+        self.assertEqual(self.screen.current_generation, 3, "Should cycle to Hoenn")
+        self.assertEqual(len(self.screen.pokemon_list), 135, "Should have 135 Hoenn Pokemon")
+        
+        # Press R again - should wrap back to Kanto (gen 1)
+        self.screen.handle_input(InputAction.RIGHT)
+        self.screen.update(0.2)
+        self.assertEqual(self.screen.current_generation, 1, "Should wrap back to Kanto")
+        self.assertEqual(len(self.screen.pokemon_list), 151, "Should have 151 Kanto Pokemon")
+    
+    def test_generation_switch_resets_scroll_position(self):
+        """
+        Test scroll position resets to first Pokemon when switching generation
+        AC#1 from Story 1.4
+        """
+        # Start at Kanto, scroll to middle
+        self.screen.current_generation = 1
+        self.screen._load_pokemon_by_generation(1)
+        self.screen.selected_index = 75  # Middle of Kanto
+        self.screen.page = 6
+        
+        # Switch to Johto
+        self.screen.handle_input(InputAction.RIGHT)
+        self.screen.update(0.2)
+        
+        # Should reset to first Pokemon
+        self.assertEqual(self.screen.selected_index, 0, "Selected index should reset to 0")
+        self.assertEqual(self.screen.page, 0, "Page should reset to 0")
+        self.assertEqual(self.screen.pokemon_list[0]['id'], 152, "First Pokemon should be Chikorita")
+    
+    def test_generation_switch_saves_state(self):
+        """
+        Test StateManager.set_last_viewed() is called with new generation
+        AC#3 from Story 1.4
+        """
+        # Start at Kanto
+        self.screen.current_generation = 1
+        self.screen._load_pokemon_by_generation(1)
+        
+        # Switch to Johto
+        self.screen.handle_input(InputAction.RIGHT)
+        self.screen.update(0.2)  # Complete transition
+        
+        # StateManager should be called with first Pokemon of Johto
+        self.mock_screen_manager.state_manager.set_last_viewed.assert_called()
+        call_args = self.mock_screen_manager.state_manager.set_last_viewed.call_args[0]
+        self.assertEqual(call_args[0], 152, "Should save first Johto Pokemon ID (Chikorita)")
+        self.assertEqual(call_args[1], 2, "Should save Johto generation")
+    
+    def test_generation_badge_glows_on_switch(self):
+        """
+        Test generation badge triggers glow effect during transition
+        AC#2 from Story 1.4
+        """
+        # Start at Kanto
+        self.screen.current_generation = 1
+        self.screen._load_pokemon_by_generation(1)
+        
+        # Ensure badge exists
+        self.assertIsNotNone(self.screen.generation_badge, "Badge should exist")
+        
+        # Badge should not be glowing initially
+        self.assertFalse(self.screen.generation_badge.active_glow, "Badge should not glow initially")
+        
+        # Switch generation
+        self.screen.handle_input(InputAction.RIGHT)
+        
+        # After 0.11s (past switch point at 0.1s), badge should start glowing
+        self.screen.update(0.11)
+        self.assertTrue(self.screen.generation_badge.active_glow, "Badge should glow during transition")
+        self.assertGreater(self.screen.generation_badge.glow_timer, 0, "Glow timer should be active")
+        
+        # Glow duration is 300ms = 0.3s
+        # At 0.11s, glow timer was set to 300ms
+        # Need to advance 0.301s to fully expire it (0.11s already used for update_glow calls)
+        for _ in range(4):  # 4 * 0.1s = 0.4s total additional time
+            self.screen.update(0.1)
+        
+        # After 0.51s total (0.11 + 0.4), glow should definitely be done
+        self.assertFalse(self.screen.generation_badge.active_glow, "Badge glow should fade after 300ms")
+    
+    def test_transition_completes_within_300ms(self):
+        """
+        Test generation switch transition completes within 300ms
+        AC#2 from Story 1.4
+        """
+        # Start at Kanto
+        self.screen.current_generation = 1
+        self.screen._load_pokemon_by_generation(1)
+        
+        # Trigger switch
+        self.screen.handle_input(InputAction.RIGHT)
+        
+        # Transition should be active
+        self.assertTrue(self.screen.is_transitioning, "Transition should be active")
+        
+        # After 0.21s (past 0.2s transition duration), transition should complete
+        self.screen.update(0.21)
+        
+        # Transition should be complete
+        self.assertFalse(self.screen.is_transitioning, "Transition should complete within 300ms (0.2s actual)")
+        self.assertEqual(self.screen.transition_alpha, 255, "Alpha should be fully opaque")
+        self.assertEqual(self.screen.current_generation, 2, "Should be in Johto")
+    
+    def test_rapid_button_pressing_no_crash(self):
+        """
+        Test rapid L/R button presses don't cause crashes or race conditions
+        AC#4 from Story 1.4
+        """
+        # Start at Kanto
+        self.screen.current_generation = 1
+        self.screen._load_pokemon_by_generation(1)
+        
+        # Rapidly press R button 10 times with minimal time steps
+        for _ in range(10):
+            self.screen.handle_input(InputAction.RIGHT)
+            self.screen.update(0.01)  # Just 10ms per press
+        
+        # Complete any pending transition
+        self.screen.update(0.5)
+        
+        # Should still be in valid state (some generation 1-3)
+        self.assertIn(self.screen.current_generation, [1, 2, 3], "Should be in valid generation")
+        self.assertGreater(len(self.screen.pokemon_list), 0, "Should have Pokemon loaded")
+    
+    def test_state_manager_missing_graceful(self):
+        """
+        Test generation switch works gracefully when StateManager is None
+        Edge case from Story 1.4
+        """
+        # Remove state manager
+        self.screen.screen_manager.state_manager = None
+        
+        # Start at Kanto
+        self.screen.current_generation = 1
+        self.screen._load_pokemon_by_generation(1)
+        
+        # Switch generation should not crash
+        self.screen.handle_input(InputAction.RIGHT)
+        self.screen.update(0.2)
+        
+        # Should successfully switch to Johto
+        self.assertEqual(self.screen.current_generation, 2, "Should switch to Johto")
+        self.assertEqual(len(self.screen.pokemon_list), 100, "Should have 100 Johto Pokemon")
+    
+    def test_badge_updates_with_correct_pokemon_id(self):
+        """
+        Test generation badge updates with first Pokemon ID of new generation
+        AC#1 from Story 1.4
+        """
+        # Start at Kanto
+        self.screen.current_generation = 1
+        self.screen._load_pokemon_by_generation(1)
+        
+        # Switch to Johto
+        self.screen.handle_input(InputAction.RIGHT)
+        self.screen.update(0.2)
+        
+        # Badge should show first Johto Pokemon
+        if self.screen.generation_badge:
+            self.assertEqual(self.screen.generation_badge.generation, 2, "Badge should show Johto")
+            self.assertEqual(self.screen.generation_badge.pokemon_id, 152, "Badge should show Chikorita ID")
 
 
 if __name__ == '__main__':
