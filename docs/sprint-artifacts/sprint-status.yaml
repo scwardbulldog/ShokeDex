@@ -51,7 +51,7 @@ development_status:
   1-5-state-persistence-for-generation-and-pokemon: done
   1-6-up-down-scrolling-within-generation: done
   1-7-performance-optimization-and-3-press-navigation-rule: done
-  epic-1-retrospective: optional
+  epic-1-retrospective: done
 
   # Epic 2: Core Browsing Experience (Combined with Epic 1)
   # Value: Browse and navigate through all 386 Pokémon efficiently
