@@ -184,22 +184,34 @@ class GenerationBadge:
         
         # Draw generation name
         if self.name_font:
-            name_text = self.name_font.render(
-                GENERATION_NAMES[self.generation],
-                True,
-                Colors.HOLOGRAM_WHITE
-            )
-            badge_surface.blit(name_text, (content_x, 8))
+            try:
+                gen_name = GENERATION_NAMES[self.generation]
+                color = Colors.HOLOGRAM_WHITE
+                # Recreate font fresh to avoid NULL pointer issues
+                temp_font = pygame.font.Font(None, 24)
+                name_text = temp_font.render(
+                    gen_name,
+                    True,
+                    color
+                )
+                badge_surface.blit(name_text, (content_x, 8))
+            except Exception as e:
+                print(f"Warning: Could not render generation name: {e}")
         
         # Draw position counter
         if self.counter_font:
-            total = GENERATION_TOTALS[self.generation]
-            counter_text = self.counter_font.render(
-                f"#{self.pokemon_id:03d}/{total:03d}",
-                True,
-                Colors.ICE_BLUE
-            )
-            badge_surface.blit(counter_text, (content_x, 28))
+            try:
+                total = GENERATION_TOTALS[self.generation]
+                # Recreate font fresh to avoid NULL pointer issues
+                temp_font = pygame.font.Font(None, 18)
+                counter_text = temp_font.render(
+                    f"#{self.pokemon_id:03d}/{total:03d}",
+                    True,
+                    Colors.ICE_BLUE
+                )
+                badge_surface.blit(counter_text, (content_x, 28))
+            except Exception as e:
+                print(f"Warning: Could not render position counter: {e}")
         
         # Blit badge to main surface
         surface.blit(badge_surface, (x, y))
@@ -288,20 +300,24 @@ class HomeScreen(Screen):
         """Called when screen becomes active."""
         super().on_enter()
         
+        # Ensure pygame font is initialized
+        if not pygame.font.get_init():
+            pygame.font.init()
+        
         # Initialize fonts with custom typefaces
         # Try to load Orbitron Bold for generation name
         try:
             self.badge_name_font = pygame.font.Font("assets/fonts/Orbitron-Bold.ttf", 24)
-        except:
+        except Exception:
             self.badge_name_font = pygame.font.Font(None, 24)
         
         # Try to load Share Tech Mono for counter
         try:
             self.badge_counter_font = pygame.font.Font("assets/fonts/ShareTechMono-Regular.ttf", 18)
-        except:
+        except Exception:
             self.badge_counter_font = pygame.font.Font(None, 18)
         
-        # Other fonts use defaults for now
+        # Use None for all other fonts (pygame default - most reliable)
         self.title_font = pygame.font.Font(None, 32)
         self.text_font = pygame.font.Font(None, 24)
         self.small_font = pygame.font.Font(None, 16)
@@ -340,8 +356,13 @@ class HomeScreen(Screen):
         
         # Initialize generation badge with correct Pokemon ID
         self.generation_badge = GenerationBadge(self.current_generation, first_pokemon_id)
-        self.generation_badge.name_font = self.badge_name_font
-        self.generation_badge.counter_font = self.badge_counter_font
+        
+        # Assign fonts to badge - verify they're valid first
+        if self.badge_name_font:
+            self.generation_badge.name_font = self.badge_name_font
+            
+        if self.badge_counter_font:
+            self.generation_badge.counter_font = self.badge_counter_font
     
     def on_exit(self):
         """Called when screen becomes inactive - save state."""
