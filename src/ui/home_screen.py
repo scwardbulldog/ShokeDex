@@ -9,6 +9,7 @@ from .screen import Screen
 from .colors import Colors
 from ..input_manager import InputAction
 from .sprite_loader import load_thumb
+from ..performance_monitor import PerformanceMonitor
 
 
 # Generation constants
@@ -295,6 +296,10 @@ class HomeScreen(Screen):
         self.cell_width = 120
         self.cell_height = 90
         self.grid_start_y = 60  # Increased to accommodate search bar
+        
+        # Performance monitoring (Story 1.7)
+        self.performance_monitor = PerformanceMonitor(history_size=100)
+        self.fps_warning_count = 0  # Track consecutive low FPS frames
         
     def on_enter(self):
         """Called when screen becomes active."""
@@ -673,6 +678,19 @@ class HomeScreen(Screen):
     
     def update(self, delta_time: float):
         """Update screen state."""
+        # Record frame for performance monitoring (Story 1.7: AC #1, #5)
+        self.performance_monitor.record_frame()
+        self.performance_monitor.record_cpu_memory()
+        
+        # Check FPS and log warnings if performance degrades (Story 1.7: AC #1)
+        stats = self.performance_monitor.get_stats()
+        if stats['fps_avg'] < 30.0 and len(self.performance_monitor.fps_history) >= 90:  # 3 seconds at 30 FPS
+            self.fps_warning_count += 1
+            if self.fps_warning_count == 1:  # Log only on first detection
+                print(f"⚠️ Performance Warning: FPS dropped to {stats['fps_avg']:.1f} (target: 30+ FPS)")
+        else:
+            self.fps_warning_count = 0  # Reset when FPS recovers
+        
         # Update generation badge glow timer
         if self.generation_badge:
             self.generation_badge.update_glow(delta_time)

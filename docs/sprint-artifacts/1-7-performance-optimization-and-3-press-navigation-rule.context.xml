@@ -1,0 +1,261 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>1</epicId>
+    <storyId>7</storyId>
+    <title>Performance Optimization and 3-Press Navigation Rule</title>
+    <status>ready-for-dev</status>
+    <generatedAt>2025-11-15</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/1-7-performance-optimization-and-3-press-navigation-rule.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>a user</asA>
+    <iWant>navigation to feel instant and reach any Pokémon quickly</iWant>
+    <soThat>browsing the Pokédex is efficient and enjoyable</soThat>
+    <tasks>
+      <task id="1" ac-ref="AC-1, AC-5">Implement PerformanceMonitor Integration - Verify PerformanceMonitor class exists, create instance in HomeScreen.__init__(), call monitor.track_frame_time() in update(), add get_average_fps() method for 10-second rolling window, log warning if FPS drops below 30, track memory usage each frame</task>
+      <task id="2" ac-ref="AC-2">Profile Button Input Latency - Create test script tools/test_input_latency.py, measure time from pygame.event.get() to HomeScreen.render() completion, test all button types (L/R, Up/Down, A), repeat 100 times per button, assert average < 80ms and p95 < 100ms, test on desktop and Pi hardware</task>
+      <task id="3" ac-ref="AC-3">Validate 3-Press Cross-Generation Paths - Create manual test checklist docs/testing/3-press-navigation-checklist.md, test representative paths (Kanto → Johto, Kanto → Hoenn, etc.), document all paths requiring > 3 presses</task>
+      <task id="4" ac-ref="AC-4">Validate 3-Press Within-Generation Navigation - Test hold-to-scroll efficiency, test boundary wrapping shortcuts, verify wrapping doesn't count as multiple presses, document inefficient paths</task>
+      <task id="5" ac-ref="AC-5">Memory Leak Detection - Install memory_profiler, add @profile decorator to HomeScreen methods, run stress test (100 gen switches, 500 scrolls), verify sprite cache LRU eviction, assert memory increase < 50MB over 30-minute session</task>
+      <task id="6" ac-ref="AC-6">Sprite Loading Performance Optimization - Profile SpriteLoader.load_sprite() call times, measure cache hit rate, verify LRU cache implementation, optional: pre-load adjacent Pokémon sprites in background, test cached load < 10ms and first load < 150ms</task>
+      <task id="7" ac-ref="AC-7">Implement Rendering Optimizations - Research pygame dirty rect vs full screen flip, implement dirty rect tracking in HomeScreen, benchmark both approaches on Pi, test idle rendering uses minimal CPU, choose approach based on Pi hardware performance</task>
+      <task id="8" ac-ref="AC-8">Raspberry Pi Hardware Validation - Deploy to Pi 3B+ test device, run tools/profile_performance.py for 10-minute test, measure FPS during gen switching/scrolling/rapid navigation, verify LCD display smoothness, test SD card I/O impact, compare Pi to desktop baseline</task>
+      <task id="9" ac-ref="AC-1 through AC-8">Performance Regression Testing - Create automated test suite tests/test_performance_mvp.py with test cases for FPS, input latency, memory stability, sprite cache efficiency, add to CI/CD pipeline, document baseline metrics</task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC-1">
+      <title>Frame Rate Performance</title>
+      <given>the user is navigating HomeScreen (generation switching or scrolling)</given>
+      <when>performing any operation (L/R button press, Up/Down scrolling, sprite transitions)</when>
+      <then>frame rate maintains 30+ FPS consistently (per NFR-P1)</then>
+      <and>no visible stuttering or lag during any operation</and>
+      <and>PerformanceMonitor confirms average FPS ≥ 30 over 10-second test period</and>
+    </criterion>
+    <criterion id="AC-2">
+      <title>Button Press Response Time</title>
+      <given>the user presses any button (L/R/Up/Down/A/B)</given>
+      <when>the button press event is processed</when>
+      <then>visual feedback appears within 100ms (per NFR-P2)</then>
+      <and>user perceives instant response (no perceived lag)</and>
+      <and>profiling tools confirm total latency < 100ms from pygame event to screen update</and>
+    </criterion>
+    <criterion id="AC-3">
+      <title>3-Press Navigation Rule - Cross-Generation</title>
+      <given>a user is viewing any Pokémon in Kanto generation</given>
+      <when>navigating to any specific Pokémon in Hoenn generation</when>
+      <then>the Pokémon is reachable within 3 button presses maximum</then>
+      <example>Kanto #25 to Hoenn #252: R (1) → R (2) = 2 presses ✅</example>
+      <example>Kanto #1 to Hoenn #386: R (1) → R (2) → Down to last Hoenn (3) = 3 presses ✅</example>
+      <and>all cross-generation paths validated manually</and>
+    </criterion>
+    <criterion id="AC-4">
+      <title>3-Press Navigation Rule - Within Generation</title>
+      <given>a user is viewing any Pokémon within current generation</given>
+      <when>navigating to any other Pokémon in the same generation</when>
+      <then>the Pokémon is reachable within 3 button presses maximum</then>
+      <example>#25 to #26: Down (1) = 1 press ✅</example>
+      <example>#1 to #151: Down once (wraps to #151) OR Up once = 1 press ✅</example>
+      <and>hold-to-scroll enables reaching distant Pokémon efficiently</and>
+    </criterion>
+    <criterion id="AC-5">
+      <title>Memory Stability</title>
+      <given>the application runs for extended periods (30+ minutes)</given>
+      <when>user navigates repeatedly (100+ generation switches, 500+ scrolls)</when>
+      <then>memory usage remains stable (no memory leaks detected)</then>
+      <and>sprite cache stays within configured limit (50 sprites max per Architecture)</and>
+      <and>Python memory profiler shows no unbounded growth</and>
+      <and>application continues operating smoothly without degradation</and>
+    </criterion>
+    <criterion id="AC-6">
+      <title>Sprite Loading Performance</title>
+      <given>the user navigates to a new Pokémon</given>
+      <when>sprite needs to be loaded from disk</when>
+      <then>sprite load time < 50ms for cached sprites (per Tech Spec)</then>
+      <and>first-time load from disk < 150ms acceptable</and>
+      <and>SpriteLoader LRU cache hit rate > 70% during typical navigation</and>
+      <and>sprite transitions remain smooth regardless of cache hits/misses</and>
+    </criterion>
+    <criterion id="AC-7">
+      <title>Rendering Optimization</title>
+      <given>the HomeScreen is rendering each frame</given>
+      <when>no state changes occur (idle screen, no button presses)</when>
+      <then>rendering uses dirty rect optimization (only updates changed areas)</then>
+      <and>idle frame render time < 16ms (maintains 60 FPS capability)</and>
+      <and>active navigation maintains 30+ FPS with full screen updates</and>
+      <and>pygame dirty rects or full screen flip used appropriately</and>
+    </criterion>
+    <criterion id="AC-8">
+      <title>Performance on Raspberry Pi Hardware</title>
+      <given>the application runs on Raspberry Pi 3B+ hardware</given>
+      <when>performing all navigation operations (switching, scrolling, transitions)</when>
+      <then>all performance metrics match desktop testing (30+ FPS, <100ms latency)</then>
+      <and>LCD display updates smoothly without tearing</and>
+      <and>no performance degradation due to SD card I/O or ARM CPU limitations</and>
+      <and>tested with tools/profile_performance.py on actual Pi hardware</and>
+    </criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <artifact path="docs/PRD.md" title="Product Requirements Document" section="Non-Functional Requirements">
+        <snippet>NFR-P1: Frame Rate - System shall maintain 30+ FPS on Raspberry Pi 3B+ during all operations. NFR-P2: Input Latency - Button press response time shall be < 100ms. NFR-P3: Startup Time - System shall boot and display Pokémon within 5 seconds. NFR-P4: Memory Efficiency - System shall operate within Pi 3B+ constraints (1GB RAM), sprite cache bounded to 50 sprites.</snippet>
+      </artifact>
+      <artifact path="docs/architecture.md" title="Architecture" section="Performance Considerations">
+        <snippet>Performance targets: 30+ FPS on Pi 3B+, < 100ms button latency, sprite cache max 50 items. Sprite loading: lazy-load with LRU cache. Frame rate management: clock.tick(30) for 30 FPS cap. Rendering optimization: dirty rects (update changed areas) or full screen flip. PerformanceMonitor class for FPS/memory tracking.</snippet>
+      </artifact>
+      <artifact path="docs/sprint-artifacts/tech-spec-epic-1-generation-navigation.md" title="Epic 1 Tech Spec" section="NFR Performance">
+        <snippet>Frame rate: 30+ FPS during gen switching/scrolling. Button latency: < 100ms. Gen switch time: < 300ms total. Sprite load: < 50ms cached. Sprite caching: keep last 20 viewed sprites (LRU cache). Database query optimization: single query per gen switch. Hardware acceleration: pygame convert_alpha() for GPU blitting.</snippet>
+      </artifact>
+      <artifact path="docs/sprint-artifacts/1-6-up-down-scrolling-within-generation.md" title="Story 1.6 Completion" section="Performance Notes">
+        <snippet>Hold-to-scroll acceleration working (3 Pokemon/frame at 500ms+, 5 at 1s+). Sprite transitions suppressed during fast scroll. All tests passing - no regressions. HomeScreen update() tracks button_hold_time, applies scroll acceleration, suppresses transitions during scroll_speed > 1. Performance validated with existing tests.</snippet>
+      </artifact>
+      <artifact path="docs/sprint-artifacts/1-5-state-persistence-for-generation-and-pokemon.md" title="Story 1.5 State Persistence" section="Performance">
+        <snippet>State save operations don't block rendering (< 50ms per Architecture). State load on startup < 5s total boot time. Atomic write pattern (temp file + rename) for reliability. State file ~1KB JSON (negligible I/O impact).</snippet>
+      </artifact>
+      <artifact path="docs/sprint-artifacts/1-4-lr-button-generation-switching.md" title="Story 1.4 Gen Switching" section="Transition Timing">
+        <snippet>Generation switch timing: fade-out (100ms) + load + fade-in (100ms) = ~300ms total. Badge glow effect on active generation. Frame rate stays 30+ FPS during fade transitions.</snippet>
+      </artifact>
+    </docs>
+    <code>
+      <artifact path="src/ui/home_screen.py" kind="screen" symbol="HomeScreen" lines="221-900" reason="Primary UI class that needs PerformanceMonitor integration for FPS tracking during navigation">
+        HomeScreen handles all navigation (L/R gen switching, Up/Down scrolling) with existing transition/acceleration logic from Stories 1.4-1.6. Has update() method called every frame (ideal for monitor.record_frame()), render() method for display updates. Contains button_hold_time tracking, scroll_speed, sprite_transition_state. Needs PerformanceMonitor instance added to __init__, track_frame_time() called in update(), optional rendering optimizations investigated.
+      </artifact>
+      <artifact path="src/performance_monitor.py" kind="module" symbol="PerformanceMonitor" lines="1-180" reason="Core performance monitoring class - verify exists and add to HomeScreen">
+        PerformanceMonitor class provides record_frame(), record_cpu_memory(), get_stats() returning FPS/CPU/memory metrics, get_report() for text output, is_performance_adequate(target_fps=30.0) for validation. Uses psutil for CPU/memory, tracks FPS history (deque with configurable size), calculates avg/min/max. Already implemented and tested (tests/test_performance_monitor.py with 12 test cases).
+      </artifact>
+      <artifact path="src/performance_monitor.py" kind="module" symbol="PerformanceProfiler" lines="180-259" reason="Code section profiling for detailed latency measurement">
+        PerformanceProfiler provides start_section(name), end_section(name, start_time), get_section_stats(name) returning count/avg/min/max/total ms, get_report() for formatted output. Used by tools/profile_performance.py for event/update/render profiling. Can be used in test_input_latency.py to measure button press → render completion timing.
+      </artifact>
+      <artifact path="src/ui/sprite_loader.py" kind="module" symbol="load_thumb, load_detail" lines="1-100" reason="Sprite loading with caching - needs performance validation">
+        Simple dictionary-based cache (_CACHE global dict) with load_thumb(pokemon_id) and load_detail(pokemon_id) functions. Uses pygame.image.load() + convert_alpha() for hardware acceleration. Currently no LRU eviction - cache grows unbounded. Architecture specifies max 50 sprites, may need @lru_cache(maxsize=50) decorator or manual LRU implementation.
+      </artifact>
+      <artifact path="src/state_manager.py" kind="manager" symbol="StateManager" lines="1-200" reason="State persistence that shouldn't impact performance">
+        StateManager handles save_state() which should complete in < 50ms. Uses atomic write pattern (temp file + rename). JSON serialization is fast for small state files (~1KB). Already tested for reliability, needs validation that repeated saves during navigation don't cause memory leaks or performance degradation.
+      </artifact>
+      <artifact path="src/input_manager.py" kind="manager" symbol="InputManager" lines="1-150" reason="Input handling that contributes to button latency">
+        InputManager abstracts pygame events to InputAction enum. Should process events quickly (< 10ms per Architecture). Testing will verify total latency from pygame.event.get() → InputManager → HomeScreen.handle_input() → render() stays under 100ms target.
+      </artifact>
+      <artifact path="tools/profile_performance.py" kind="tool" symbol="ProfiledApp" lines="1-250" reason="Existing profiling tool to validate on Pi hardware">
+        Runs application with PerformanceMonitor, shows real-time FPS/CPU/memory overlay, profiles event/update/render sections, generates timestamped reports in data/ directory. Accepts duration parameter (default 60s). Used for AC #8 validation on Raspberry Pi 3B+. Already functional and tested.
+      </artifact>
+    </code>
+    <dependencies>
+      <python>
+        <package name="pygame" version=">=2.5.0" reason="Graphics rendering, event loop, Surface management for display updates"/>
+        <package name="Pillow" version=">=10.0.0" reason="Image loading for sprite assets"/>
+        <package name="psutil" version=">=5.9.0" reason="CPU and memory monitoring in PerformanceMonitor"/>
+        <package name="pytest" version=">=7.4.0" reason="Testing framework for performance regression tests"/>
+        <package name="pytest-cov" version=">=4.1.0" reason="Test coverage reporting"/>
+      </python>
+      <external>
+        <tool name="memory_profiler" reason="Line-by-line memory profiling for memory leak detection (Task 5)"/>
+        <tool name="line_profiler" optional="true" reason="Optional: line-level profiling for bottleneck identification"/>
+      </external>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint id="PERF-1" critical="true">
+      Frame rate MUST maintain 30+ FPS on Raspberry Pi 3B+ during all operations (NFR-P1). Use PerformanceMonitor to track, log warning if FPS drops below 30 for > 3 consecutive seconds. Profile with tools/profile_performance.py on actual Pi hardware.
+    </constraint>
+    <constraint id="PERF-2" critical="true">
+      Button press response time MUST be < 100ms from pygame event to screen update (NFR-P2). Test with tools/test_input_latency.py measuring pygame.event.get() → HomeScreen.render() completion. Profile bottlenecks if latency > 100ms.
+    </constraint>
+    <constraint id="MEMORY-1" critical="true">
+      Sprite cache MUST stay within 50 sprite limit (per Architecture). Current implementation uses unbounded dict - needs LRU eviction. Consider @lru_cache(maxsize=50) or manual LRU. Memory profiler should show no unbounded growth over 30-minute session.
+    </constraint>
+    <constraint id="NAV-1" critical="true">
+      3-press navigation rule: Any Pokémon reachable in ≤3 button presses from any screen (FR2.4). Validate manually with checklist covering cross-generation and within-generation paths. Hold-to-scroll counts as 1 action regardless of distance traveled.
+    </constraint>
+    <constraint id="ARCH-1">
+      Follow existing HomeScreen patterns from Stories 1.4-1.6. Don't refactor navigation logic - only add PerformanceMonitor integration and optional rendering optimizations. Keep update() and render() method signatures unchanged.
+    </constraint>
+    <constraint id="TEST-1">
+      Create automated performance regression tests in tests/test_performance_mvp.py. Test cases: frame rate during gen switch, button input latency, memory stability over time, sprite cache efficiency. Set up baseline metrics for comparison in CI/CD.
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface name="PerformanceMonitor.record_frame()" kind="performance-tracking">
+      <signature>def record_frame(self) -> None</signature>
+      <description>Record frame completion for FPS tracking - call in HomeScreen.update() each frame</description>
+      <path>src/performance_monitor.py</path>
+      <usage>self.performance_monitor.record_frame() at start/end of update(delta_time)</usage>
+    </interface>
+    <interface name="PerformanceMonitor.get_stats()" kind="performance-tracking">
+      <signature>def get_stats(self) -> Dict[str, float]</signature>
+      <description>Get current FPS, frame time, CPU, memory statistics</description>
+      <path>src/performance_monitor.py</path>
+      <returns>Dict with keys: fps_current, fps_avg, fps_min, fps_max, frame_time_avg_ms, cpu_percent, memory_mb, etc.</returns>
+    </interface>
+    <interface name="PerformanceMonitor.is_performance_adequate()" kind="validation">
+      <signature>def is_performance_adequate(self, target_fps: float = 30.0, max_cpu: float = 80.0) -> bool</signature>
+      <description>Check if performance meets targets (30 FPS, 80% CPU max)</description>
+      <path>src/performance_monitor.py</path>
+      <usage>Used in tests to validate performance requirements met</usage>
+    </interface>
+    <interface name="PerformanceProfiler.start_section()" kind="profiling">
+      <signature>def start_section(self, name: str) -> float</signature>
+      <description>Start timing a code section - returns start time</description>
+      <path>src/performance_monitor.py</path>
+      <usage>start = profiler.start_section("button_input"); ... profiler.end_section("button_input", start)</usage>
+    </interface>
+    <interface name="HomeScreen.update(delta_time)" kind="lifecycle">
+      <signature>def update(self, delta_time: float) -> None</signature>
+      <description>Frame update where PerformanceMonitor integration happens</description>
+      <path>src/ui/home_screen.py</path>
+      <modification>Add self.performance_monitor.record_frame() call, check FPS and log warnings if < 30</modification>
+    </interface>
+    <interface name="sprite_loader.load_thumb()" kind="resource-loading">
+      <signature>def load_thumb(pokemon_id: int) -> Optional[pygame.Surface]</signature>
+      <description>Load thumbnail sprite with caching - needs LRU limit enforcement</description>
+      <path>src/ui/sprite_loader.py</path>
+      <current>Uses unbounded _CACHE dict</current>
+      <needs>LRU eviction when len(_CACHE) > 50 or use @lru_cache(maxsize=50) decorator</needs>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      <standard>Use pytest framework for all performance tests (pytest.ini configures test discovery). Performance tests in tests/test_performance_mvp.py use timing assertions (time.time() before/after operations). Mock hardware dependencies (pygame, database) in unit tests. Integration tests use real components. Manual hardware testing on actual Raspberry Pi 3B+ for final validation (AC #8). Profile with tools/profile_performance.py for 10-minute runs. Memory profiling with memory_profiler package using @profile decorator on HomeScreen methods. Test coverage tracked with pytest-cov. All existing tests must remain passing (no regressions).</standard>
+    </standards>
+    <locations>
+      <location>tests/test_performance_mvp.py - New file for performance regression tests (Task 9)</location>
+      <location>tests/test_home_screen.py - Existing 181 tests, add performance-related tests if needed</location>
+      <location>tests/test_performance_monitor.py - Existing 12 tests for PerformanceMonitor class</location>
+      <location>tools/test_input_latency.py - New profiling script for button latency measurement (Task 2)</location>
+      <location>tools/profile_performance.py - Existing profiling tool for comprehensive performance testing (Task 8)</location>
+      <location>docs/testing/3-press-navigation-checklist.md - New manual test checklist for navigation efficiency (Task 3, 4)</location>
+    </locations>
+    <ideas>
+      <test id="test_frame_rate_during_generation_switch" ac-ref="AC-1">
+        Automated test: Create HomeScreen, simulate rapid L/R button presses (100 switches), measure FPS using PerformanceMonitor.get_stats(), assert fps_avg >= 30. Mock pygame and database for fast execution.
+      </test>
+      <test id="test_button_input_latency" ac-ref="AC-2">
+        Integration test in tools/test_input_latency.py: Measure time from pygame.event.post() → InputManager processing → HomeScreen.handle_input() → render() completion. Repeat 100 times per button type (L/R/Up/Down/A/B), calculate average and 95th percentile, assert avg < 80ms and p95 < 100ms.
+      </test>
+      <test id="test_memory_stability_over_time" ac-ref="AC-5">
+        Stress test: Run 100 generation switches + 500 scroll operations, track memory with PerformanceMonitor.record_cpu_memory(), assert memory_mb increase < 50 over 30 minutes. Use memory_profiler to detect leaks in specific methods.
+      </test>
+      <test id="test_sprite_cache_efficiency" ac-ref="AC-6">
+        Unit test: Load 100 sprites, track cache hits/misses, assert hit rate > 70%. Verify LRU eviction: load 51st sprite, check oldest evicted. Measure load times: assert cached < 10ms, first load < 150ms.
+      </test>
+      <test id="test_3_press_cross_generation" ac-ref="AC-3">
+        Manual checklist test: Kanto #1 → Johto #152 (R = 1 press), Kanto #1 → Hoenn #386 (R, R, Down/Hold = 3 actions), Johto #200 → Kanto #50 (L, Scroll = 2 actions). Document all paths, verify ≤3 presses.
+      </test>
+      <test id="test_3_press_within_generation" ac-ref="AC-4">
+        Manual test: #1 → #50 (Hold Down < 2s), #1 → #151 (Up = 1 press wraps), #151 → #1 (Down = 1 press wraps). Verify boundary wrapping shortcuts work, hold counts as 1 action.
+      </test>
+      <test id="test_rendering_optimization" ac-ref="AC-7">
+        Performance test: Measure idle frame render time (no state changes), assert < 16ms. Measure active navigation render time, assert 30+ FPS maintained. Compare pygame.display.update(dirty_rects) vs pygame.display.flip() performance on Pi hardware.
+      </test>
+      <test id="test_pi_hardware_validation" ac-ref="AC-8">
+        Manual test on Pi 3B+: Run tools/profile_performance.py for 10 minutes, perform gen switching (50+ times), hold-to-scroll (500+ Pokémon), rapid Up/Down navigation. Verify FPS avg >= 30, no screen tearing, latency < 100ms. Compare to desktop baseline.
+      </test>
+    </ideas>
+  </tests>
+</story-context>

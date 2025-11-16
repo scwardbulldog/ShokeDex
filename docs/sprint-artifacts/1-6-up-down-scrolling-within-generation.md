@@ -1,6 +1,6 @@
 # Story 1.6: Up/Down Scrolling Within Generation
 
-Status: review
+Status: done
 
 ## Story
 
