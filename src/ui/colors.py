@@ -51,6 +51,14 @@ class Colors:
     ERROR = RED
     SUCCESS = LIGHT_GREEN
     
+    # Holographic Blue System (Anime Pokédex aesthetic)
+    DEEP_SPACE_BLACK = (10, 14, 26)      # #0a0e1a - Background
+    DARK_BLUE = (26, 47, 74)              # #1a2f4a - Panels
+    ELECTRIC_BLUE = (0, 212, 255)         # #00d4ff - Primary UI, borders
+    BRIGHT_CYAN = (77, 247, 255)          # #4df7ff - Highlights, glow
+    ICE_BLUE = (168, 230, 255)            # #a8e6ff - Secondary text
+    HOLOGRAM_WHITE = (232, 244, 248)      # #e8f4f8 - Primary text
+    
     # Type colors (for Pokemon types)
     TYPE_COLORS = {
         'normal': GRAY,

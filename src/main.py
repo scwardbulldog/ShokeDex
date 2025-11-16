@@ -20,14 +20,15 @@ from src.state_manager import StateManager
 from src.audio_manager import AudioManager
 
 
-# Display configuration (optimized for 480x320 LCD)
-DISPLAY_WIDTH = 480
-DISPLAY_HEIGHT = 320
-FPS = 30
+# Display configuration (optimized for 480x320 LCD, can be overridden by env vars)
+DISPLAY_WIDTH = int(os.environ.get('SHOKEDEX_WIDTH', '480'))
+DISPLAY_HEIGHT = int(os.environ.get('SHOKEDEX_HEIGHT', '320'))
+FPS = int(os.environ.get('SHOKEDEX_FPS', '30'))
 
 # Application configuration
 APP_NAME = "ShokeDex"
 DATABASE_PATH = "data/pokedex.db"
+ASSETS_PATH = "assets"
 
 
 class ShokeDexApp:
@@ -35,6 +36,12 @@ class ShokeDexApp:
     
     def __init__(self):
         """Initialize the application."""
+        # Validate and create required directories
+        self._validate_directories()
+        
+        # Log configuration
+        self._log_configuration()
+        
         # Initialize Pygame
         pygame.init()
         
@@ -86,8 +93,48 @@ class ShokeDexApp:
         # Application state
         self.running = True
     
+    def _validate_directories(self):
+        """Validate and create required directories."""
+        project_root = Path(__file__).parent.parent
+        
+        # Create data directory if missing
+        data_dir = project_root / "data"
+        data_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Create assets directories if missing
+        assets_dir = project_root / ASSETS_PATH
+        sprites_dir = assets_dir / "sprites"
+        thumb_dir = sprites_dir / "thumb"
+        detail_dir = sprites_dir / "detail"
+        
+        for directory in [assets_dir, sprites_dir, thumb_dir, detail_dir]:
+            if not directory.exists():
+                print(f"Warning: Directory missing: {directory}")
+                directory.mkdir(parents=True, exist_ok=True)
+        
+        # Validate sprite assets are accessible
+        if not thumb_dir.exists() or not list(thumb_dir.glob('*.png')):
+            print(f"Warning: No sprite assets found in {thumb_dir}")
+        
+        if not detail_dir.exists() or not list(detail_dir.glob('*.png')):
+            print(f"Warning: No detail sprites found in {detail_dir}")
+    
+    def _log_configuration(self):
+        """Log loaded configuration for debugging."""
+        print(f"Configuration:")
+        print(f"  Display: {DISPLAY_WIDTH}x{DISPLAY_HEIGHT}")
+        print(f"  Target FPS: {FPS}")
+        print(f"  Database: {DATABASE_PATH}")
+        print(f"  Assets: {ASSETS_PATH}")
+        
+        # Validate configuration values
+        if DISPLAY_WIDTH <= 0 or DISPLAY_HEIGHT <= 0:
+            raise ValueError(f"Invalid display resolution: {DISPLAY_WIDTH}x{DISPLAY_HEIGHT}")
+        if FPS <= 0:
+            raise ValueError(f"Invalid FPS target: {FPS}")
+    
     def _init_database(self):
-        """Initialize database connection."""
+        """Initialize database connection and validate schema."""
         db_path = Path(__file__).parent.parent / DATABASE_PATH
         
         # Check if database exists
@@ -103,8 +150,27 @@ class ShokeDexApp:
             except Exception as e:
                 print(f"Error creating database: {e}")
                 return None
+        else:
+            print(f"Database found at {db_path}")
         
-        return Database(str(db_path))
+        # Validate database schema
+        db = Database(str(db_path))
+        try:
+            with db as connection:
+                # Check if pokemon table exists
+                cursor = connection.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table' AND name='pokemon'"
+                )
+                if not cursor.fetchone():
+                    print("Warning: Pokemon table not found, creating schema...")
+                    connection.create_schema()
+                else:
+                    print("Database schema validated.")
+        except Exception as e:
+            print(f"Error validating database: {e}")
+            return None
+        
+        return db
     
     def handle_events(self):
         """Handle Pygame events."""

@@ -3,11 +3,161 @@ Home Screen for ShokeDex - Grid view of Pokémon
 """
 
 import pygame
+import os
 from typing import List, Optional, Tuple
 from .screen import Screen
 from .colors import Colors
 from ..input_manager import InputAction
 from .sprite_loader import load_thumb
+
+
+# Generation constants
+GENERATION_NAMES = {
+    1: "KANTO",
+    2: "JOHTO",
+    3: "HOENN"
+}
+
+GENERATION_RANGES = {
+    1: (1, 151),    # Kanto: Bulbasaur to Mew
+    2: (152, 251),  # Johto: Chikorita to Celebi
+    3: (252, 386)   # Hoenn: Treecko to Deoxys
+}
+
+GENERATION_TOTALS = {
+    1: 151,
+    2: 100,
+    3: 135
+}
+
+
+class GenerationBadge:
+    """
+    Visual component displaying current generation with logo and position counter.
+    
+    Shows region name (KANTO/JOHTO/HOENN) with optional logo icon and
+    position counter in format #XXX/YYY.
+    """
+    
+    def __init__(self, generation: int, pokemon_id: int):
+        """
+        Initialize generation badge.
+        
+        Args:
+            generation: 1 (Kanto), 2 (Johto), or 3 (Hoenn)
+            pokemon_id: Current Pokemon National Dex number
+        """
+        self.generation = generation
+        self.pokemon_id = pokemon_id
+        self.logo_surface: Optional[pygame.Surface] = None
+        
+        # Try to load generation logo
+        self._load_logo()
+        
+        # Initialize fonts (will be set by parent screen)
+        self.name_font: Optional[pygame.font.Font] = None
+        self.counter_font: Optional[pygame.font.Font] = None
+    
+    def _load_logo(self):
+        """Load generation logo asset with fallback to text-only."""
+        logo_paths = {
+            1: "assets/icons/badge_kanto.png",
+            2: "assets/icons/badge_johto.png",
+            3: "assets/icons/badge_hoenn.png"
+        }
+        
+        if self.generation not in logo_paths:
+            return
+        
+        logo_path = logo_paths[self.generation]
+        
+        try:
+            if os.path.exists(logo_path):
+                self.logo_surface = pygame.image.load(logo_path).convert_alpha()
+                # Scale to 40x40px
+                self.logo_surface = pygame.transform.smoothscale(self.logo_surface, (40, 40))
+        except Exception as e:
+            print(f"Warning: Generation badge asset not found: {logo_path} - {e}")
+            self.logo_surface = None
+    
+    def update(self, pokemon_id: int):
+        """Update position counter when Pokemon changes."""
+        self.pokemon_id = pokemon_id
+    
+    def set_generation(self, generation: int, pokemon_id: int):
+        """Update generation and reload logo if needed."""
+        if generation != self.generation:
+            self.generation = generation
+            self.pokemon_id = pokemon_id
+            self._load_logo()
+    
+    def render(self, surface: pygame.Surface, x: int, y: int):
+        """
+        Render badge to surface at specified position.
+        
+        Args:
+            surface: pygame Surface to render on
+            x: X coordinate (top-left corner)
+            y: Y coordinate (top-left corner)
+        """
+        # Badge dimensions
+        badge_width = 220
+        badge_height = 50
+        
+        # Create badge background with transparency
+        badge_surface = pygame.Surface((badge_width, badge_height), pygame.SRCALPHA)
+        
+        # Draw background (dark blue with transparency)
+        bg_color = (*Colors.DARK_BLUE, 230)  # rgba(26, 47, 74, 0.9)
+        pygame.draw.rect(badge_surface, bg_color, (0, 0, badge_width, badge_height))
+        
+        # Draw 2px electric blue border
+        pygame.draw.rect(badge_surface, Colors.ELECTRIC_BLUE, (0, 0, badge_width, badge_height), 2)
+        
+        # Draw corner accent lines (45° cuts)
+        accent_length = 10
+        # Top-left corner
+        pygame.draw.line(badge_surface, Colors.ELECTRIC_BLUE, (2, accent_length), (accent_length, 2), 2)
+        # Top-right corner
+        pygame.draw.line(badge_surface, Colors.ELECTRIC_BLUE, 
+                        (badge_width - accent_length, 2), (badge_width - 2, accent_length), 2)
+        # Bottom-left corner
+        pygame.draw.line(badge_surface, Colors.ELECTRIC_BLUE,
+                        (2, badge_height - accent_length), (accent_length, badge_height - 2), 2)
+        # Bottom-right corner
+        pygame.draw.line(badge_surface, Colors.ELECTRIC_BLUE,
+                        (badge_width - accent_length, badge_height - 2), 
+                        (badge_width - 2, badge_height - accent_length), 2)
+        
+        # Calculate content positioning
+        content_x = 10
+        
+        # Draw logo if available
+        if self.logo_surface:
+            badge_surface.blit(self.logo_surface, (content_x, 5))
+            content_x += 45  # Logo width + spacing
+        
+        # Draw generation name
+        if self.name_font:
+            name_text = self.name_font.render(
+                GENERATION_NAMES[self.generation],
+                True,
+                Colors.HOLOGRAM_WHITE
+            )
+            badge_surface.blit(name_text, (content_x, 8))
+        
+        # Draw position counter
+        if self.counter_font:
+            total = GENERATION_TOTALS[self.generation]
+            counter_text = self.counter_font.render(
+                f"#{self.pokemon_id:03d}/{total:03d}",
+                True,
+                Colors.ICE_BLUE
+            )
+            badge_surface.blit(counter_text, (content_x, 28))
+        
+        # Blit badge to main surface
+        surface.blit(badge_surface, (x, y))
 
 
 class HomeScreen(Screen):
@@ -53,10 +203,16 @@ class HomeScreen(Screen):
         # View mode (all, favorites, recent)
         self.view_mode = "all"  # Can be "all", "favorites", "recent"
         
+        # Generation navigation
+        self.current_generation = 1  # Default to Kanto
+        self.generation_badge: Optional[GenerationBadge] = None
+        
         # Fonts (will be initialized in on_enter)
         self.title_font: Optional[pygame.font.Font] = None
         self.text_font: Optional[pygame.font.Font] = None
         self.small_font: Optional[pygame.font.Font] = None
+        self.badge_name_font: Optional[pygame.font.Font] = None
+        self.badge_counter_font: Optional[pygame.font.Font] = None
         
         # Layout dimensions (for 480x320 display)
         self.cell_width = 120
@@ -71,6 +227,17 @@ class HomeScreen(Screen):
         self.title_font = pygame.font.Font(None, 32)
         self.text_font = pygame.font.Font(None, 24)
         self.small_font = pygame.font.Font(None, 16)
+        self.badge_name_font = pygame.font.Font(None, 24)  # For generation name
+        self.badge_counter_font = pygame.font.Font(None, 18)  # For position counter
+        
+        # Initialize generation badge
+        first_pokemon_id = 1  # Default to Bulbasaur
+        if self.pokemon_list:
+            first_pokemon_id = self.pokemon_list[0]['id']
+        
+        self.generation_badge = GenerationBadge(self.current_generation, first_pokemon_id)
+        self.generation_badge.name_font = self.badge_name_font
+        self.generation_badge.counter_font = self.badge_counter_font
         
         # Load Pokemon data
         self._load_pokemon()
@@ -186,6 +353,12 @@ class HomeScreen(Screen):
         
         # Final clamp
         self.selected_index = max(0, min(self.selected_index, self.total_pokemon - 1))
+        
+        # Update generation badge with current Pokemon ID
+        if 0 <= self.selected_index < self.total_pokemon:
+            current_pokemon = self.filtered_list[self.selected_index]
+            if self.generation_badge:
+                self.generation_badge.update(current_pokemon['id'])
     
     def _select_pokemon(self):
         """Handle Pokemon selection."""
@@ -233,6 +406,10 @@ class HomeScreen(Screen):
         title_text = self.title_font.render("ShokeDex", True, Colors.TEXT_PRIMARY)
         title_rect = title_text.get_rect(center=(240, 15))
         surface.blit(title_text, title_rect)
+        
+        # Draw generation badge (top-left position)
+        if self.generation_badge:
+            self.generation_badge.render(surface, 10, 10)
         
         # Draw search/filter bar
         self._render_search_bar(surface)

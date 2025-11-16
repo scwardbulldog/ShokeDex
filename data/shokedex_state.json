@@ -1,0 +1,18 @@
+{
+  "version": "1.0.0",
+  "last_viewed": {
+    "pokemon_id": 1,
+    "generation": 1
+  },
+  "favorites": [],
+  "recent": [],
+  "preferences": {
+    "input_mode": "keyboard",
+    "volume": 0.7
+  },
+  "stats": {
+    "total_views": 0,
+    "unique_viewed": 0,
+    "sessions": 0
+  }
+}
