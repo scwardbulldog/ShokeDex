@@ -49,7 +49,7 @@ development_status:
   1-3-generation-filtering-and-database-queries: done
   1-4-lr-button-generation-switching: done
   1-5-state-persistence-for-generation-and-pokemon: done
-  1-6-up-down-scrolling-within-generation: backlog
+  1-6-up-down-scrolling-within-generation: review
   1-7-performance-optimization-and-3-press-navigation-rule: backlog
   epic-1-retrospective: optional
 

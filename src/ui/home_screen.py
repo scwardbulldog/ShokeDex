@@ -258,6 +258,20 @@ class HomeScreen(Screen):
         self.transition_alpha = 255
         self.pending_generation = None
         
+        # Hold-to-scroll state (Story 1.6)
+        self.button_hold_time = {
+            InputAction.UP: 0.0,
+            InputAction.DOWN: 0.0
+        }
+        self.active_button = None
+        self.scroll_speed = 1  # Pokemon per frame during hold
+        
+        # Sprite transition state (Story 1.6)
+        self.sprite_transition_state = None  # None, "fade-out", "loading", "fade-in"
+        self.sprite_transition_timer = 0.0
+        self.sprite_alpha = 255
+        self.target_pokemon_index = None
+        
         # Fonts (will be initialized in on_enter)
         self.title_font: Optional[pygame.font.Font] = None
         self.text_font: Optional[pygame.font.Font] = None
@@ -495,10 +509,15 @@ class HomeScreen(Screen):
             # This is handled in the render loop for now
             return
         
+        # Story 1.6: Single-Pokemon scrolling with Up/Down
         if action == InputAction.UP:
-            self._move_selection(-self.grid_cols)
+            self.active_button = InputAction.UP
+            self.button_hold_time[InputAction.UP] = 0.0  # Reset on new press
+            self._handle_selection_change(-1)
         elif action == InputAction.DOWN:
-            self._move_selection(self.grid_cols)
+            self.active_button = InputAction.DOWN
+            self.button_hold_time[InputAction.DOWN] = 0.0  # Reset on new press
+            self._handle_selection_change(1)
         elif action == InputAction.LEFT:
             # L button: Previous generation (Story 1.4)
             self._switch_generation(-1)
@@ -509,9 +528,67 @@ class HomeScreen(Screen):
             self._select_pokemon()
         elif action == InputAction.START:
             self._open_settings()
+        elif action == InputAction.NONE:
+            # Button released - reset hold state
+            if self.active_button in [InputAction.UP, InputAction.DOWN]:
+                self.active_button = None
+    
+    def _handle_selection_change(self, delta: int):
+        """Handle single-Pokemon navigation with boundary wrapping (Story 1.6).
+        
+        Args:
+            delta: +1 for down/next, -1 for up/previous
+        """
+        if not self.pokemon_list:
+            return
+        
+        # Apply delta with modulo wrapping (stays within current generation)
+        self.selected_index = (self.selected_index + delta) % len(self.pokemon_list)
+        
+        # Update page to match new selection
+        self.page = self.selected_index // self.items_per_page
+        
+        # Get current Pokemon ID
+        if 0 <= self.selected_index < len(self.pokemon_list):
+            current_pokemon = self.pokemon_list[self.selected_index]
+            pokemon_id = current_pokemon['id']
+            
+            # Update generation badge position counter
+            if self.generation_badge:
+                self.generation_badge.update(pokemon_id)
+            
+            # Save to StateManager
+            if hasattr(self.screen_manager, 'state_manager') and self.screen_manager.state_manager:
+                try:
+                    self.screen_manager.state_manager.set_last_viewed(
+                        pokemon_id=pokemon_id,
+                        generation=self.current_generation
+                    )
+                except Exception as e:
+                    # Don't crash on state save failure
+                    print(f"Warning: Failed to update last viewed state: {e}")
+            
+            # Start sprite transition if not in fast scroll mode
+            if self.scroll_speed == 1:
+                self._start_sprite_transition(self.selected_index)
+    
+    def _start_sprite_transition(self, target_index: int):
+        """Start smooth sprite fade transition (Story 1.6).
+        
+        Args:
+            target_index: Index of Pokemon to transition to
+        """
+        self.sprite_transition_state = "fade-out"
+        self.sprite_transition_timer = 0.0
+        self.sprite_alpha = 255
+        self.target_pokemon_index = target_index
     
     def _move_selection(self, delta: int):
-        """Move selection by delta positions."""
+        """DEPRECATED: Use _handle_selection_change() instead.
+        
+        Move selection by delta positions (old grid-based navigation).
+        Kept for backwards compatibility with existing code.
+        """
         new_index = self.selected_index + delta
         
         # Clamp to valid range
@@ -579,6 +656,81 @@ class HomeScreen(Screen):
         if self.generation_badge:
             self.generation_badge.update_glow(delta_time)
         
+        # Handle hold-to-scroll acceleration (Story 1.6)
+        if self.active_button in [InputAction.UP, InputAction.DOWN]:
+            self.button_hold_time[self.active_button] += delta_time
+            
+            # Check for acceleration threshold
+            hold_duration = self.button_hold_time[self.active_button]
+            
+            if hold_duration >= 1.0:
+                # Turbo mode: 5 Pokemon per frame
+                self.scroll_speed = 5
+            elif hold_duration >= 0.5:
+                # Fast mode: 3 Pokemon per frame
+                self.scroll_speed = 3
+            else:
+                # Normal mode: 1 Pokemon per press
+                self.scroll_speed = 1
+            
+            # Apply accelerated scrolling during hold
+            if self.scroll_speed > 1 and self.pokemon_list:
+                delta = 1 if self.active_button == InputAction.DOWN else -1
+                
+                # Scroll multiple Pokemon per frame
+                for _ in range(self.scroll_speed - 1):  # -1 because initial press already moved once
+                    self.selected_index = (self.selected_index + delta) % len(self.pokemon_list)
+                
+                # Update display after fast scroll
+                self.page = self.selected_index // self.items_per_page
+                
+                if 0 <= self.selected_index < len(self.pokemon_list):
+                    current_pokemon = self.pokemon_list[self.selected_index]
+                    if self.generation_badge:
+                        self.generation_badge.update(current_pokemon['id'])
+                    
+                    # Save state during fast scroll
+                    if hasattr(self.screen_manager, 'state_manager') and self.screen_manager.state_manager:
+                        try:
+                            self.screen_manager.state_manager.set_last_viewed(
+                                pokemon_id=current_pokemon['id'],
+                                generation=self.current_generation
+                            )
+                        except Exception:
+                            pass
+        else:
+            # Button released - reset scroll speed
+            self.scroll_speed = 1
+        
+        # Handle sprite transition animation (Story 1.6)
+        if self.sprite_transition_state is not None:
+            self.sprite_transition_timer += delta_time
+            
+            if self.sprite_transition_state == "fade-out":
+                # Fade out over 100ms
+                if self.sprite_transition_timer < 0.1:
+                    self.sprite_alpha = int(255 * (1 - self.sprite_transition_timer / 0.1))
+                else:
+                    # Transition to loading state
+                    self.sprite_transition_state = "loading"
+                    self.sprite_transition_timer = 0.0
+                    self.sprite_alpha = 0
+            
+            elif self.sprite_transition_state == "loading":
+                # Instant transition to fade-in (sprite loading happens in render)
+                self.sprite_transition_state = "fade-in"
+                self.sprite_transition_timer = 0.0
+            
+            elif self.sprite_transition_state == "fade-in":
+                # Fade in over 100ms
+                if self.sprite_transition_timer < 0.1:
+                    self.sprite_alpha = int(255 * (self.sprite_transition_timer / 0.1))
+                else:
+                    # Transition complete
+                    self.sprite_transition_state = None
+                    self.sprite_alpha = 255
+                    self.target_pokemon_index = None
+        
         # Handle generation switch transition (Story 1.4)
         if self.is_transitioning:
             self.transition_timer += delta_time
@@ -601,9 +753,12 @@ class HomeScreen(Screen):
                     # Trigger badge glow effect
                     self.generation_badge.trigger_glow(300)
                 
-                # Reset scroll position
+                # Reset scroll position and hold state
                 self.selected_index = 0
                 self.page = 0
+                self.active_button = None
+                self.scroll_speed = 1
+                self.button_hold_time = {InputAction.UP: 0.0, InputAction.DOWN: 0.0}
                 
                 # Reload Pokemon list for new generation
                 self._load_pokemon_by_generation(self.current_generation)
@@ -611,7 +766,10 @@ class HomeScreen(Screen):
                 # Save to state manager
                 if hasattr(self.screen_manager, 'state_manager') and self.screen_manager.state_manager and self.pokemon_list:
                     first_pokemon_id = self.pokemon_list[0]['id']
-                    self.screen_manager.state_manager.set_last_viewed(first_pokemon_id, self.current_generation)
+                    self.screen_manager.state_manager.set_last_viewed(
+                        pokemon_id=first_pokemon_id,
+                        generation=self.current_generation
+                    )
             
             # Phase 3: Fade in (0.1-0.2s) - happens after switch
             if self.transition_timer >= 0.1 and self.transition_timer < 0.2:

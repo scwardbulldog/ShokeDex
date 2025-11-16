@@ -1,0 +1,207 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>1</epicId>
+    <storyId>6</storyId>
+    <title>Up/Down Scrolling Within Generation</title>
+    <status>drafted</status>
+    <generatedAt>November 15, 2025</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/1-6-up-down-scrolling-within-generation.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>user</asA>
+    <iWant>to scroll through Pokémon within my current generation using Up/Down buttons</iWant>
+    <soThat>I can browse the regional Pokédex sequentially</soThat>
+    <tasks>
+      <task id="1" ac-ref="AC-1">Implement Single-Press Up/Down Navigation - Add InputAction.UP and DOWN handling in HomeScreen.handle_input(), create _handle_selection_change() method for boundary wrapping and state updates</task>
+      <task id="2" ac-ref="AC-2">Implement Hold-to-Scroll Acceleration - Track button_hold_time dict, implement acceleration logic in update() (1 Pokemon at 0-500ms, 3/frame at 500ms+, 5/frame at 1s+), suppress transitions during fast scroll</task>
+      <task id="3" ac-ref="AC-3, AC-4">Implement Boundary Wrapping - Use modulo wrapping within pokemon_list, verify generation boundaries respected (Kanto wraps 151→1, not into Johto)</task>
+      <task id="4" ac-ref="AC-5">Integrate State Persistence - Call state_manager.set_last_viewed() in _handle_selection_change(), verify on_exit() saves state</task>
+      <task id="5" ac-ref="AC-6">Implement Smooth Sprite Transitions - Create fade-out (100ms) → load → fade-in (100ms) transition state machine, suppress during fast scroll</task>
+      <task id="6" ac-ref="AC-2, AC-7">Optimize Performance for Hold-to-Scroll - Suppress sprite transitions when scroll_speed > 1, profile FPS to maintain 30+ during rapid scrolling</task>
+      <task id="7" ac-ref="AC-7">Ensure Input Responsiveness - Verify InputManager processes events < 10ms, immediate visual feedback, total latency < 100ms</task>
+      <task id="8" ac-ref="AC-1 through AC-7">Testing - Unit tests for single/hold navigation, boundary wrapping, state persistence, transitions, performance (10+ new tests expected)</task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC-1">
+      <title>Single-Press Scrolling Navigation</title>
+      <description>Down button moves to next Pokemon, Up moves to previous, position counter updates (#025/151 → #026/151), sprite transitions smoothly (< 300ms), StateManager saves new pokemon_id</description>
+    </criterion>
+    <criterion id="AC-2">
+      <title>Hold-to-Scroll Acceleration</title>
+      <description>Holding Down/Up > 500ms accelerates from 1 Pokemon/frame to 3/frame, position counter updates in real-time, sprite transitions suppressed during fast scroll, 30+ FPS maintained throughout, smooth stop on release with final fade-in</description>
+    </criterion>
+    <criterion id="AC-3">
+      <title>Boundary Wrapping Behavior</title>
+      <description>At last Pokemon in generation (Mew #151 in Kanto), Down wraps to first (Bulbasaur #1), position shows #001/151, smooth transition plays. At first Pokemon, Up wraps to last, position shows #151/151</description>
+    </criterion>
+    <criterion id="AC-4">
+      <title>Cross-Generation Boundary Behavior</title>
+      <description>Kanto Mew #151 + Down wraps to Kanto Bulbasaur #1 (NOT Johto Chikorita #152), generation badge remains "KANTO". Johto Celebi #251 + Down wraps to Johto Chikorita #152 (NOT Hoenn Treecko #252)</description>
+    </criterion>
+    <criterion id="AC-5">
+      <title>State Persistence During Scrolling</title>
+      <description>StateManager saves last viewed pokemon_id on each navigation, on_exit() triggers final state save, on restart HomeScreen loads showing last viewed Pokemon with correct position counter</description>
+    </criterion>
+    <criterion id="AC-6">
+      <title>Smooth Visual Transitions</title>
+      <description>Single-press navigation: fade-out (100ms) → load sprite → fade-in (100ms), total < 300ms, no stuttering. Rapid scrolling: suppress animations if FPS drops below 30, use instant sprite swaps</description>
+    </criterion>
+    <criterion id="AC-7">
+      <title>Input Responsiveness</title>
+      <description>Visual feedback appears within < 100ms of button press (NFR-P2), Pokemon selection changes immediately, no perceived lag, InputManager processes events quickly</description>
+    </criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <artifact path="docs/PRD.md" title="Product Requirements Document" section="FR2.2 - Scroll Navigation">
+        <snippet>System shall support single-press navigation (one Pokémon at a time) and hold-to-scroll navigation (rapid browsing). Navigation efficiency: Any Pokémon reachable within 3 button presses. NFR-P1: 30+ FPS performance. NFR-P2: < 100ms button press response time.</snippet>
+      </artifact>
+      <artifact path="docs/architecture.md" title="Architecture" section="Screen Lifecycle & Navigation">
+        <snippet>HomeScreen.handle_input() processes InputAction.UP/DOWN. HomeScreen.update() called every frame for logic updates. StateManager integration pattern: use self.screen_manager.state_manager with hasattr() null check. on_exit() saves state via state_manager.save_state().</snippet>
+      </artifact>
+      <artifact path="docs/sprint-artifacts/tech-spec-epic-1-generation-navigation.md" title="Epic 1 Tech Spec" section="Pokemon Scroll Flow">
+        <snippet>User presses UP/DOWN → HomeScreen.handle_input() receives InputAction → Move selection index by ±1 within pokemon_list bounds → Check if holding button for fast scroll → Load sprite with caching → Update position counter in generation badge (#25/151). Hold-to-scroll acceleration: 0-500ms = 1 Pokemon/press, 500ms+ = 3 Pokemon/frame, 1000ms+ = 5 Pokemon/frame.</snippet>
+      </artifact>
+      <artifact path="docs/sprint-artifacts/1-5-state-persistence-for-generation-and-pokemon.md" title="Story 1.5 Completion" section="Learnings">
+        <snippet>StateManager Integration Established: HomeScreen already calls state_manager.set_last_viewed() in generation switching and on_exit(). Access Pattern: Use self.screen_manager.state_manager with hasattr() null check. on_enter() loads last viewed pokemon_id and sets selected_index. on_exit() saves state automatically.</snippet>
+      </artifact>
+      <artifact path="docs/sprint-artifacts/1-4-lr-button-generation-switching.md" title="Story 1.4 Completion" section="Transition Pattern">
+        <snippet>Fade Transition Pattern: fade-out (100ms alpha 255→0) → load new data → fade-in (100ms alpha 0→255). Total 300ms transition time validated smooth on Raspberry Pi. 30+ FPS maintained during transitions. Pattern proven for generation switching, applies to Up/Down scrolling.</snippet>
+      </artifact>
+      <artifact path="docs/ux-design-specification.md" title="UX Design Spec" section="Navigation Patterns">
+        <snippet>Single press for precise navigation (one Pokémon at a time). Hold button for speed scrolling (rapid navigation). Wrapping behavior at list boundaries (loop around or stop at edges - design choice). Smooth transitions between views (maintain context, avoid jarring changes). Visual continuity: transitions show same Pokémon to maintain context.</snippet>
+      </artifact>
+    </docs>
+    <code>
+      <artifact path="src/ui/home_screen.py" kind="screen" symbol="HomeScreen" lines="209-800" reason="Primary implementation file - needs Up/Down handling, hold-to-scroll acceleration, boundary wrapping, transition state machine">
+        HomeScreen currently handles LEFT/RIGHT (generation switching) in handle_input() but UP/DOWN move by grid_cols. Need to change to single Pokemon navigation. Has _move_selection(delta) method that applies delta to selected_index with page management. Has selected_index, pokemon_list, current_generation, generation_badge. Already integrated with StateManager in on_exit(). Grid layout currently pages - story requires single-item scrolling within generation.
+      </artifact>
+      <artifact path="src/ui/home_screen.py" kind="method" symbol="handle_input" lines="484-512" reason="Input handler that needs UP/DOWN cases modified for single-Pokemon scrolling">
+        Currently: UP moves by -grid_cols, DOWN by +grid_cols (grid navigation). Need: UP = -1, DOWN = +1 (single Pokemon navigation). LEFT/RIGHT already handle generation switching via _switch_generation(). Pattern established: call helper method from handle_input, update selection, update state.
+      </artifact>
+      <artifact path="src/ui/home_screen.py" kind="method" symbol="_move_selection" lines="515-538" reason="Selection movement method that may need modification for wrapping behavior">
+        Applies delta to selected_index with page management. Clamps to valid range [0, total_pokemon-1]. Updates generation_badge with current Pokemon ID. May need wrapping logic added: modulo len(pokemon_list) instead of clamping for boundary wrapping behavior.
+      </artifact>
+      <artifact path="src/ui/home_screen.py" kind="method" symbol="on_exit" lines="332-353" reason="Already saves state - verify called correctly, no changes needed per Dev Notes">
+        Gets current_pokemon_id from pokemon_list[selected_index], calls state_manager.set_last_viewed(pokemon_id, generation), calls state_manager.save_state(). Wrapped in try/except with null checks. Story 1.6 just updates selected_index, on_exit automatically saves new position.
+      </artifact>
+      <artifact path="src/ui/home_screen.py" kind="method" symbol="on_enter" lines="296-329" reason="Loads state on screen entry - verify works with scrolling, no changes expected">
+        Calls state_manager.get_last_viewed_generation() and get_last_viewed_id(), loads generation, finds pokemon in list, sets selected_index and page. Handles pokemon not in current generation by defaulting to first. Seamlessly supports Up/Down navigation by restoring correct position.
+      </artifact>
+      <artifact path="src/ui/home_screen.py" kind="method" symbol="update" lines="576-620" reason="Frame update loop - needs button_hold_time tracking and scroll acceleration logic">
+        Currently handles generation switch transition timing. Need to add: button_hold_time dict tracking, acceleration logic (if hold_time > 0.5s apply scroll_speed multiplier), update selected_index multiple times per frame during fast scroll, suppress sprite transitions when scroll_speed > 1.
+      </artifact>
+      <artifact path="src/state_manager.py" kind="manager" symbol="StateManager.set_last_viewed" lines="182-209" reason="State persistence method called on navigation - already integrated">
+        Takes pokemon_id and optional generation parameter. Auto-detects generation if not provided. Updates state dict with last_viewed pokemon_id and generation. Adds to recent list. Increments total_views stat. No changes needed - already called from on_exit().
+      </artifact>
+      <artifact path="src/input_manager.py" kind="manager" symbol="InputAction" lines="13-24" reason="Input action enum defining UP/DOWN actions">
+        Enum with UP, DOWN, LEFT, RIGHT, SELECT, BACK, START, NONE. Used in handle_input() to detect button presses. InputManager.process_event() returns InputAction from pygame events or GPIO. Already working for LEFT/RIGHT in Story 1.4.
+      </artifact>
+      <artifact path="src/ui/detail_screen.py" kind="method" symbol="handle_input" lines="124-140" reason="Reference pattern for LEFT/RIGHT navigation in detail view">
+        Shows pattern: LEFT calls _navigate_pokemon(-1), RIGHT calls _navigate_pokemon(1). Similar pattern needed in HomeScreen for UP/DOWN with wrapping logic. Demonstrates single-item navigation approach.
+      </artifact>
+      <artifact path="src/ui/generation_badge.py" kind="component" symbol="GenerationBadge" reason="Badge component that displays position counter - already updates">
+        Displays current region and position counter (#025/151). Has update(pokemon_id) method to refresh counter. Called from _move_selection() when selection changes. No changes needed - already integrated and working.
+      </artifact>
+      <artifact path="tests/test_home_screen.py" kind="test" symbol="TestHomeScreenGenerationFiltering" lines="157-180" reason="Existing test suite pattern - extend with scrolling tests">
+        23 tests passing. Tests generation filtering, switching, scroll position reset. Pattern: set up screen, call methods, assert expected state. Need to add 10+ tests for Up/Down navigation, wrapping, hold-to-scroll, state persistence.
+      </artifact>
+    </code>
+    <dependencies>
+      <ecosystem name="Python">
+        <package name="pygame" version="2.5.0+" usage="Graphics rendering, event loop, input handling, sprite display, Surface management, frame rate control via Clock"/>
+        <package name="Pillow" version="10.0.0+" usage="Image loading for sprites (via SpriteLoader), format conversion, thumbnail generation"/>
+      </ecosystem>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint id="PERF-1" critical="true">
+      System must maintain 30+ FPS during all scrolling operations including hold-to-scroll. Profile with PerformanceMonitor. Suppress sprite transitions if FPS drops below 30.
+    </constraint>
+    <constraint id="PERF-2" critical="true">
+      Button press response time must be < 100ms from press to visual feedback (NFR-P2). InputManager already processes events quickly, verify total latency in integration.
+    </constraint>
+    <constraint id="STATE-1" critical="true">
+      Must call state_manager.set_last_viewed() on each navigation to update position. Already implemented in on_exit() - works automatically with selection changes.
+    </constraint>
+    <constraint id="BOUNDARY-1" critical="true">
+      Wrapping must stay within current generation boundaries. Kanto (1-151) wraps internally, does NOT cross into Johto (152+). Use modulo len(pokemon_list) where pokemon_list is generation-filtered.
+    </constraint>
+    <constraint id="TRANSITION-1">
+      Sprite transitions should be smooth (fade-out 100ms → load → fade-in 100ms) for single-press navigation. Total transition < 300ms. Suppress transitions during fast scroll (scroll_speed > 1) for performance.
+    </constraint>
+    <constraint id="ARCH-1">
+      Use existing _move_selection() pattern or create new _handle_selection_change() method. Follow HomeScreen architectural patterns established in Stories 1.4 and 1.5.
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface name="HomeScreen.handle_input(InputAction.UP)" kind="input-handler">
+      <signature>def handle_input(self, action: InputAction) -> None</signature>
+      <description>Handle Up button press - navigate to previous Pokemon with wrapping</description>
+      <implementation>if action == InputAction.UP: call _handle_selection_change(-1) or _move_selection(-1) with wrapping logic</implementation>
+      <path>src/ui/home_screen.py</path>
+    </interface>
+    <interface name="HomeScreen.handle_input(InputAction.DOWN)" kind="input-handler">
+      <signature>def handle_input(self, action: InputAction) -> None</signature>
+      <description>Handle Down button press - navigate to next Pokemon with wrapping</description>
+      <implementation>if action == InputAction.DOWN: call _handle_selection_change(+1) or _move_selection(+1) with wrapping logic</implementation>
+      <path>src/ui/home_screen.py</path>
+    </interface>
+    <interface name="HomeScreen._handle_selection_change(delta)" kind="method">
+      <signature>def _handle_selection_change(self, delta: int) -> None</signature>
+      <description>Apply delta to selected_index with modulo wrapping, update display, save state</description>
+      <implementation>self.selected_index = (self.selected_index + delta) % len(self.pokemon_list), get new pokemon_id, call state_manager.set_last_viewed(), update position counter, trigger sprite transition</implementation>
+      <path>src/ui/home_screen.py</path>
+      <notes>New method to create OR modify existing _move_selection() to add wrapping</notes>
+    </interface>
+    <interface name="HomeScreen.update(delta_time)" kind="lifecycle">
+      <signature>def update(self, delta_time: float) -> None</signature>
+      <description>Frame update - track button_hold_time, apply scroll acceleration</description>
+      <implementation>Track button_hold_time for UP/DOWN actions, if hold_time > 0.5s increase scroll_speed (3 Pokemon/frame), apply multiple selection changes per frame, suppress transitions during fast scroll, reset on button release</implementation>
+      <path>src/ui/home_screen.py</path>
+    </interface>
+    <interface name="StateManager.set_last_viewed(pokemon_id, generation)" kind="state-persistence">
+      <signature>def set_last_viewed(self, pokemon_id: int, generation: Optional[int] = None) -> None</signature>
+      <description>Save last viewed Pokemon and generation - called on each navigation</description>
+      <usage>Call from _handle_selection_change() after updating selected_index with new pokemon_id from pokemon_list</usage>
+      <path>src/state_manager.py</path>
+    </interface>
+    <interface name="InputManager.process_event(event)" kind="input-processing">
+      <signature>def process_event(self, event: pygame.event.Event) -> InputAction</signature>
+      <description>Convert pygame event to InputAction enum (UP, DOWN, etc)</description>
+      <usage>Main loop calls this, returns InputAction which is passed to screen_manager.handle_input(action)</usage>
+      <path>src/input_manager.py</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Use pytest framework. Test files in tests/ directory. Naming: test_{module_name}.py, test_{method}_{scenario}. Use mock objects for StateManager, Database in unit tests. Integration tests use real objects. Profile performance with tools/profile_performance.py. Measure input latency with tools/test_input_latency.py. Assert FPS >= 30, latency < 100ms. Mock pygame surfaces and events for headless testing. All tests should pass before marking story complete.
+    </standards>
+    <locations>
+      <location>tests/test_home_screen.py</location>
+      <location>tools/profile_performance.py</location>
+      <location>tools/test_input_latency.py</location>
+    </locations>
+    <ideas>
+      <idea ac-ref="AC-1">test_single_press_down_navigation: Press Down, assert selected_index increments by 1, verify StateManager called if present</idea>
+      <idea ac-ref="AC-1">test_single_press_up_navigation: Start at index 5, press Up, assert selected_index = 4</idea>
+      <idea ac-ref="AC-3">test_boundary_wrapping_forward: Set to last Pokemon (index 150 in Kanto), press Down, assert wraps to index 0 (Bulbasaur #1)</idea>
+      <idea ac-ref="AC-3">test_boundary_wrapping_backward: Set to first Pokemon (index 0), press Up, assert wraps to last (index 150, Mew #151)</idea>
+      <idea ac-ref="AC-4">test_cross_generation_boundary_no_wrap: Kanto has 151 Pokemon, at index 150, press Down, assert wraps to 0 (NOT Johto #152)</idea>
+      <idea ac-ref="AC-2">test_hold_to_scroll_acceleration: Set button_hold_time > 0.5s, call update(), assert selected_index increased by > 1</idea>
+      <idea ac-ref="AC-5">test_state_persistence_on_scroll: Navigate Down, verify state_manager.set_last_viewed called with new pokemon_id</idea>
+      <idea ac-ref="AC-6">test_smooth_transitions: Start navigation, advance through transition frames (300ms), verify transition_state progresses correctly</idea>
+      <idea ac-ref="AC-2">test_hold_to_scroll_performance: Simulate hold-to-scroll for 60 frames (1 second), measure FPS, assert >= 30</idea>
+      <idea ac-ref="AC-7">test_input_latency: Measure time from button press pygame event to screen update, assert < 100ms</idea>
+      <idea ac-ref="AC-1 through AC-7">test_navigation_roundtrip: Navigate Down through entire generation (151 times), assert wraps back to starting position</idea>
+    </ideas>
+  </tests>
+</story-context>
