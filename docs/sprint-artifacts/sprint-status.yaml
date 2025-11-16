@@ -47,8 +47,8 @@ development_status:
   1-1-project-foundation-setup: done
   1-2-generation-badge-ui-component: done
   1-3-generation-filtering-and-database-queries: done
-  1-4-lr-button-generation-switching: ready-for-dev
-  1-5-state-persistence-for-generation-and-pokemon: backlog
+  1-4-lr-button-generation-switching: done
+  1-5-state-persistence-for-generation-and-pokemon: done
   1-6-up-down-scrolling-within-generation: backlog
   1-7-performance-optimization-and-3-press-navigation-rule: backlog
   epic-1-retrospective: optional

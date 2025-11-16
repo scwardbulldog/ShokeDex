@@ -81,16 +81,70 @@ class StateManager:
                 print(f"Warning: State version mismatch. Expected {self.STATE_VERSION}, got {state.get('version')}")
                 # Could trigger migration here in the future
             
+            # Validate and clamp values (Story 1.5: AC #6)
+            needs_correction = False
+            
+            # Validate last_viewed section
+            if 'last_viewed' in state:
+                # Clamp pokemon_id to valid range (1-386)
+                if 'pokemon_id' in state['last_viewed']:
+                    original_id = state['last_viewed']['pokemon_id']
+                    state['last_viewed']['pokemon_id'] = max(1, min(386, original_id))
+                    if state['last_viewed']['pokemon_id'] != original_id:
+                        print(f"Warning: pokemon_id {original_id} out of range, clamped to {state['last_viewed']['pokemon_id']}")
+                        needs_correction = True
+                
+                # Clamp generation to valid range (1-3)
+                if 'generation' in state['last_viewed']:
+                    original_gen = state['last_viewed']['generation']
+                    state['last_viewed']['generation'] = max(1, min(3, original_gen))
+                    if state['last_viewed']['generation'] != original_gen:
+                        print(f"Warning: generation {original_gen} out of range, clamped to {state['last_viewed']['generation']}")
+                        needs_correction = True
+            
+            # Validate preferences section
+            if 'preferences' in state:
+                # Clamp volume to valid range (0.0-1.0)
+                if 'volume' in state['preferences']:
+                    original_volume = state['preferences']['volume']
+                    state['preferences']['volume'] = max(0.0, min(1.0, float(original_volume)))
+                    if abs(state['preferences']['volume'] - original_volume) > 0.001:
+                        print(f"Warning: volume {original_volume} out of range, clamped to {state['preferences']['volume']}")
+                        needs_correction = True
+                
+                # Validate input_mode
+                if 'input_mode' in state['preferences']:
+                    if state['preferences']['input_mode'] not in ('keyboard', 'gpio'):
+                        print(f"Warning: invalid input_mode '{state['preferences']['input_mode']}', defaulting to 'keyboard'")
+                        state['preferences']['input_mode'] = 'keyboard'
+                        needs_correction = True
+            
+            # If we corrected values, save the corrected state back to file
+            if needs_correction:
+                try:
+                    with open(self.state_file, 'w', encoding='utf-8') as f:
+                        json.dump(state, f, indent=2, ensure_ascii=False)
+                    print("Corrected state file saved")
+                except IOError:
+                    pass  # Don't fail on save error during load
+            
             return state
             
         except (json.JSONDecodeError, IOError) as e:
-            print(f"Error loading state file: {e}")
-            print("Using default state")
-            return self._get_default_state()
+            print(f"Warning: State file corrupted, resetting to defaults - {e}")
+            # Overwrite corrupt file with defaults
+            default_state = self._get_default_state()
+            try:
+                self.state_file.parent.mkdir(parents=True, exist_ok=True)
+                with open(self.state_file, 'w', encoding='utf-8') as f:
+                    json.dump(default_state, f, indent=2, ensure_ascii=False)
+            except IOError:
+                pass  # Don't fail if we can't write defaults
+            return default_state
     
     def save_state(self) -> bool:
         """
-        Save current state to JSON file.
+        Save current state to JSON file using atomic write pattern.
         
         Returns:
             True if successful, False otherwise
@@ -99,9 +153,15 @@ class StateManager:
             # Ensure directory exists
             self.state_file.parent.mkdir(parents=True, exist_ok=True)
             
-            # Write state with pretty formatting
-            with open(self.state_file, 'w', encoding='utf-8') as f:
+            # Atomic write pattern: write to temp file then rename (Story 1.5: AC #7)
+            temp_file = Path(str(self.state_file) + '.tmp')
+            
+            # Write to temporary file
+            with open(temp_file, 'w', encoding='utf-8') as f:
                 json.dump(self.state, f, indent=2, ensure_ascii=False)
+            
+            # Atomic rename (POSIX systems guarantee atomicity)
+            temp_file.replace(self.state_file)
             
             return True
             

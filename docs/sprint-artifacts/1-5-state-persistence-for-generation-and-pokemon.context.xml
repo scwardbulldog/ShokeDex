@@ -1,0 +1,268 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>1</epicId>
+    <storyId>5</storyId>
+    <title>State Persistence for Generation and Pokémon</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-15</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/1-5-state-persistence-for-generation-and-pokemon.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>a user</asA>
+    <iWant>the device to remember which Pokémon and generation I was viewing</iWant>
+    <soThat>when I power it back on, I return to where I left off</soThat>
+    <tasks>
+      - Task 1: Verify StateManager Initialization in main.py (AC: #1, #4)
+      - Task 2: Implement First Boot Defaults (AC: #1)
+      - Task 3: Integrate State Loading in HomeScreen.on_enter() (AC: #2, #3)
+      - Task 4: Integrate State Saving in HomeScreen.on_exit() (AC: #2, #3)
+      - Task 5: Ensure Boot to HomeScreen Only (AC: #4)
+      - Task 6: Implement Volume and Input Mode Persistence (AC: #5)
+      - Task 7: Implement State File Corruption Handling (AC: #6)
+      - Task 8: Optimize State Persistence Performance (AC: #7)
+      - Task 9: Testing (AC: #1-7)
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC-1" priority="high">
+      <description>First Boot State Initialization</description>
+      <given>the application launches for the first time (no state file exists)</given>
+      <when>StateManager initializes</when>
+      <then>a state file is created at data/shokedex_state.json</then>
+      <and>the file contains valid JSON with default values: pokemon_id=1, generation=1, input_mode="keyboard", volume=0.7</and>
+      <and>HomeScreen displays Bulbasaur (#1) in Kanto generation on first boot</and>
+      <and>no errors or warnings logged for missing state</and>
+    </criterion>
+    <criterion id="AC-2" priority="high">
+      <description>Last Viewed Pokémon Persistence</description>
+      <given>a user views Pikachu (#25) in Kanto generation and exits HomeScreen</given>
+      <when>StateManager saves state</when>
+      <then>state file contains pokemon_id=25 and generation=1</then>
+      <and>save operation completes in &lt; 50ms (non-blocking)</and>
+      <when>the application restarts</when>
+      <then>HomeScreen displays Pikachu (#25) in Kanto generation</then>
+      <and>generation badge shows "KANTO"</and>
+    </criterion>
+    <criterion id="AC-3" priority="high">
+      <description>State Persistence Across Generations</description>
+      <given>a user switches from Kanto to Johto and views Chikorita (#152)</given>
+      <when>the user exits the application</when>
+      <then>StateManager saves pokemon_id=152 and generation=2</then>
+      <when>the application restarts</when>
+      <then>HomeScreen loads showing Johto generation</then>
+      <and>Chikorita (#152) is the displayed/selected Pokémon</and>
+      <and>generation badge shows "JOHTO"</and>
+    </criterion>
+    <criterion id="AC-4" priority="high">
+      <description>Boot to HomeScreen Behavior</description>
+      <given>a user is viewing DetailScreen for Raichu (#26)</given>
+      <when>the user powers off the device</when>
+      <then>StateManager saves pokemon_id=26</then>
+      <when>the application restarts</when>
+      <then>the application boots to HomeScreen (not DetailScreen)</then>
+      <and>HomeScreen shows Raichu (#26) as selected Pokémon</and>
+      <and>user can press A button to navigate back to DetailScreen if desired</and>
+    </criterion>
+    <criterion id="AC-5" priority="medium">
+      <description>Volume and Input Mode Preferences</description>
+      <given>a user sets volume to 0.5 (50%) and input mode to "gpio"</given>
+      <when>StateManager saves state</when>
+      <then>state file contains volume=0.5 and input_mode="gpio"</then>
+      <when>the application restarts</when>
+      <then>StateManager.get_volume() returns 0.5</then>
+      <and>StateManager.get_input_mode() returns "gpio"</and>
+      <and>volume is validated and clamped to 0.0-1.0 range</and>
+      <and>input_mode is validated to be "keyboard" or "gpio"</and>
+    </criterion>
+    <criterion id="AC-6" priority="high">
+      <description>State File Corruption Recovery</description>
+      <given>the state file is corrupted (invalid JSON)</given>
+      <when>the application starts and StateManager initializes</when>
+      <then>the application does not crash</then>
+      <and>StateManager loads default values (pokemon_id=1, generation=1, keyboard mode, volume=0.7)</and>
+      <and>corrupt file is overwritten with valid defaults</and>
+      <and>warning logged: "State file corrupted, resetting to defaults"</and>
+      <given>the state file contains invalid values (pokemon_id=999, generation=5)</given>
+      <then>invalid values are clamped to valid ranges (pokemon_id 1-386, generation 1-3, volume 0.0-1.0)</then>
+      <and>corrected values are written back to state file</and>
+    </criterion>
+    <criterion id="AC-7" priority="high">
+      <description>State Persistence Performance</description>
+      <given>the application is running</given>
+      <when>StateManager.save_state() is called</when>
+      <then>save operation completes in &lt; 50ms</then>
+      <and>no perceptible delay in screen transitions</and>
+      <and>frame rate remains 30+ FPS during state saves</and>
+      <when>the application starts</when>
+      <then>StateManager loads state file in &lt; 50ms</then>
+      <and>application boots to HomeScreen in &lt; 5 seconds total (per NFR-P3)</and>
+      <when>the application shuts down cleanly</when>
+      <then>state_manager.save_state() is called in finally block</then>
+      <and>final state is written to file before exit</and>
+    </criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <artifact path="docs/PRD.md" title="Product Requirements Document" section="FR5: State Persistence">
+        <snippet>FR5.1 - Session State: System shall remember last viewed Pokémon across power cycles. System shall restore to last viewed Pokémon on startup. FR5.2 - User Preferences: System shall persist user settings (if any) across sessions. Volume level shall be remembered (for future audio feature).</snippet>
+      </artifact>
+      <artifact path="docs/architecture.md" title="System Architecture" section="StateManager Integration">
+        <snippet>Purpose: Persist user session data across power cycles. Usage Pattern: Access via screen_manager.state_manager. When to call save_state(): On screen exit (on_exit method), On app shutdown (main loop cleanup), After significant state changes. What StateManager tracks: Last viewed Pokémon ID and generation, Favorites list, Recent views (last 10 Pokémon), User preferences (volume, input mode), Usage statistics.</snippet>
+      </artifact>
+      <artifact path="docs/architecture.md" title="State File Format" section="Data Architecture">
+        <snippet>State file location: data/shokedex_state.json. Structure: {version, last_viewed: {pokemon_id, generation}, favorites: [], recent: [], preferences: {input_mode, volume}, stats: {total_views, unique_viewed, sessions}}. Corruption handling: If JSON parse fails, reset to defaults and log error.</snippet>
+      </artifact>
+      <artifact path="docs/sprint-artifacts/tech-spec-epic-1-generation-navigation.md" title="Epic 1 Tech Spec" section="State Persistence">
+        <snippet>StateManager saves/restores last viewed generation. State file format: JSON with generation field. Atomic write pattern: write to temp file → rename to final path. Loading pattern: Try/catch on load, fallback to defaults on corruption.</snippet>
+      </artifact>
+      <artifact path="docs/sprint-artifacts/1-4-lr-button-generation-switching.md" title="Story 1-4 Completion Notes" section="Learnings">
+        <snippet>StateManager Already Integrated in Generation Switching: Story 1.4 calls self.screen_manager.state_manager.set_last_viewed() in _switch_generation() method after loading new generation. Access Pattern Established: Use self.screen_manager.state_manager to access manager singleton (no direct imports). Null Safety Required: Check hasattr(self.screen_manager, 'state_manager') for test compatibility.</snippet>
+      </artifact>
+      <artifact path="docs/sprint-artifacts/1-3-generation-filtering-and-database-queries.md" title="Story 1-3 Implementation" section="StateManager Pattern">
+        <snippet>Story 1.3 demonstrated screen_manager.state_manager access pattern. GENERATION_RANGES constant defined: {1: (1,151), 2: (152,251), 3: (252,386)}. _load_pokemon_by_generation() method available in HomeScreen.</snippet>
+      </artifact>
+    </docs>
+    <code>
+      <artifact path="src/state_manager.py" kind="manager" symbol="StateManager" lines="1-279" reason="Core state persistence manager - already implemented with all needed methods">
+        StateManager class manages persistent application state across sessions. Default state file: data/shokedex_state.json. Key methods: get_last_viewed_id(), get_last_viewed_generation(), set_last_viewed(pokemon_id, generation), save_state(), get_volume(), set_volume(), get_input_mode(), set_input_mode(). Automatic generation detection from pokemon_id. Recent tracking (max 10), favorites support, preferences storage, stats tracking.
+      </artifact>
+      <artifact path="src/ui/home_screen.py" kind="screen" symbol="HomeScreen" lines="1-800" reason="Primary screen requiring state loading on_enter and saving on_exit">
+        HomeScreen displays Pokemon grid with generation filtering. Has current_generation attribute, _load_pokemon_by_generation() method, _switch_generation() method. Story 1.4 already integrated StateManager in _switch_generation(). Needs state loading in on_enter() to restore last viewed generation and Pokemon. Needs state saving in on_exit() when navigating away.
+      </artifact>
+      <artifact path="src/main.py" kind="entry-point" symbol="main" lines="1-150" reason="Application entry point - initializes StateManager and ensures finally block for cleanup">
+        Main entry point creates StateManager instance, ScreenManager, and runs main game loop. Must verify StateManager instantiation before ScreenManager creation. Must add finally block to ensure save_state() called on shutdown. Boot sequence: Initialize managers → Create HomeScreen → Run game loop → Cleanup on exit.
+      </artifact>
+      <artifact path="src/ui/screen_manager.py" kind="manager" symbol="ScreenManager" lines="1-200" reason="Screen coordinator that provides state_manager reference to all screens">
+        ScreenManager coordinates screen navigation with push/pop stack. Constructor accepts state_manager parameter and stores as instance variable. All screens access state_manager via self.screen_manager.state_manager. HomeScreen already has this access pattern from Stories 1.3 and 1.4.
+      </artifact>
+      <artifact path="tests/test_state_manager.py" kind="test" symbol="TestStateManager" lines="1-250" reason="Existing comprehensive test suite for StateManager functionality">
+        Test suite covers: default state initialization, last viewed tracking, generation detection, favorites management, recent tracking, preferences (volume, input_mode), statistics, save/load roundtrip, corruption recovery. All tests passing. Story 1.5 will add integration tests for HomeScreen state persistence.
+      </artifact>
+      <artifact path="tests/test_home_screen.py" kind="test" symbol="TestHomeScreenGenerationFiltering" lines="1-220" reason="Existing HomeScreen test suite - will add state persistence tests">
+        Test suite covers generation filtering, generation switching, scroll position reset. 23 tests passing (14 from Story 1.3, 9 from Story 1.4). Story 1.5 will add integration tests for state loading in on_enter() and state saving in on_exit().
+      </artifact>
+    </code>
+    <dependencies>
+      <ecosystem name="Python" manifest="requirements.txt">
+        <package name="pygame" version="2.5.0+" reason="Graphics rendering and display management" />
+        <package name="Pillow" version="10.0.0+" reason="Image processing for sprites" />
+      </ecosystem>
+      <internal>
+        <dependency path="src/data/database.py" reason="Pokemon data queries for generation filtering" />
+        <dependency path="src/input_manager.py" reason="Input action abstraction for button handling" />
+        <dependency path="src/ui/sprite_loader.py" reason="Sprite loading utilities" />
+        <dependency path="src/ui/colors.py" reason="Color palette constants" />
+      </internal>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="performance">Save operation must complete in &lt; 50ms (non-blocking on Raspberry Pi)</constraint>
+    <constraint type="performance">Load operation must complete in &lt; 50ms during startup</constraint>
+    <constraint type="performance">State saves must not drop frame rate below 30 FPS</constraint>
+    <constraint type="performance">Total boot time must remain &lt; 5 seconds including state restoration</constraint>
+    <constraint type="security">State file is JSON (no code execution risk)</constraint>
+    <constraint type="security">File permissions: user-only read/write</constraint>
+    <constraint type="reliability">Corruption must not crash application - always fallback to defaults</constraint>
+    <constraint type="reliability">Invalid values must be clamped to safe ranges: pokemon_id 1-386, generation 1-3, volume 0.0-1.0</constraint>
+    <constraint type="compatibility">State file portable across systems (just copy data/ folder)</constraint>
+    <constraint type="architecture">Always access StateManager via screen_manager.state_manager (no direct imports)</constraint>
+    <constraint type="architecture">Use hasattr(self.screen_manager, 'state_manager') for null safety in tests</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface name="StateManager.get_last_viewed_generation" kind="method">
+      <signature>def get_last_viewed_generation(self) -> int</signature>
+      <description>Retrieve last viewed generation from saved state</description>
+      <returns>Generation number (1, 2, or 3). Defaults to 1 if not set.</returns>
+      <path>src/state_manager.py</path>
+    </interface>
+    <interface name="StateManager.get_last_viewed_id" kind="method">
+      <signature>def get_last_viewed_id(self) -> int</signature>
+      <description>Retrieve last viewed Pokemon ID from saved state</description>
+      <returns>Pokemon national dex number (1-386). Defaults to 1 if not set.</returns>
+      <path>src/state_manager.py</path>
+    </interface>
+    <interface name="StateManager.set_last_viewed" kind="method">
+      <signature>def set_last_viewed(self, pokemon_id: int, generation: Optional[int] = None)</signature>
+      <description>Update last viewed Pokemon and generation. Auto-detects generation if not provided.</description>
+      <parameters>pokemon_id: National dex number, generation: 1-3 (auto-detected if None)</parameters>
+      <path>src/state_manager.py</path>
+    </interface>
+    <interface name="StateManager.save_state" kind="method">
+      <signature>def save_state(self) -> bool</signature>
+      <description>Persist current state to JSON file</description>
+      <returns>True if successful, False otherwise</returns>
+      <path>src/state_manager.py</path>
+    </interface>
+    <interface name="StateManager.get_volume" kind="method">
+      <signature>def get_volume(self) -> float</signature>
+      <description>Get volume preference</description>
+      <returns>Volume level 0.0-1.0, defaults to 0.7</returns>
+      <path>src/state_manager.py</path>
+    </interface>
+    <interface name="StateManager.set_volume" kind="method">
+      <signature>def set_volume(self, volume: float)</signature>
+      <description>Set volume preference with clamping to 0.0-1.0 range</description>
+      <path>src/state_manager.py</path>
+    </interface>
+    <interface name="StateManager.get_input_mode" kind="method">
+      <signature>def get_input_mode(self) -> str</signature>
+      <description>Get input mode preference</description>
+      <returns>"keyboard" or "gpio", defaults to "keyboard"</returns>
+      <path>src/state_manager.py</path>
+    </interface>
+    <interface name="StateManager.set_input_mode" kind="method">
+      <signature>def set_input_mode(self, mode: str)</signature>
+      <description>Set input mode preference with validation to "keyboard" or "gpio"</description>
+      <path>src/state_manager.py</path>
+    </interface>
+    <interface name="HomeScreen.on_enter" kind="lifecycle">
+      <signature>def on_enter(self)</signature>
+      <description>Called when screen becomes active - must load state here</description>
+      <implementation>Call state_manager.get_last_viewed_generation() and get_last_viewed_id(), set current_generation, call _load_pokemon_by_generation(), find pokemon in list and set selected_index</implementation>
+      <path>src/ui/home_screen.py</path>
+    </interface>
+    <interface name="HomeScreen.on_exit" kind="lifecycle">
+      <signature>def on_exit(self)</signature>
+      <description>Called when screen becomes inactive - must save state here</description>
+      <implementation>Get current pokemon_id from pokemon_list[selected_index], call state_manager.set_last_viewed(pokemon_id, current_generation), call state_manager.save_state()</implementation>
+      <path>src/ui/home_screen.py</path>
+    </interface>
+    <interface name="HomeScreen._load_pokemon_by_generation" kind="method">
+      <signature>def _load_pokemon_by_generation(self, generation: int)</signature>
+      <description>Load Pokemon for specified generation from database (already implemented in Story 1.3)</description>
+      <path>src/ui/home_screen.py</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Use pytest framework. All tests in tests/ directory. Mock StateManager for unit tests. Use real database for integration tests. Test coverage goal: 90%+ for state persistence logic. Performance tests run on actual Raspberry Pi hardware when possible. Use try/except to handle graceful failures. Verify no crashes on corruption or invalid data.
+    </standards>
+    <locations>
+      tests/test_state_manager.py - StateManager unit tests (existing, comprehensive)
+      tests/test_home_screen.py - HomeScreen integration tests (will add state persistence tests)
+      tests/test_performance_monitor.py - Performance validation tests
+    </locations>
+    <ideas>
+      <idea ac-ref="AC-1">test_first_boot_creates_state_file: Delete state file, instantiate StateManager, verify file created with defaults (pokemon_id=1, generation=1, volume=0.7, input_mode="keyboard")</idea>
+      <idea ac-ref="AC-2">test_load_state_returns_last_viewed: Save state with pokemon_id=25, generation=1, create new StateManager, verify get_last_viewed_id() returns 25 and get_last_viewed_generation() returns 1</idea>
+      <idea ac-ref="AC-2">test_save_state_persists_to_file: Call set_last_viewed(25, 1), save_state(), read JSON file, verify pokemon_id=25 and generation=1 in file</idea>
+      <idea ac-ref="AC-3">test_home_screen_loads_last_generation: Mock state_manager to return generation=2, pokemon_id=152, create HomeScreen, call on_enter(), verify current_generation=2 and Chikorita loaded</idea>
+      <idea ac-ref="AC-3">test_generation_switch_saves_state: Create HomeScreen with mock state_manager, call _switch_generation(1), verify state_manager.set_last_viewed() called with new generation</idea>
+      <idea ac-ref="AC-4">test_boot_to_homescreen_always: Mock DetailScreen as last viewed, restart app simulation, verify HomeScreen is root screen and DetailScreen not instantiated</idea>
+      <idea ac-ref="AC-5">test_volume_validation: Call set_volume(1.5), verify get_volume() returns 1.0 (clamped). Call set_volume(-0.5), verify returns 0.0 (clamped)</idea>
+      <idea ac-ref="AC-5">test_input_mode_validation: Call set_input_mode("keyboard"), verify get_input_mode() returns "keyboard". Call set_input_mode("invalid"), verify returns "keyboard" (default)</idea>
+      <idea ac-ref="AC-6">test_state_corruption_recovery: Write invalid JSON to state file, instantiate StateManager, verify no crash, defaults loaded, warning logged</idea>
+      <idea ac-ref="AC-6">test_invalid_values_clamped: Write pokemon_id=999 to state file, load, verify clamped to 386. Write generation=5, verify clamped to 3</idea>
+      <idea ac-ref="AC-7">test_save_state_performance: Time save_state() operation, assert duration &lt; 50ms on Raspberry Pi</idea>
+      <idea ac-ref="AC-7">test_load_state_performance: Time StateManager initialization with existing state file, assert duration &lt; 50ms</idea>
+      <idea ac-ref="AC-7">test_state_save_in_finally_block: Verify main.py has try/finally block that calls state_manager.save_state() on cleanup</idea>
+    </ideas>
+  </tests>
+</story-context>

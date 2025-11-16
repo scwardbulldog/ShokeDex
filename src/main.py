@@ -77,17 +77,17 @@ class ShokeDexApp:
         # Initialize screen manager
         self.screen_manager = ScreenManager(self.screen)
         
+        # Attach state_manager to screen_manager for screen access (Story 1.5)
+        self.screen_manager.state_manager = self.state_manager
+        self.screen_manager.audio_manager = self.audio_manager
+        self.screen_manager.input_manager = self.input_manager
+        
         # Initialize database
         self.database = self._init_database()
+        self.screen_manager.database = self.database
         
         # Set up initial screen
-        # Pass audio manager and state manager to screen
-        home_screen = HomeScreen(
-            self.screen_manager, 
-            self.database,
-            audio_manager=self.audio_manager,
-            state_manager=self.state_manager
-        )
+        home_screen = HomeScreen(self.screen_manager, self.database)
         self.screen_manager.push(home_screen)
         
         # Application state
@@ -230,21 +230,22 @@ class ShokeDexApp:
         print(f"Input mode: {self.input_manager.get_mode_name()}")
         print("Press ESC to quit.")
         
-        while self.running:
-            # Calculate delta time
-            delta_time = self.clock.tick(FPS) / 1000.0
-            
-            # Handle events
-            self.handle_events()
-            
-            # Update
-            self.update(delta_time)
-            
-            # Render
-            self.render()
-        
-        # Cleanup
-        self.cleanup()
+        try:
+            while self.running:
+                # Calculate delta time
+                delta_time = self.clock.tick(FPS) / 1000.0
+                
+                # Handle events
+                self.handle_events()
+                
+                # Update
+                self.update(delta_time)
+                
+                # Render
+                self.render()
+        finally:
+            # Ensure cleanup happens even on unexpected exit (Story 1.5: State Persistence)
+            self.cleanup()
     
     def cleanup(self):
         """Clean up resources before exit."""

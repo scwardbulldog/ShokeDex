@@ -292,17 +292,63 @@ class HomeScreen(Screen):
         self.text_font = pygame.font.Font(None, 24)
         self.small_font = pygame.font.Font(None, 16)
         
-        # Initialize generation badge
-        first_pokemon_id = 1  # Default to Bulbasaur
-        if self.pokemon_list:
-            first_pokemon_id = self.pokemon_list[0]['id']
-        
-        self.generation_badge = GenerationBadge(self.current_generation, first_pokemon_id)
-        self.generation_badge.name_font = self.badge_name_font
-        self.generation_badge.counter_font = self.badge_counter_font
+        # Load state from StateManager (Story 1.5: State Persistence)
+        if hasattr(self.screen_manager, 'state_manager') and self.screen_manager.state_manager:
+            self.current_generation = self.screen_manager.state_manager.get_last_viewed_generation()
+            last_pokemon_id = self.screen_manager.state_manager.get_last_viewed_id()
+        else:
+            # No state manager available (test environment) - use defaults
+            last_pokemon_id = 1
         
         # Load Pokemon data for current generation
         self._load_pokemon_by_generation(self.current_generation)
+        
+        # Find the last viewed Pokemon in the loaded list and set selected_index
+        if self.pokemon_list:
+            found_index = None
+            for i, pokemon in enumerate(self.pokemon_list):
+                if pokemon['id'] == last_pokemon_id:
+                    found_index = i
+                    break
+            
+            if found_index is not None:
+                self.selected_index = found_index
+                # Calculate correct page for this selection
+                self.page = found_index // self.items_per_page
+            else:
+                # Pokemon not in current generation - default to first
+                self.selected_index = 0
+                self.page = 0
+            
+            first_pokemon_id = self.pokemon_list[self.selected_index]['id']
+        else:
+            first_pokemon_id = 1
+        
+        # Initialize generation badge with correct Pokemon ID
+        self.generation_badge = GenerationBadge(self.current_generation, first_pokemon_id)
+        self.generation_badge.name_font = self.badge_name_font
+        self.generation_badge.counter_font = self.badge_counter_font
+    
+    def on_exit(self):
+        """Called when screen becomes inactive - save state."""
+        super().on_exit()
+        
+        # Save current state to StateManager (Story 1.5: State Persistence)
+        if hasattr(self.screen_manager, 'state_manager') and self.screen_manager.state_manager:
+            # Get current Pokemon ID from selected index
+            if self.pokemon_list and 0 <= self.selected_index < len(self.pokemon_list):
+                current_pokemon_id = self.pokemon_list[self.selected_index]['id']
+                
+                try:
+                    # Save last viewed Pokemon and generation
+                    self.screen_manager.state_manager.set_last_viewed(
+                        current_pokemon_id,
+                        self.current_generation
+                    )
+                    self.screen_manager.state_manager.save_state()
+                except Exception as e:
+                    # Don't crash on save failure - just log it
+                    print(f"Warning: Failed to save state: {e}")
     
     def _load_pokemon_by_generation(self, generation: int):
         """

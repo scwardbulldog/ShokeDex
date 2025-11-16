@@ -235,3 +235,105 @@ class TestStateManager(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+    
+    # Story 1.5: State Persistence Integration Tests
+    
+    def test_first_boot_creates_state_file(self):
+        """Test first boot creates state file with defaults (AC #1)"""
+        # Remove temp file to simulate first boot
+        Path(self.state_path).unlink(missing_ok=True)
+        
+        # Create new state manager
+        state_manager = StateManager(self.state_path)
+        
+        # Verify file was created
+        self.assertTrue(Path(self.state_path).exists())
+        
+        # Verify defaults
+        self.assertEqual(state_manager.get_last_viewed_id(), 1)
+        self.assertEqual(state_manager.get_last_viewed_generation(), 1)
+        self.assertEqual(state_manager.get_volume(), 0.7)
+        self.assertEqual(state_manager.get_input_mode(), 'keyboard')
+    
+    def test_state_corruption_recovery(self):
+        """Test corrupted JSON resets to defaults without crash (AC #6)"""
+        # Write invalid JSON to state file
+        with open(self.state_path, 'w') as f:
+            f.write("{invalid json content here")
+        
+        # Create state manager - should not crash
+        state_manager = StateManager(self.state_path)
+        
+        # Should load defaults
+        self.assertEqual(state_manager.get_last_viewed_id(), 1)
+        self.assertEqual(state_manager.get_last_viewed_generation(), 1)
+        
+        # Verify corrupt file was overwritten with valid defaults
+        with open(self.state_path, 'r') as f:
+            state = json.load(f)  # Should parse successfully now
+            self.assertEqual(state['last_viewed']['pokemon_id'], 1)
+    
+    def test_invalid_pokemon_id_clamped(self):
+        """Test invalid pokemon_id is clamped to valid range (AC #6)"""
+        # Manually write invalid pokemon_id to file
+        invalid_state = self.state_manager._get_default_state()
+        invalid_state['last_viewed']['pokemon_id'] = 999  # Out of range
+        
+        with open(self.state_path, 'w') as f:
+            json.dump(invalid_state, f)
+        
+        # Load state - should clamp value
+        state_manager = StateManager(self.state_path)
+        
+        # Should be clamped to 386 (max valid ID)
+        self.assertEqual(state_manager.get_last_viewed_id(), 386)
+    
+    def test_invalid_generation_clamped(self):
+        """Test invalid generation is clamped to valid range (AC #6)"""
+        # Manually write invalid generation to file
+        invalid_state = self.state_manager._get_default_state()
+        invalid_state['last_viewed']['generation'] = 5  # Out of range
+        
+        with open(self.state_path, 'w') as f:
+            json.dump(invalid_state, f)
+        
+        # Load state - should clamp value
+        state_manager = StateManager(self.state_path)
+        
+        # Should be clamped to 3 (max valid generation)
+        self.assertEqual(state_manager.get_last_viewed_generation(), 3)
+    
+    def test_invalid_volume_clamped(self):
+        """Test invalid volume is clamped to 0.0-1.0 range (AC #5, #6)"""
+        # Test over max
+        invalid_state = self.state_manager._get_default_state()
+        invalid_state['preferences']['volume'] = 1.5
+        
+        with open(self.state_path, 'w') as f:
+            json.dump(invalid_state, f)
+        
+        state_manager = StateManager(self.state_path)
+        self.assertEqual(state_manager.get_volume(), 1.0)
+        
+        # Test under min
+        invalid_state['preferences']['volume'] = -0.5
+        
+        with open(self.state_path, 'w') as f:
+            json.dump(invalid_state, f)
+        
+        state_manager = StateManager(self.state_path)
+        self.assertEqual(state_manager.get_volume(), 0.0)
+    
+    def test_invalid_input_mode_validation(self):
+        """Test invalid input_mode defaults to keyboard (AC #5, #6)"""
+        # Manually write invalid input_mode to file
+        invalid_state = self.state_manager._get_default_state()
+        invalid_state['preferences']['input_mode'] = 'invalid_mode'
+        
+        with open(self.state_path, 'w') as f:
+            json.dump(invalid_state, f)
+        
+        # Load state - should default to keyboard
+        state_manager = StateManager(self.state_path)
+        
+        self.assertEqual(state_manager.get_input_mode(), 'keyboard')

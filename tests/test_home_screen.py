@@ -512,3 +512,167 @@ class TestLRButtonGenerationSwitching(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class TestHomeScreenStatePersistence(unittest.TestCase):
+    """Test HomeScreen state persistence integration (Story 1.5)"""
+    
+    def setUp(self):
+        """Set up test database and HomeScreen with mock state manager"""
+        # Create temporary database
+        self.temp_dir = tempfile.mkdtemp()
+        self.db_path = os.path.join(self.temp_dir, 'test.db')
+        self.db = Database(self.db_path)
+        
+        # Create schema and populate with test data
+        with self.db as db:
+            db.create_schema()
+            
+            # Insert Pokemon from all three generations
+            pokemon_data = []
+            
+            # Kanto: 1-151
+            for i in range(1, 152):
+                pokemon_data.append((i, f'Pokemon{i}', i, 10, 100, 100, 1, 1))
+            
+            # Johto: 152-251
+            for i in range(152, 252):
+                pokemon_data.append((i, f'Pokemon{i}', i, 10, 100, 100, 2, 1))
+            
+            # Hoenn: 252-386
+            for i in range(252, 387):
+                pokemon_data.append((i, f'Pokemon{i}', i, 10, 100, 100, 3, 1))
+            
+            db.executemany("""
+                INSERT INTO pokemon (id, name, species_id, height, weight, base_experience, generation, is_default)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, pokemon_data)
+            db.commit()
+        
+        # Create mock screen manager with mock state manager
+        self.mock_screen_manager = Mock()
+        self.mock_screen_manager.width = 800
+        self.mock_screen_manager.height = 480
+        self.mock_screen_manager.database = self.db
+        self.mock_screen_manager.input_manager = Mock()
+        
+        # Create mock state manager
+        self.mock_state_manager = Mock()
+        self.mock_state_manager.get_last_viewed_generation.return_value = 1
+        self.mock_state_manager.get_last_viewed_id.return_value = 1
+        self.mock_screen_manager.state_manager = self.mock_state_manager
+        
+        # Mock pygame display initialization
+        with patch('pygame.display.set_mode'), \
+             patch('pygame.font.Font'):
+            self.screen = HomeScreen(self.mock_screen_manager, self.db)
+    
+    def tearDown(self):
+        """Clean up temporary database"""
+        if os.path.exists(self.db_path):
+            os.remove(self.db_path)
+        os.rmdir(self.temp_dir)
+    
+    def test_on_enter_loads_last_viewed_generation(self):
+        """Test on_enter loads last viewed generation from state (AC #2, #3)"""
+        # Set up mock to return Johto generation
+        self.mock_state_manager.get_last_viewed_generation.return_value = 2
+        self.mock_state_manager.get_last_viewed_id.return_value = 152  # Chikorita
+        
+        # Call on_enter
+        self.screen.on_enter()
+        
+        # Verify generation was loaded
+        self.assertEqual(self.screen.current_generation, 2, "Should load Johto generation")
+        
+        # Verify Pokemon list is for Johto
+        self.assertEqual(len(self.screen.pokemon_list), 100, "Should load 100 Johto Pokemon")
+        self.assertEqual(self.screen.pokemon_list[0]['id'], 152, "First should be Chikorita")
+    
+    def test_on_enter_loads_last_viewed_pokemon(self):
+        """Test on_enter sets selected_index to last viewed Pokemon (AC #2, #3)"""
+        # Set up mock to return Pikachu in Kanto
+        self.mock_state_manager.get_last_viewed_generation.return_value = 1
+        self.mock_state_manager.get_last_viewed_id.return_value = 25  # Pikachu
+        
+        # Call on_enter
+        self.screen.on_enter()
+        
+        # Verify Pikachu is selected
+        self.assertEqual(self.screen.pokemon_list[self.screen.selected_index]['id'], 25, "Pikachu should be selected")
+        
+        # Verify page is calculated correctly for this selection
+        expected_page = 24 // self.screen.items_per_page  # Pikachu is at index 24 (0-indexed)
+        self.assertEqual(self.screen.page, expected_page, "Page should be calculated correctly")
+    
+    def test_on_enter_defaults_to_first_if_pokemon_not_in_generation(self):
+        """Test on_enter defaults to first Pokemon if last viewed not in current generation"""
+        # Set up mock to return Johto generation but Kanto Pokemon
+        self.mock_state_manager.get_last_viewed_generation.return_value = 2
+        self.mock_state_manager.get_last_viewed_id.return_value = 25  # Pikachu (Kanto)
+        
+        # Call on_enter
+        self.screen.on_enter()
+        
+        # Should default to first Pokemon in Johto (Chikorita)
+        self.assertEqual(self.screen.selected_index, 0, "Should default to first index")
+        self.assertEqual(self.screen.pokemon_list[0]['id'], 152, "Should be Chikorita")
+    
+    def test_on_exit_saves_current_state(self):
+        """Test on_exit saves current Pokemon and generation to state (AC #2, #3)"""
+        # Set up screen state
+        self.screen.on_enter()
+        self.screen.current_generation = 2
+        self.screen._load_pokemon_by_generation(2)
+        self.screen.selected_index = 10  # Some Pokemon in the list
+        
+        # Call on_exit
+        self.screen.on_exit()
+        
+        # Verify state_manager.set_last_viewed was called
+        self.mock_state_manager.set_last_viewed.assert_called_once()
+        call_args = self.mock_state_manager.set_last_viewed.call_args
+        
+        # Check arguments
+        self.assertEqual(call_args[0][0], self.screen.pokemon_list[10]['id'], "Should save selected Pokemon ID")
+        self.assertEqual(call_args[0][1], 2, "Should save Johto generation")
+        
+        # Verify save_state was called
+        self.mock_state_manager.save_state.assert_called_once()
+    
+    def test_on_exit_handles_missing_state_manager(self):
+        """Test on_exit doesn't crash if state_manager is None"""
+        # Remove state manager
+        self.mock_screen_manager.state_manager = None
+        
+        # Recreate screen without state manager
+        with patch('pygame.display.set_mode'), \
+             patch('pygame.font.Font'):
+            screen = HomeScreen(self.mock_screen_manager, self.db)
+            screen.on_enter()
+            screen.current_generation = 1
+            screen._load_pokemon_by_generation(1)
+        
+        # Should not crash
+        screen.on_exit()
+    
+    def test_generation_switch_saves_new_generation(self):
+        """Test generation switch updates state with new generation (AC #3)"""
+        # Set up screen
+        self.screen.on_enter()
+        self.screen.current_generation = 1
+        self.screen._load_pokemon_by_generation(1)
+        
+        # Switch to Johto
+        self.screen._switch_generation(1)
+        self.screen.update(0.2)  # Complete transition
+        
+        # Verify state_manager.set_last_viewed was called with new generation
+        self.mock_state_manager.set_last_viewed.assert_called()
+        
+        # Get the last call (from generation switch, not on_enter)
+        last_call = self.mock_state_manager.set_last_viewed.call_args_list[-1]
+        self.assertEqual(last_call[1]['generation'], 2, "Should save Johto generation")
+        self.assertEqual(last_call[1]['pokemon_id'], 152, "Should save first Johto Pokemon")
+
+
