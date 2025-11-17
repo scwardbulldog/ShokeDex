@@ -1,0 +1,272 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>3</epicId>
+    <storyId>5</storyId>
+    <title>Pokédex Description Text Display</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-16</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/3-5-pokedex-description-text-display.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>user</asA>
+    <iWant>to read the Pokémon's Pokédex entry description</iWant>
+    <soThat>I can learn about its lore and characteristics</soThat>
+    <tasks>
+- [ ] Task 1: Extend Database Query to Include Description (AC: #7)
+- [ ] Task 2: Load Description in DetailScreen Lifecycle (AC: #7, #8)
+- [ ] Task 3: Implement Text Wrapping Function (AC: #2, #3, #4)
+- [ ] Task 4: Pre-Render Description Lines in on_enter (AC: #9)
+- [ ] Task 5: Implement Description Panel Rendering (AC: #1, #5, #6)
+- [ ] Task 6: Implement Font Loading for Description (AC: #5)
+- [ ] Task 7: Implement Truncation with Ellipsis (AC: #4)
+- [ ] Task 8: Error Handling and Placeholder Display (AC: #8)
+- [ ] Task 9: Performance Optimization (AC: #9, #10)
+- [ ] Task 10: Integration Testing (AC: All)
+- [ ] Task 11: Update Tests and Documentation (AC: All)</tasks>
+  </story>
+
+  <acceptanceCriteria>
+1. **Authentic Description Display (AC #1)**
+   - Authentic flavor text from database displayed
+   - Text from pokemon table description column
+   - No placeholder/dummy text (except when missing)
+   - Maintains original wording from PokéAPI
+
+2. **Text Wrapping at Word Boundaries (AC #2)**
+   - Text wraps at word boundaries (not mid-word)
+   - Maximum 400px width per line
+   - Splits on spaces, not within words
+   - Hyphenated words may split at hyphens if necessary
+
+3. **Four-Line Display Limit (AC #3)**
+   - Maximum 4 lines displayed
+   - Line height: 22.4px (1.4 × 16px font size)
+   - Lines evenly spaced vertically
+   - Total height ≤ 89.6px (4 lines × 22.4px)
+
+4. **Truncation with Ellipsis (AC #4)**
+   - Text exceeding 4 lines truncated
+   - "..." ellipsis appended to line 4
+   - Ellipsis fits within 400px width
+   - Ellipsis clearly visible, not cut off
+   - No ellipsis if text fits naturally
+
+5. **Typography Specifications (AC #5)**
+   - Font: Rajdhani Regular, 16px
+   - Color: ice blue (#a8e6ff / rgb(168, 230, 255))
+   - Antialiased for smooth rendering
+   - Fallback: pygame default if Rajdhani unavailable
+
+6. **Layout and Positioning (AC #6)**
+   - Panel in lower section of detail area
+   - Holographic blue styling: dark blue background rgba(26, 47, 74, 0.9)
+   - 2px solid electric blue border (#00d4ff)
+   - 16px padding between panel edge and text
+   - All text within display boundaries (no cutoff)
+   - No overlap with other UI elements
+
+7. **Database Query Integration (AC #7)**
+   - Description from pokemon table description column
+   - Parameterized query (SQL injection prevention)
+   - Query completes in < 50ms
+   - Stored in self.description: str
+
+8. **Error Handling and Missing Data (AC #8)**
+   - Placeholder "No description available" if missing
+   - Same styling as normal description
+   - Warning logged: "No description found for Pokemon #{id}"
+   - No crash on missing description
+   - Null descriptions coerced to empty string
+
+9. **Pre-Rendering Optimization (AC #9)**
+   - Text wrapped/rendered in on_enter() (not per frame)
+   - Cached in self.description_lines: List[pygame.Surface]
+   - render() blits cached surfaces only
+   - Pre-rendering completes in < 5ms
+   - Surfaces cleared/regenerated on navigation
+
+10. **Performance Requirements (AC #10)**
+    - 30+ FPS maintained during rendering
+    - Description blit < 5ms per frame
+    - Text wrapping in on_enter() < 50ms
+    - DetailScreen total render < 33ms per frame</acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/PRD.md</path>
+        <title>Product Requirements Document</title>
+        <section>FR3: Pokémon Detail View</section>
+        <snippet>FR3.1 - Detail Screen Display: System shall display detailed Pokémon information when user presses A button. Large sprite shall occupy 50-60% of screen real estate. Display shall include: Name, National Dex number, type(s), base stats, height, weight, description.</snippet>
+      </doc>
+      <doc>
+        <path>docs/PRD.md</path>
+        <title>Product Requirements Document</title>
+        <section>NFR-P1: Frame Rate</section>
+        <snippet>System shall maintain 30+ FPS on Raspberry Pi 3B+ during all operations. No visible stuttering or lag during navigation or screen transitions.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture.md</path>
+        <title>Architecture Document</title>
+        <section>Performance Patterns - Text Rendering</section>
+        <snippet>Pre-render static text elements in on_enter() to optimize frame rate. Load fonts once, cache in instance variables. Use antialiasing for smooth rendering. No text processing per frame - blit cached surfaces only.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture.md</path>
+        <title>Architecture Document</title>
+        <section>Database Access Pattern</section>
+        <snippet>Always use parameterized queries: cursor.execute("SELECT * FROM pokemon WHERE id = ?", (pokemon_id,)). Never use string formatting for SQL queries. Use context managers for connections. Handle exceptions gracefully.</snippet>
+      </doc>
+      <doc>
+        <path>docs/ux-design-specification.md</path>
+        <title>UX Design Specification</title>
+        <section>4.3 Detail Screen - Pokédex Description</section>
+        <snippet>Pokédex description displayed with authentic flavor text. Text wrapped at word boundaries to max 400px width. Maximum 4 lines with 22.4px line height. Truncate with "..." if exceeds 4 lines. Rajdhani 16px, ice blue color for readability.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-2-detail-view-with-audio.md</path>
+        <title>Epic 2 Tech Spec - Detail View</title>
+        <section>AC #5: Pokedex Description Display</section>
+        <snippet>DESCRIPTION_SPEC: font='Rajdhani', size=16px, color=#a8e6ff (ice blue), max_width=400px, max_lines=4, line_height=22.4px (1.4 × font), truncation='...'. Text wrapping requirements: wrap at word boundaries, max 400px width, max 4 lines, truncate with ellipsis if exceeds.</snippet>
+      </doc>
+      <doc>
+        <path>docs/database_schema.md</path>
+        <title>Database Schema</title>
+        <section>pokemon table</section>
+        <snippet>pokemon table columns: id, name, height, weight, description. Description field type: TEXT (variable length string). May be null or empty. Contains authentic flavor text from PokéAPI. Length varies: 50-300 characters typical, some legendary Pokémon 400+ characters.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <artifact>
+        <path>src/ui/detail_screen.py</path>
+        <kind>class</kind>
+        <symbol>DetailScreen</symbol>
+        <lines>entire file</lines>
+        <reason>Main implementation target - add description panel rendering, text wrapping, and pre-rendering optimization</reason>
+      </artifact>
+      <artifact>
+        <path>src/ui/screen.py</path>
+        <kind>base class</kind>
+        <symbol>Screen</symbol>
+        <lines>1-50</lines>
+        <reason>Base class defining lifecycle methods (on_enter, on_exit, update, render) used for description loading and rendering</reason>
+      </artifact>
+      <artifact>
+        <path>src/data/database.py</path>
+        <kind>class</kind>
+        <symbol>Database</symbol>
+        <lines>entire file</lines>
+        <reason>Verify get_pokemon_by_id() includes description field or add get_pokemon_physical_data() method</reason>
+      </artifact>
+      <artifact>
+        <path>src/ui/colors.py</path>
+        <kind>constants</kind>
+        <symbol>ICE_BLUE, DARK_BLUE, ELECTRIC_BLUE</symbol>
+        <lines>entire file</lines>
+        <reason>Holographic blue color palette for description panel styling (background, border, text)</reason>
+      </artifact>
+      <artifact>
+        <path>src/state_manager.py</path>
+        <kind>class</kind>
+        <symbol>StateManager</symbol>
+        <lines>1-100</lines>
+        <reason>Used to save last viewed Pokémon when navigating between DetailScreen instances</reason>
+      </artifact>
+      <artifact>
+        <path>src/performance_monitor.py</path>
+        <kind>module</kind>
+        <symbol>PerformanceMonitor</symbol>
+        <lines>1-50</lines>
+        <reason>Performance profiling for description rendering (target: < 5ms blit, < 50ms pre-render)</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <python>
+        <package name="pygame" version="2.5.0+">Graphics rendering, font rendering, Surface creation for text</package>
+        <package name="Pillow" version="10.0.0+">Not directly used for text, but available for image processing</package>
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+- Pre-render text surfaces in on_enter(), never process text per frame (performance)
+- Maximum 4 lines displayed to prevent layout overflow (UX requirement)
+- Text wrapping must break at word boundaries, not mid-word (readability)
+- All database queries must use parameterized statements (security)
+- Font fallback to pygame default if Rajdhani unavailable (reliability)
+- Description panel must not overlap other UI elements (layout)
+- Total render time must remain < 33ms per frame to maintain 30+ FPS (performance)
+- Description text cached as pygame.Surface objects, not strings (optimization)</constraints>
+
+  <interfaces>
+    <interface>
+      <name>Database.get_pokemon_by_id()</name>
+      <kind>database query method</kind>
+      <signature>def get_pokemon_by_id(pokemon_id: int) -&gt; Dict[str, Any]</signature>
+      <path>src/data/database.py</path>
+      <note>Verify this method returns description field. If not, modify query: SELECT id, name, height, weight, description FROM pokemon WHERE id = ?</note>
+    </interface>
+    <interface>
+      <name>DetailScreen.on_enter()</name>
+      <kind>lifecycle method</kind>
+      <signature>def on_enter(self) -&gt; None</signature>
+      <path>src/ui/detail_screen.py</path>
+      <note>Called when screen becomes active. Load description, pre-render text lines here.</note>
+    </interface>
+    <interface>
+      <name>DetailScreen.render()</name>
+      <kind>rendering method</kind>
+      <signature>def render(self, surface: pygame.Surface) -&gt; None</signature>
+      <path>src/ui/detail_screen.py</path>
+      <note>Called every frame. Blit pre-rendered description line surfaces only, no text processing.</note>
+    </interface>
+    <interface>
+      <name>pygame.font.Font.render()</name>
+      <kind>pygame text rendering</kind>
+      <signature>font.render(text: str, antialias: bool, color: Tuple[int, int, int]) -&gt; pygame.Surface</signature>
+      <path>pygame library</path>
+      <note>Used to render each line of description text to Surface. antialias=True for smooth text.</note>
+    </interface>
+    <interface>
+      <name>pygame.font.Font.size()</name>
+      <kind>pygame text measurement</kind>
+      <signature>font.size(text: str) -&gt; Tuple[int, int]</signature>
+      <path>pygame library</path>
+      <note>Returns (width, height) of rendered text. Used for word-boundary wrapping logic.</note>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>Testing standards for ShokeDex:
+- Use Python unittest framework (existing tests in tests/ directory)
+- Run with: python -m unittest discover tests -v
+- Test coverage target: 90%+ for core functionality
+- Use temporary/in-memory databases for testing (no side effects)
+- Mock external dependencies (pygame surfaces, file I/O)
+- Clean up resources in tearDown() methods
+- Name pattern: test_{method_name}_{scenario}
+- Profile performance with time.perf_counter() for timing assertions</standards>
+    <locations>
+      <location>tests/test_detail_screen.py</location>
+    </locations>
+    <ideas>
+      <idea ac="AC #1, #7">test_description_displays_authentic_text() - Load Pikachu (#25), verify description text matches database value, confirm not placeholder</idea>
+      <idea ac="AC #2">test_description_wraps_at_word_boundaries() - Long description text wraps without mid-word breaks, verify no words ending with hyphen (unless original)</idea>
+      <idea ac="AC #3">test_description_max_four_lines() - Verify line count ≤ 4 for any description length, check line height 22.4px spacing</idea>
+      <idea ac="AC #4">test_long_description_truncates_with_ellipsis() - Mewtwo (#150) or other legendary with 200+ char description truncates at line 4 with "..." visible</idea>
+      <idea ac="AC #4">test_short_description_no_ellipsis() - Caterpie (#10) short description (1-2 lines) renders without ellipsis</idea>
+      <idea ac="AC #5">test_description_typography_styling() - Verify font=Rajdhani 16px, color=#a8e6ff (ice blue), antialiasing enabled</idea>
+      <idea ac="AC #6">test_description_panel_layout() - Panel positioned in lower section, dark blue background rgba(26,47,74,0.9), 2px electric blue border, 16px padding</idea>
+      <idea ac="AC #8">test_missing_description_placeholder() - Mock database returning None/empty string, verify placeholder "No description available" displayed with same styling</idea>
+      <idea ac="AC #9">test_description_pre_rendering_performance() - Measure time in on_enter() for _render_description_lines(), assert < 50ms (target: < 5ms ideal)</idea>
+      <idea ac="AC #10">test_description_blit_performance() - Measure time in render() for _render_description_panel(), assert < 5ms per frame</idea>
+      <idea ac="AC #10">test_detail_screen_maintains_30fps() - Run render loop 100 times, measure FPS, assert ≥ 30 FPS maintained</idea>
+      <idea ac="AC #7">test_database_query_includes_description() - Unit test Database.get_pokemon_by_id(), verify description field present in returned dict</idea>
+      <idea ac="Edge Case">test_description_exactly_four_lines() - Text fitting exactly 4 lines without truncation (no ellipsis, all text visible)</idea>
+      <idea ac="Edge Case">test_description_single_long_word() - Word exceeding 400px width forces onto line (may overflow, document behavior)</idea>
+      <idea ac="Edge Case">test_rapid_navigation_description_updates() - Navigate L/R quickly 20 times, verify description updates correctly, no stale text</idea>
+    </ideas>
+  </tests>
+</story-context>

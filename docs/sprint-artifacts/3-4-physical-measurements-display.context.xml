@@ -1,0 +1,259 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>3</epicId>
+    <storyId>3.4</storyId>
+    <title>Physical Measurements Display</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-16</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/3-4-physical-measurements-display.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>user</asA>
+    <iWant>to see the Pokémon's height and weight displayed clearly on the detail screen</iWant>
+    <soThat>I understand its physical characteristics and can compare sizes across Pokémon</soThat>
+    <tasks>
+      - Verify Database Schema for Physical Data (AC: #5, #6)
+      - Implement Database Query for Physical Data (AC: #5, #6)
+      - Load Physical Data in DetailScreen Lifecycle (AC: #5)
+      - Create Physical Data Rendering Method (AC: #1, #2, #3, #4, #9)
+      - Integrate Physical Data into DetailScreen Render Flow (AC: #3)
+      - Implement Data Validation and Edge Case Handling (AC: #6, #7)
+      - Apply Color and Typography Styling (AC: #4, #9)
+      - Add Unit Tests for Physical Data Methods (AC: #5, #6, #7, #8)
+      - Performance Profiling and Optimization (AC: #10)
+      - Integration Testing and Visual Verification (AC: All)
+      - Update Documentation and Code Comments (AC: All)
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC-1" priority="critical">
+      <description>Height Display</description>
+      <given>DetailScreen is displaying a Pokémon</given>
+      <when>the physical data section renders</when>
+      <then>height is displayed in meters with format "X.Xm" (one decimal place)</then>
+      <and>label "Height:" uses ice blue color (#a8e6ff)</and>
+      <and>value is displayed in white (#ffffff)</and>
+      <and>height value is accurate from database pokemon table</and>
+    </criterion>
+    <criterion id="AC-2" priority="critical">
+      <description>Weight Display</description>
+      <given>DetailScreen is displaying a Pokémon</given>
+      <when>the physical data section renders</when>
+      <then>weight is displayed in kilograms with format "X.Xkg" (one decimal place)</then>
+      <and>label "Weight:" uses ice blue color (#a8e6ff)</and>
+      <and>value is displayed in white (#ffffff)</and>
+      <and>weight value is accurate from database pokemon table</and>
+    </criterion>
+    <criterion id="AC-3" priority="critical">
+      <description>Physical Data Positioning</description>
+      <given>DetailScreen is rendering with sprite, stats, and type badges</given>
+      <when>physical data is positioned</when>
+      <then>height and weight are displayed in the lower section of the detail panel</then>
+      <and>physical data does not overlap sprite, stats bars, or type badges</and>
+      <and>physical data remains fully within display boundaries (no cutoff)</and>
+      <and>positioning is consistent across all Pokémon (short and tall, light and heavy)</and>
+    </criterion>
+    <criterion id="AC-4" priority="high">
+      <description>Physical Data Layout and Typography</description>
+      <given>height and weight are being rendered</given>
+      <when>the layout is applied</when>
+      <then>labels ("Height:" and "Weight:") are right-aligned</then>
+      <and>values (e.g., "0.4m", "6.0kg") are left-aligned after labels</and>
+      <and>vertical spacing between height and weight is 8px</and>
+      <and>font is Rajdhani, 16px for both labels and values</and>
+      <and>layout provides clean, readable alignment</and>
+    </criterion>
+    <criterion id="AC-5" priority="critical">
+      <description>Database Query Integration</description>
+      <given>DetailScreen needs to load physical data</given>
+      <when>DetailScreen._load_pokemon_data() executes</when>
+      <then>height and weight are fetched from pokemon table</then>
+      <and>query uses parameterized statement (SQL injection prevention)</and>
+      <and>query completes in &lt; 50ms (per performance target)</and>
+      <and>height and weight values are stored in instance variables (self.height, self.weight)</and>
+    </criterion>
+    <criterion id="AC-6" priority="high">
+      <description>Data Validation and Unit Conversion</description>
+      <given>database stores height in decimeters and weight in hectograms (PokéAPI format)</given>
+      <when>physical data is loaded</when>
+      <then>height is converted from decimeters to meters: meters = decimeters / 10</then>
+      <and>weight is converted from hectograms to kilograms: kilograms = hectograms / 10</and>
+      <and>converted values are validated as positive numbers</and>
+      <and>if height or weight is 0 or negative, warning is logged and "???" placeholder shown</and>
+    </criterion>
+    <criterion id="AC-7" priority="medium">
+      <description>Edge Case Handling</description>
+      <given>database returns missing or invalid physical data</given>
+      <when>physical data is processed</when>
+      <then>if height is None or null, display "???" with warning logged</then>
+      <and>if weight is None or null, display "???" with warning logged</and>
+      <and>if height &gt; 100m (unrealistic), warning logged but value shown (data integrity check)</and>
+      <and>if weight &gt; 10000kg (unrealistic), warning logged but value shown</and>
+      <and>application does not crash on invalid physical data</and>
+    </criterion>
+    <criterion id="AC-8" priority="high">
+      <description>Formatting Consistency</description>
+      <given>physical measurements are being formatted</given>
+      <when>values are converted to strings</when>
+      <then>height uses format f"{height:.1f}m" (one decimal place, meters suffix)</then>
+      <and>weight uses format f"{weight:.1f}kg" (one decimal place, kilograms suffix)</and>
+      <and>examples: "0.4m" (Pikachu), "17.0m" (Onix), "6.0kg" (Pikachu), "210.0kg" (Onix)</and>
+      <and>formatting is consistent for all 386 Gen 1-3 Pokémon</and>
+    </criterion>
+    <criterion id="AC-9" priority="high">
+      <description>Visual Consistency with Holographic Aesthetic</description>
+      <given>physical data section is part of DetailScreen</given>
+      <when>styling is applied</when>
+      <then>labels use ice blue color (#a8e6ff) matching stat labels</then>
+      <and>values use white color (#ffffff) matching stat values</and>
+      <and>font (Rajdhani 16px) matches detail screen typography</and>
+      <and>overall visual style aligns with holographic blue aesthetic established in Epic 1 and 3</and>
+    </criterion>
+    <criterion id="AC-10" priority="high">
+      <description>Performance Requirements</description>
+      <given>DetailScreen renders with physical data</given>
+      <when>any operation occurs</when>
+      <then>frame rate maintains 30+ FPS during rendering</then>
+      <and>physical data rendering completes in &lt; 2ms per frame</and>
+      <and>database query for height/weight included in overall &lt; 50ms data load time</and>
+      <and>DetailScreen total render time remains &lt; 33ms per frame</and>
+    </criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <artifact path="docs/PRD.md" title="Product Requirements Document" section="FR3.1 - Detail Screen Display">
+        System shall display detailed Pokémon information with physical stats (height, weight) displayed clearly on detail screen. DetailScreen displays comprehensive info with large sprite (50-60% screen), stats panel, type badges, and physical measurements. Height in meters (0.4m), weight in kilograms (6.0kg). Target: readable text, holographic blue aesthetic, 30+ FPS rendering.
+      </artifact>
+      <artifact path="docs/architecture.md" title="Architecture Document" section="Database Access Pattern">
+        Database queries must use parameterized statements for SQL injection prevention. Always use: cursor.execute("SELECT ... WHERE id = ?", (pokemon_id,)). Never use string formatting. Helper method pattern: get_pokemon_physical_data(pokemon_id) returns height, weight. Context manager pattern: with Database() as db. Performance target: &lt;50ms query time. pokemon table columns: id, name, height (INTEGER, decimeters), weight (INTEGER, hectograms), requiring unit conversion for display.
+      </artifact>
+      <artifact path="docs/ux-design-specification.md" title="UX Design Specification" section="Typography System">
+        Physical measurements typography: Rajdhani font, 16px size, line height 1.4 (22.4px). Labels: ice blue (#a8e6ff), right-aligned. Values: hologram white (#ffffff), left-aligned. Spacing: 8px vertical between height and weight lines. Layout: label width 80px fixed, value offset 10px gap. Max width 400px, positioned in lower section below sprite without overlapping stats or type badges.
+      </artifact>
+      <artifact path="docs/sprint-artifacts/tech-spec-epic-2-detail-view-with-audio.md" title="Epic 2 Technical Specification" section="Physical Measurements Display">
+        Physical data display specification: Height in meters with one decimal (e.g., "0.4m", "8.8m"), weight in kilograms with one decimal (e.g., "6.0kg", "210.0kg"). Database stores height in decimeters, weight in hectograms - requires conversion: meters = decimeters / 10, kilograms = hectograms / 10. Positioning: lower section of detail panel below sprite and type badges. Layout: right-aligned labels (80px width), left-aligned values (10px offset), 8px vertical spacing. Performance: &lt;2ms rendering, &lt;50ms database query. Validation: 0 or negative shows "???", extreme values (height &gt;100m, weight &gt;10000kg) logged as warnings.
+      </artifact>
+      <artifact path="docs/database_schema.md" title="Database Schema Documentation" section="pokemon Table Structure">
+        pokemon table columns: id (INTEGER PRIMARY KEY, National Dex 1-386), name (TEXT), height (INTEGER, decimeters), weight (INTEGER, hectograms), generation (INTEGER), created_at, updated_at. Example data: Pikachu #25 height=4 (0.4m), weight=60 (6.0kg); Onix #95 height=88 (8.8m), weight=2100 (210.0kg). Query pattern: SELECT height, weight FROM pokemon WHERE id = ? with parameterized statement. Height/weight may be NULL or 0 in edge cases - requires validation and error handling.
+      </artifact>
+    </docs>
+    <code>
+      <artifact path="src/ui/detail_screen.py" kind="class" symbol="DetailScreen" lines="1-680" reason="DetailScreen class implements comprehensive Pokemon detail view. Already has _load_pokemon_data() method (lines 152-226), on_enter() lifecycle (lines 79-151), render() method (lines 274-315), header/sprite/stat rendering methods. Physical data rendering will add _render_physical_data() method following same pattern as _render_stat_bars() and _render_type_badges(). Instance variables self.pokemon_data, self.database, self.state_manager already initialized. Fonts loaded in on_enter(). Placeholder panel exists at lines 606-660 showing "Physical Data (3.4)" label - this will be replaced with actual rendering.">
+        DetailScreen class structure: __init__(screen_manager, pokemon_id) initializes pokemon_id, database, state_manager references. on_enter() loads fonts (header_font, body_font, small_font, stat_label_font, stat_value_font), calls _load_pokemon_data(), loads sprite with load_detail(pokemon_id), updates StateManager.set_last_viewed(). _load_pokemon_data() queries database.get_pokemon_by_id(), get_pokemon_stats(), get_pokemon_types() with performance logging. render() calls _render_header(), _render_sprite(), _render_stat_bars(), _render_type_badges(), _render_placeholder_panels(). Physical data will integrate by: adding self.height/self.weight instance vars, loading in _load_pokemon_data(), creating _render_physical_data() method (lines 16px font, ice blue labels, white values, 80px label width, 10px value offset, 8px vertical spacing), replacing placeholder panel rendering.
+      </artifact>
+      <artifact path="src/data/database.py" kind="class" symbol="Database" lines="11-418" reason="Database class manages SQLite connections with context manager pattern. Existing methods: get_pokemon_by_id(pokemon_id) returns Dict with id/name/height/weight/types (lines 257-271), get_pokemon_stats(pokemon_id) returns List[Dict] (lines 295-305), get_pokemon_types(pokemon_id) returns List[str] (lines 307-328). Physical data query can either: 1) Use get_pokemon_by_id() and extract height/weight from existing Dict, OR 2) Create new get_pokemon_physical_data(pokemon_id) method returning Tuple[float, float] with unit conversion. Method pattern: parameterized queries (cursor.execute with ? placeholder), error handling, performance logging. Schema: pokemon table has height (INTEGER decimeters), weight (INTEGER hectograms) columns requiring /10 conversion to meters/kg.">
+        Database.get_pokemon_by_id() implementation (lines 257-271): SELECT p.*, GROUP_CONCAT(DISTINCT t.name) as types FROM pokemon p LEFT JOIN pokemon_types pt ... WHERE p.id = ? GROUP BY p.id. Returns Dict with keys: id, name, height (decimeters), weight (hectograms), types (comma-separated), generation. Returns None if pokemon_id not found. Uses parameterized query for SQL injection prevention. Example usage: with Database() as db: pokemon = db.get_pokemon_by_id(25) → height=4 (dm), weight=60 (hg). Physical data story can extract height/weight from this existing method and perform unit conversion in DetailScreen, OR add new method specifically for physical data with conversion baked in.
+      </artifact>
+      <artifact path="src/ui/colors.py" kind="constants" symbol="Colors" lines="1-100" reason="Colors class defines holographic blue palette constants used throughout UI. Relevant constants for physical data: ICE_BLUE = (168, 230, 255) for labels, HOLOGRAM_WHITE = (232, 244, 248) for values, DARK_BLUE = (26, 47, 74) for panel backgrounds, ELECTRIC_BLUE = (0, 212, 255) for borders. These match stat label/value colors ensuring visual consistency. Physical data rendering will use: Colors.ICE_BLUE for "Height:" and "Weight:" labels, Colors.HOLOGRAM_WHITE for "0.4m" and "6.0kg" values, maintaining holographic aesthetic established in Stories 3.1, 3.2, 3.3.">
+        Colors constants: DEEP_SPACE_BLACK = (10, 14, 26), DARK_BLUE = (26, 47, 74), ELECTRIC_BLUE = (0, 212, 255), BRIGHT_CYAN = (77, 247, 255), ICE_BLUE = (168, 230, 255), PLASMA_ORANGE = (255, 107, 53), NEON_YELLOW = (255, 210, 63), HOLOGRAM_WHITE = (232, 244, 248), CHARCOAL = (45, 55, 72), SLATE_GRAY = (74, 85, 104), STEEL_GRAY = (113, 128, 150). Physical data uses same ice blue/white pairing as stat bars for visual consistency across DetailScreen.
+      </artifact>
+      <artifact path="src/ui/sprite_loader.py" kind="function" symbol="load_detail" lines="136-162" reason="Reference for sprite loading pattern with LRU caching. DetailScreen uses load_detail(pokemon_id) in on_enter() to load 128x128 detail sprite. Physical data rendering positions below sprite, needs sprite dimensions for layout calculations. Sprite positioned at screen_width // 4, screen_height // 2 (center-left). Physical data positions in lower section (e.g., y = screen_height - 120) to avoid overlap.">
+        load_detail(pokemon_id) function loads detail-sized sprites (96-128px) from assets/sprites/detail/ directory with LRU caching (maxsize=100). Returns pygame.Surface or None if sprite missing. Used in DetailScreen.on_enter() at line 126. Physical data positioning references sprite location to ensure no overlap - sprite in center-left, physical data in bottom-left quadrant.
+      </artifact>
+      <artifact path="tests/test_database.py" kind="test-class" symbol="TestDatabase" lines="1-500" reason="Existing database test patterns for unit testing. Tests include: test_insert_and_query_pokemon() (lines 75-99) showing pokemon table insert/query pattern, test_get_pokemon_by_generation_kanto() (lines 278-302) demonstrating parameterized queries. Physical data tests will follow similar patterns: test_get_pokemon_physical_data_valid() queries Pikachu #25 verifying height=0.4m/weight=6.0kg, test_get_pokemon_physical_data_large() queries Onix #95 for extreme values, test_get_pokemon_physical_data_invalid() tests pokemon_id=999 returns (0.0, 0.0), test_unit_conversion() validates decimeters→meters and hectograms→kg conversions.">
+        Test pattern examples: setUp() creates Database(":memory:"), test methods use with self.db as db context manager, assertEqual/assertIsNotNone assertions, parameterized INSERT queries for test data. Physical data tests will: insert pokemon with height=4/weight=60, query with get_pokemon_physical_data(25), assert converted values equal 0.4/6.0, test edge cases (None, 0, negative, extreme values), verify placeholder "???" handling.
+      </artifact>
+    </code>
+    <dependencies>
+      <python>
+        <package name="pygame" version="2.5.0+" reason="Graphics rendering, font loading, surface blitting for physical data text display" />
+        <package name="sqlite3" version="stdlib" reason="Database queries for height/weight data from pokemon table" />
+        <package name="logging" version="stdlib" reason="Performance logging, edge case warnings, error handling for physical data" />
+        <package name="time" version="stdlib" reason="Performance profiling with perf_counter() for render time measurement" />
+      </python>
+      <internal>
+        <module path="src/ui/screen.py" reason="Base Screen class with lifecycle methods (on_enter, on_exit, render, update)" />
+        <module path="src/ui/colors.py" reason="ICE_BLUE (#a8e6ff) for labels, HOLOGRAM_WHITE (#ffffff) for values" />
+        <module path="src/data/database.py" reason="Get_pokemon_by_id() or new get_pokemon_physical_data() for height/weight queries" />
+        <module path="src/state_manager.py" reason="StateManager reference via screen_manager for last viewed persistence" />
+      </internal>
+      <assets>
+        <asset path="assets/fonts/Rajdhani-Regular.ttf" optional="true" reason="Preferred font for physical data labels/values (16px), fallback to pygame.font.Font(None, 16)" />
+      </assets>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <technical>
+      <constraint>Database stores height in decimeters (INTEGER), must convert to meters for display: meters = decimeters / 10.0</constraint>
+      <constraint>Database stores weight in hectograms (INTEGER), must convert to kilograms for display: kilograms = hectograms / 10.0</constraint>
+      <constraint>All database queries must use parameterized statements: cursor.execute("SELECT height, weight FROM pokemon WHERE id = ?", (pokemon_id,))</constraint>
+      <constraint>Physical data rendering must complete in &lt; 2ms per frame to maintain 30+ FPS target</constraint>
+      <constraint>Database query time must be &lt; 50ms as part of overall _load_pokemon_data() performance budget</constraint>
+      <constraint>Layout must avoid overlapping sprite (center-left), stat bars (right panel), type badges (below sprite) - position in bottom-left quadrant</constraint>
+      <constraint>Text must remain within display boundaries for 480x320 and 800x480 resolutions with proper scaling</constraint>
+    </technical>
+    <architectural>
+      <constraint>Follow DetailScreen rendering pattern: create _render_physical_data(surface) method similar to _render_stat_bars() and _render_type_badges()</constraint>
+      <constraint>Load physical data in on_enter() lifecycle via _load_pokemon_data(), store in self.height and self.weight instance variables</constraint>
+      <constraint>Use Colors constants (ICE_BLUE, HOLOGRAM_WHITE) for visual consistency with existing stat labels/values</constraint>
+      <constraint>Pre-render text surfaces in on_enter() if performance requires optimization (currently rendering per-frame acceptable for 2 text lines)</constraint>
+      <constraint>Handle missing/invalid data gracefully with "???" placeholder without crashing application</constraint>
+    </architectural>
+    <business>
+      <constraint>Display format must match UX specification: "X.Xm" for height, "X.Xkg" for weight with exactly one decimal place</constraint>
+      <constraint>Label/value alignment must follow established pattern: labels right-aligned (80px width), values left-aligned (10px offset)</constraint>
+      <constraint>Vertical spacing 8px between height and weight lines for readability at small display sizes</constraint>
+      <constraint>Physical measurements applicable to all 386 Gen 1-3 Pokémon without exceptions or special cases</constraint>
+    </business>
+  </constraints>
+
+  <interfaces>
+    <interface name="Database.get_pokemon_by_id" kind="method">
+      <signature>def get_pokemon_by_id(self, pokemon_id: int) -> Optional[Dict[str, Any]]</signature>
+      <description>Existing method returns Pokemon data including height (decimeters) and weight (hectograms) requiring conversion</description>
+      <implementation>DetailScreen._load_pokemon_data() already calls this method. Extract height/weight from returned Dict and convert: self.height = pokemon_data['height'] / 10.0 if pokemon_data['height'] else 0.0, self.weight = pokemon_data['weight'] / 10.0 if pokemon_data['weight'] else 0.0. Store in instance variables for rendering. Validate: if self.height &lt;= 0: log warning, set to -1 for "???" placeholder. Query time already profiled as part of existing _load_pokemon_data() method.</implementation>
+      <path>src/data/database.py</path>
+    </interface>
+    <interface name="Database.get_pokemon_physical_data" kind="method" status="optional-new">
+      <signature>def get_pokemon_physical_data(self, pokemon_id: int) -> Tuple[float, float]</signature>
+      <description>Optional new method specifically for physical data with unit conversion built-in</description>
+      <implementation>Alternative to using get_pokemon_by_id(). Create dedicated method: SELECT height, weight FROM pokemon WHERE id = ?. Convert in database layer: height_m = height_dm / 10.0 if height_dm else 0.0, weight_kg = weight_hg / 10.0 if weight_hg else 0.0. Return (height_m, weight_kg). DetailScreen calls: self.height, self.weight = db.get_pokemon_physical_data(self.pokemon_id). Benefit: cleaner separation, unit conversion encapsulated. Tradeoff: additional method vs reusing existing query.</implementation>
+      <path>src/data/database.py</path>
+    </interface>
+    <interface name="DetailScreen._render_physical_data" kind="method" status="new">
+      <signature>def _render_physical_data(self, surface: pygame.Surface) -> None</signature>
+      <description>New method renders height and weight with labels, values, proper alignment and styling</description>
+      <implementation>Method structure: Define positioning constants (PHYSICAL_DATA_X=30, PHYSICAL_DATA_Y=screen_height-120, LABEL_WIDTH=80, VALUE_OFFSET=10, LINE_HEIGHT=24). Load font if not cached: self.physical_data_font = pygame.font.Font(None, 16). Format strings: height_str = f"{self.height:.1f}m" if self.height &gt; 0 else "???", weight_str = f"{self.weight:.1f}kg" if self.weight &gt; 0 else "???". Render height label (right-aligned at LABEL_WIDTH), height value (left-aligned after label + VALUE_OFFSET). Render weight label/value same pattern, offset by LINE_HEIGHT. Use Colors.ICE_BLUE for labels, Colors.HOLOGRAM_WHITE for values. Profile with perf_counter(), log warning if &gt; 2ms.</implementation>
+      <path>src/ui/detail_screen.py</path>
+    </interface>
+    <interface name="DetailScreen.render" kind="method" status="modify">
+      <signature>def render(self, surface: pygame.Surface) -> None</signature>
+      <description>Existing render method calls all sub-rendering methods - add physical data rendering call</description>
+      <implementation>Current structure (lines 274-315): fill background, _render_header(), _render_sprite(), _render_stat_bars(), _render_type_badges(), _render_placeholder_panels(). Modification: Add self._render_physical_data(surface) call after _render_type_badges() and before _render_placeholder_panels(). Remove physical data placeholder from _render_placeholder_panels() (currently shows "Physical Data (3.4)" label). Total render time must remain &lt; 33ms for 30 FPS - physical data adds ~1-2ms overhead acceptable.</implementation>
+      <path>src/ui/detail_screen.py</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Unit tests use unittest framework with Database(":memory:") for isolated test environments. Test methods follow pattern: test_{method}_{scenario}. Assertions use assertEqual, assertIsNotNone, assertAlmostEqual for float comparisons. Parameterized SQL queries validated. Performance targets measured with time.perf_counter(). Edge cases (None, 0, negative, extreme values) explicitly tested. Mock objects used when needed for manager dependencies.
+    </standards>
+    <locations>
+      <location path="tests/test_database.py" reason="Unit tests for Database.get_pokemon_physical_data() or height/weight extraction from get_pokemon_by_id()" />
+      <location path="tests/test_detail_screen.py" reason="Unit and integration tests for DetailScreen physical data rendering, formatting, positioning, error handling" />
+    </locations>
+    <ideas>
+      <idea ac-ref="AC-5,AC-6">test_get_pokemon_physical_data_pikachu: Query Pikachu #25, assert height==0.4 (4dm/10), weight==6.0 (60hg/10), verify unit conversion accuracy with assertAlmostEqual(height, 0.4, places=1)</idea>
+      <idea ac-ref="AC-5,AC-6">test_get_pokemon_physical_data_onix: Query Onix #95, assert height==8.8 (88dm/10), weight==210.0 (2100hg/10), verify large values converted correctly</idea>
+      <idea ac-ref="AC-5,AC-7">test_get_pokemon_physical_data_invalid_id: Query pokemon_id=999, assert returns (0.0, 0.0) or raises exception handled gracefully, no crash</idea>
+      <idea ac-ref="AC-6">test_unit_conversion_accuracy: Test conversion formulas directly, assert 4dm → 0.4m, 60hg → 6.0kg, 88dm → 8.8m, 2100hg → 210.0kg</idea>
+      <idea ac-ref="AC-7">test_physical_data_none_handling: Mock database return None for height/weight, verify DetailScreen displays "???" placeholder, logs warning, no crash</idea>
+      <idea ac-ref="AC-7">test_physical_data_zero_values: Mock height=0/weight=0, verify "???" displayed, warning logged, application continues</idea>
+      <idea ac-ref="AC-7">test_physical_data_negative_values: Mock height=-5/weight=-10, verify "???" displayed, warning logged, validation catches invalid data</idea>
+      <idea ac-ref="AC-7">test_physical_data_extreme_values: Mock height=150 (15m, unrealistic), verify warning logged but value displayed (data integrity check), not replaced with placeholder</idea>
+      <idea ac-ref="AC-8">test_physical_data_formatting: Create DetailScreen(pokemon_id=25), load data, assert height_str == "0.4m", weight_str == "6.0kg", f-string format verified</idea>
+      <idea ac-ref="AC-1,AC-2,AC-8">test_physical_data_formatting_consistency: Loop through sample Pokemon (Pikachu, Onix, Diglett, Wailord), verify all format correctly with one decimal place, meters/kg suffixes</idea>
+      <idea ac-ref="AC-3,AC-4">test_physical_data_positioning: Render DetailScreen to test surface, verify physical data y-coordinate in bottom section (&gt; sprite_y + sprite_height), x-coordinate avoids stat panel, no overlap detected</idea>
+      <idea ac-ref="AC-3">test_physical_data_layout_no_overlap: Render DetailScreen with all components (sprite, stats, types, physical), assert bounding boxes don't intersect, all within display boundaries</idea>
+      <idea ac-ref="AC-9">test_physical_data_colors: Verify label text uses Colors.ICE_BLUE ((168,230,255)), value text uses Colors.HOLOGRAM_WHITE ((232,244,248)), matches stat label/value colors</idea>
+      <idea ac-ref="AC-10">test_physical_data_render_performance: Profile _render_physical_data() with perf_counter(), assert elapsed &lt; 0.002 seconds (2ms), measure over 100 iterations for average</idea>
+      <idea ac-ref="AC-10">test_detail_screen_total_render_performance: Profile full DetailScreen.render() including physical data, assert &lt; 0.033 seconds (33ms for 30 FPS), verify physical data doesn't cause frame drops</idea>
+      <idea ac-ref="AC-1,AC-2,AC-3,AC-4">test_physical_data_integration_full_flow: Navigate HomeScreen → DetailScreen(pokemon_id=25), verify physical data loads, renders, displays correctly, B button returns, state saved</idea>
+    </ideas>
+  </tests>
+</story-context>
