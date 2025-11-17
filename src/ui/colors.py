@@ -59,6 +59,14 @@ class Colors:
     ICE_BLUE = (168, 230, 255)            # #a8e6ff - Secondary text
     HOLOGRAM_WHITE = (232, 244, 248)      # #e8f4f8 - Primary text
     
+    # Stat bar colors (Story 3.2 - color-coded by value ranges)
+    STAT_COLORS = {
+        'low': (113, 128, 150),          # 0-50: Gray #718096
+        'medium': (0, 212, 255),         # 51-100: Electric blue #00d4ff
+        'high': (77, 247, 255),          # 101-150: Bright cyan #4df7ff
+        'exceptional': (255, 107, 53)    # 151+: Plasma orange #ff6b35
+    }
+    
     # Type colors (for Pokemon types)
     TYPE_COLORS = {
         'normal': GRAY,
@@ -80,3 +88,29 @@ class Colors:
         'steel': (183, 183, 206),
         'fairy': (214, 133, 173),
     }
+
+
+def get_stat_color(value: int) -> tuple:
+    """
+    Map stat value to RGB color based on ranges.
+    
+    Args:
+        value: Base stat value (0-255)
+        
+    Returns:
+        RGB color tuple for the stat bar
+        
+    Color mapping (Story 3.2 AC #3):
+        0-50: Gray (low stats)
+        51-100: Electric blue (medium stats)
+        101-150: Bright cyan (high stats)
+        151+: Plasma orange (exceptional stats)
+    """
+    if value <= 50:
+        return Colors.STAT_COLORS['low']
+    elif value <= 100:
+        return Colors.STAT_COLORS['medium']
+    elif value <= 150:
+        return Colors.STAT_COLORS['high']
+    else:
+        return Colors.STAT_COLORS['exceptional']

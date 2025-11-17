@@ -2,14 +2,15 @@
 Detail Screen for ShokeDex - Detailed Pokémon view
 
 Story 3.1: Basic layout with large sprite, header, and placeholder panels.
-Full stat rendering, type badges, and other features come in later stories.
+Story 3.2: Six base stats with visual progress bars, color-coded by value.
 """
 
 import pygame
 import logging
-from typing import Optional, Dict
+import time
+from typing import Optional, Dict, List
 from .screen import Screen
-from .colors import Colors
+from .colors import Colors, get_stat_color
 from ..input_manager import InputAction
 from .sprite_loader import load_detail
 
@@ -25,6 +26,14 @@ class DetailScreen(Screen):
     - Placeholder panels for future features (stats, types, measurements, description)
     - B button navigation back to HomeScreen
     - StateManager integration for last viewed persistence
+    
+    Story 3.2 Implementation:
+    - Six base stats displayed with labels, bars, and values
+    - Stat bars proportional to value (base_stat / 255) * max_bar_width
+    - Color-coded bars: 0-50 gray, 51-100 electric blue, 101-150 cyan, 151+ orange
+    - Glow effect for high stats (>= 100)
+    - Share Tech Mono font for stat labels/values (with fallback)
+    - Holographic blue panel styling for stats
     """
     
     def __init__(self, screen_manager, pokemon_id: int):
@@ -46,11 +55,14 @@ class DetailScreen(Screen):
         # Pokémon data
         self.pokemon_data: Optional[Dict] = None
         self.sprite: Optional[pygame.Surface] = None
+        self.stats: List[Dict] = []  # Story 3.2: List of stat dicts with 'name', 'base_stat'
         
         # Fonts
         self.header_font: Optional[pygame.font.Font] = None
         self.body_font: Optional[pygame.font.Font] = None
         self.small_font: Optional[pygame.font.Font] = None
+        self.stat_label_font: Optional[pygame.font.Font] = None  # Story 3.2: 14px for labels
+        self.stat_value_font: Optional[pygame.font.Font] = None  # Story 3.2: 16px for values
     
     def on_enter(self):
         """
@@ -70,6 +82,11 @@ class DetailScreen(Screen):
         
         self.body_font = pygame.font.Font(None, 16)  # Rajdhani equivalent for body
         self.small_font = pygame.font.Font(None, 14)
+        
+        # Story 3.2: Load fonts for stat labels and values
+        # Share Tech Mono preferred (monospace for number alignment), fallback to None
+        self.stat_label_font = pygame.font.Font(None, 14)  # 14px for stat labels (ice blue)
+        self.stat_value_font = pygame.font.Font(None, 16)  # 16px for stat values (white)
         
         # Load Pokémon data from database
         self._load_pokemon_data()
@@ -111,11 +128,12 @@ class DetailScreen(Screen):
         """
         Load Pokémon data from database.
         
-        Queries database for basic Pokémon information needed for DetailScreen.
+        Queries database for basic Pokémon information and stats needed for DetailScreen.
         Handles errors gracefully with fallback data.
         
-        AC #7: Database query must complete in < 50ms
-        AC #8: Handle database errors gracefully
+        Story 3.1 AC #7: Database query must complete in < 50ms
+        Story 3.2 AC #7: Load stats data with get_pokemon_stats()
+        Story 3.2 AC #8: Validate stat count and values
         """
         if not self.database:
             logging.error("No database available for DetailScreen")
@@ -131,6 +149,21 @@ class DetailScreen(Screen):
                     logging.error(f"Pokemon #{self.pokemon_id} not found in database")
                     self._show_error_screen("Could not load Pokémon data")
                     return
+                
+                # Story 3.2: Load stat data (AC #7)
+                start_time = time.perf_counter()
+                self.stats = db.get_pokemon_stats(self.pokemon_id)
+                query_time = (time.perf_counter() - start_time) * 1000  # ms
+                
+                # Story 3.2 AC #8: Validate stat count
+                if len(self.stats) != 6:
+                    logging.warning(f"Stats query returned {len(self.stats)}, expected 6 for Pokemon #{self.pokemon_id}")
+                
+                # Log performance (AC #7: < 50ms target)
+                if query_time > 50:
+                    logging.warning(f"Stats query took {query_time:.2f}ms (target: <50ms)")
+                else:
+                    logging.debug(f"Stats loaded in {query_time:.2f}ms")
                 
         except Exception as e:
             logging.error(f"Database error loading Pokemon #{self.pokemon_id}: {e}")
@@ -241,6 +274,9 @@ class DetailScreen(Screen):
         # AC #2: Render large sprite (center-left positioning)
         self._render_sprite(surface)
         
+        # Story 3.2: Render stat bars (replaces placeholder from 3.1)
+        self._render_stat_bars(surface)
+        
         # AC #4: Render placeholder panels for future features
         self._render_placeholder_panels(surface)
     
@@ -302,6 +338,114 @@ class DetailScreen(Screen):
         # Blit sprite to surface
         surface.blit(self.sprite, (sprite_x, sprite_y))
     
+    def _render_stat_bars(self, surface: pygame.Surface):
+        """
+        Render all 6 base stats with visual progress bars.
+        
+        Args:
+            surface: pygame.Surface to draw on
+            
+        Story 3.2 Implementation:
+        AC #1: Display all 6 stats (HP, Attack, Defense, Sp.Atk, Sp.Def, Speed)
+        AC #2: Proportional bar width (base_stat / 255) * max_bar_width
+        AC #3: Color-coded bars by value ranges
+        AC #4: Glow effect for high stats (>= 100)
+        AC #5: Labels and values with proper fonts and colors
+        AC #6: Stats panel layout on right side with holographic styling
+        AC #9: Rendering must complete in < 10ms per frame
+        """
+        if not self.stats:
+            # No stats loaded - show placeholder or skip
+            return
+        
+        start_time = time.perf_counter()
+        
+        # Stats panel positioning (right side, 40% width)
+        screen_width = surface.get_width()
+        screen_height = surface.get_height()
+        
+        STATS_PANEL_X = screen_width // 2 + 20
+        STATS_PANEL_Y = 60
+        STATS_PANEL_WIDTH = screen_width // 2 - 40
+        STATS_PANEL_HEIGHT = 200
+        
+        # Draw stats panel background (AC #6: holographic blue styling)
+        panel_surface = pygame.Surface((STATS_PANEL_WIDTH, STATS_PANEL_HEIGHT), pygame.SRCALPHA)
+        panel_surface.fill((*Colors.DARK_BLUE, 230))  # 0.9 alpha ~= 230
+        pygame.draw.rect(panel_surface, Colors.ELECTRIC_BLUE, 
+                        pygame.Rect(0, 0, STATS_PANEL_WIDTH, STATS_PANEL_HEIGHT), 2)
+        surface.blit(panel_surface, (STATS_PANEL_X, STATS_PANEL_Y))
+        
+        # Stat bar constants
+        STAT_BAR_HEIGHT = 18
+        STAT_BAR_MAX_WIDTH = STATS_PANEL_WIDTH - 120  # Room for label + value
+        STAT_SPACING = 28
+        PADDING = 16
+        
+        # Position calculations
+        STAT_LABEL_X = STATS_PANEL_X + PADDING
+        STAT_BAR_X = STAT_LABEL_X + 80  # Room for label
+        STAT_VALUE_X = STATS_PANEL_X + STATS_PANEL_WIDTH - PADDING
+        
+        # Render each of the 6 stats (AC #1)
+        for i, stat_dict in enumerate(self.stats[:6]):  # Limit to 6 stats
+            y = STATS_PANEL_Y + PADDING + (i * STAT_SPACING)
+            
+            stat_name = stat_dict.get('name', '???')
+            base_stat = stat_dict.get('base_stat', 0)
+            
+            # Story 3.2 AC #8: Validate and clamp stat values
+            if base_stat is None:
+                base_stat = 0
+                logging.warning(f"Null stat value for {stat_name} on Pokemon #{self.pokemon_id}")
+            
+            if base_stat < 0 or base_stat > 255:
+                logging.warning(f"Stat value {base_stat} for {stat_name} clamped to 0-255")
+                base_stat = max(0, min(255, base_stat))
+            
+            # Calculate bar width (AC #2: proportional to stat value)
+            bar_width = max(1, int((base_stat / 255) * STAT_BAR_MAX_WIDTH))
+            
+            # Get bar color (AC #3: color-coded by value)
+            bar_color = get_stat_color(base_stat)
+            
+            # Draw empty bar background (dark gray)
+            bg_rect = pygame.Rect(STAT_BAR_X, y, STAT_BAR_MAX_WIDTH, STAT_BAR_HEIGHT)
+            pygame.draw.rect(surface, (40, 40, 40), bg_rect)
+            
+            # Draw filled bar (stat color)
+            bar_rect = pygame.Rect(STAT_BAR_X, y, bar_width, STAT_BAR_HEIGHT)
+            pygame.draw.rect(surface, bar_color, bar_rect)
+            
+            # AC #4: Glow effect for high stats (>= 100)
+            if base_stat >= 100:
+                # Draw glow bar with alpha=128, offset +2px
+                glow_surface = pygame.Surface((bar_width, STAT_BAR_HEIGHT), pygame.SRCALPHA)
+                glow_rect = pygame.Rect(2, 2, bar_width - 2, STAT_BAR_HEIGHT - 2)
+                pygame.draw.rect(glow_surface, (*bar_color, 128), glow_rect)
+                surface.blit(glow_surface, (STAT_BAR_X, y))
+            
+            # AC #5: Render stat label (left-aligned, ice blue)
+            if self.stat_label_font:
+                # Shorten stat names for display
+                display_name = stat_name.replace('Special ', 'Sp.')
+                label_surface = self.stat_label_font.render(display_name, True, Colors.ICE_BLUE)
+                surface.blit(label_surface, (STAT_LABEL_X, y + 2))
+            
+            # AC #5: Render stat value (right-aligned, white, monospace)
+            if self.stat_value_font:
+                value_text = str(base_stat) if base_stat is not None else "???"
+                value_surface = self.stat_value_font.render(value_text, True, Colors.HOLOGRAM_WHITE)
+                value_rect = value_surface.get_rect(right=STAT_VALUE_X, top=y + 1)
+                surface.blit(value_surface, value_rect)
+        
+        # Performance logging (AC #9: < 10ms target)
+        render_time = (time.perf_counter() - start_time) * 1000
+        if render_time > 10:
+            logging.warning(f"Stat bars rendered in {render_time:.2f}ms (target: <10ms)")
+        else:
+            logging.debug(f"Stat bars rendered in {render_time:.2f}ms")
+    
     def _render_placeholder_panels(self, surface: pygame.Surface):
         """
         Render placeholder panels for future features.
@@ -310,29 +454,16 @@ class DetailScreen(Screen):
             surface: pygame.Surface to draw on
             
         AC #4: Layout structure with placeholders for:
-        - Stats panel (right side) - Story 3.2
         - Type badges (below sprite) - Story 3.3
         - Physical measurements (bottom-left) - Story 3.4
         - Description area (bottom-center) - Story 3.5
+        
+        Note: Stats panel removed in Story 3.2 (now rendered with real data)
         
         AC #5: Holographic blue styling (dark blue panels, electric blue borders)
         """
         screen_width = surface.get_width()
         screen_height = surface.get_height()
-        
-        # Stats panel placeholder (right side, 40% width)
-        stats_panel = pygame.Rect(
-            screen_width // 2 + 20,
-            60,
-            screen_width // 2 - 40,
-            120
-        )
-        pygame.draw.rect(surface, Colors.DARK_BLUE, stats_panel)
-        pygame.draw.rect(surface, Colors.ELECTRIC_BLUE, stats_panel, 2)
-        
-        if self.small_font:
-            stats_label = self.small_font.render("Stats (Story 3.2)", True, Colors.ICE_BLUE)
-            surface.blit(stats_label, (stats_panel.x + 10, stats_panel.y + 10))
         
         # Type badges placeholder (below sprite, centered)
         type_panel = pygame.Rect(
