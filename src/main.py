@@ -202,6 +202,11 @@ class ShokeDexApp:
                 # Pass action to screen manager
                 if action != InputAction.NONE:
                     self.screen_manager.handle_input(action)
+            elif event.type == pygame.KEYUP:
+                # Handle key release to stop hold-to-scroll
+                action = self.input_manager.get_action_from_keyup(event)
+                if action != InputAction.NONE:
+                    self.screen_manager.handle_input_release(action)
     
     def update(self, delta_time: float):
         """

@@ -113,6 +113,17 @@ class ScreenManager:
         if current:
             current.handle_input(action)
     
+    def handle_input_release(self, action):
+        """
+        Pass input release event to the current screen.
+        
+        Args:
+            action: InputAction that was released
+        """
+        current = self.get_current()
+        if current and hasattr(current, 'handle_input_release'):
+            current.handle_input_release(action)
+    
     def update(self, delta_time: float):
         """
         Update the current screen.

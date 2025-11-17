@@ -554,10 +554,18 @@ class HomeScreen(Screen):
             self._select_pokemon()
         elif action == InputAction.START:
             self._open_settings()
-        elif action == InputAction.NONE:
-            # Button released - reset hold state
-            if self.active_button in [InputAction.UP, InputAction.DOWN]:
+    
+    def handle_input_release(self, action: InputAction):
+        """Handle input release events (key up).
+        
+        Args:
+            action: The input action that was released
+        """
+        # Reset hold state when button is released
+        if action in [InputAction.UP, InputAction.DOWN]:
+            if self.active_button == action:
                 self.active_button = None
+                self.scroll_speed = 1
     
     def _handle_selection_change(self, delta: int):
         """Handle single-Pokemon navigation with boundary wrapping (Story 1.6).
@@ -664,8 +672,7 @@ class HomeScreen(Screen):
             
             detail_screen = DetailScreen(
                 self.screen_manager,
-                pokemon_id=pokemon['id'],
-                database=self.database
+                pokemon_id=pokemon['id']
             )
             self.screen_manager.push(detail_screen)
     

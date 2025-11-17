@@ -5,6 +5,7 @@ Supports both development (keyboard) and hardware (GPIO) input modes.
 """
 
 import pygame
+import time
 from enum import Enum
 from typing import Optional, Dict, Callable, List
 import sys
@@ -81,6 +82,11 @@ class InputManager:
         self.keyboard_map = keyboard_map or self.DEFAULT_KEYBOARD_MAP
         self.gpio_map = gpio_map or self.DEFAULT_GPIO_MAP
         
+        # Track last press time for each key to implement debounce
+        # This prevents OS key repeat but allows rapid tapping
+        self.last_press_time: Dict[int, float] = {}
+        self.debounce_time = 0.05  # 50ms debounce window - prevents OS repeats, allows fast tapping
+        
         # Event handlers
         self.handlers: Dict[InputAction, List[Callable]] = {
             action: [] for action in InputAction
@@ -151,6 +157,8 @@ class InputManager:
         """
         Process a pygame event and return the corresponding input action.
         
+        Uses time-based debouncing to prevent OS key repeats while allowing rapid tapping.
+        
         Args:
             event: Pygame event to process
             
@@ -159,11 +167,41 @@ class InputManager:
         """
         if self.mode == InputMode.KEYBOARD:
             if event.type == pygame.KEYDOWN:
+                current_time = time.time()
+                
+                # Check if this key was pressed recently (debounce)
+                if event.key in self.last_press_time:
+                    time_since_last_press = current_time - self.last_press_time[event.key]
+                    if time_since_last_press < self.debounce_time:
+                        # Too soon - this is likely an OS repeat event
+                        return InputAction.NONE
+                
+                # Record this press time
+                self.last_press_time[event.key] = current_time
+                
                 action = self.keyboard_map.get(event.key, InputAction.NONE)
                 if action != InputAction.NONE:
                     self._trigger_handlers(action)
                 return action
+            elif event.type == pygame.KEYUP:
+                # Clear the press time when key is released
+                if event.key in self.last_press_time:
+                    del self.last_press_time[event.key]
         
+        return InputAction.NONE
+    
+    def get_action_from_keyup(self, event: pygame.event.Event) -> InputAction:
+        """
+        Get the input action for a KEYUP event.
+        
+        Args:
+            event: Pygame KEYUP event
+            
+        Returns:
+            InputAction corresponding to the released key
+        """
+        if event.type == pygame.KEYUP:
+            return self.keyboard_map.get(event.key, InputAction.NONE)
         return InputAction.NONE
     
     def get_action(self, event: pygame.event.Event) -> InputAction:

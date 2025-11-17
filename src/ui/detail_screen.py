@@ -1,9 +1,13 @@
 """
 Detail Screen for ShokeDex - Detailed Pokémon view
+
+Story 3.1: Basic layout with large sprite, header, and placeholder panels.
+Full stat rendering, type badges, and other features come in later stories.
 """
 
 import pygame
-from typing import Optional, Dict, List
+import logging
+from typing import Optional, Dict
 from .screen import Screen
 from .colors import Colors
 from ..input_manager import InputAction
@@ -14,444 +18,361 @@ class DetailScreen(Screen):
     """
     Detail screen showing comprehensive information about a single Pokémon.
     
-    Displays sprite, stats, types, abilities, and other information.
+    Story 3.1 Implementation:
+    - Large sprite display (128x128, center-left positioning)
+    - Header with Pokémon name and National Dex number
+    - Holographic blue styling (panels, borders, text colors)
+    - Placeholder panels for future features (stats, types, measurements, description)
+    - B button navigation back to HomeScreen
+    - StateManager integration for last viewed persistence
     """
     
-    def __init__(self, screen_manager, pokemon_id: int, database=None):
+    def __init__(self, screen_manager, pokemon_id: int):
         """
-        Initialize DetailScreen.
+        Initialize DetailScreen for a specific Pokémon.
         
         Args:
-            screen_manager: ScreenManager instance
-            pokemon_id: ID of the Pokemon to display
-            database: Database instance (optional)
+            screen_manager: ScreenManager instance providing manager access
+            pokemon_id: National Dex number to display (1-386)
         """
         super().__init__(screen_manager)
         self.pokemon_id = pokemon_id
-        self.database = database
         
-        # Pokemon data
+        # Manager references (via screen_manager injection pattern)
+        self.database = screen_manager.database if hasattr(screen_manager, 'database') else None
+        self.state_manager = screen_manager.state_manager if hasattr(screen_manager, 'state_manager') else None
+        self.sprite_loader = screen_manager.sprite_loader if hasattr(screen_manager, 'sprite_loader') else None
+        
+        # Pokémon data
         self.pokemon_data: Optional[Dict] = None
-        self.stats: List[Dict] = []
-        self.types: List[str] = []
-        self.evolutions: List[Dict] = []
-        self.abilities: List[Dict] = []
-        
-        # View mode (stats, evolutions, abilities)
-        self.view_tab = "stats"  # Can be "stats", "evolutions", "abilities"
+        self.sprite: Optional[pygame.Surface] = None
         
         # Fonts
-        self.title_font: Optional[pygame.font.Font] = None
-        self.heading_font: Optional[pygame.font.Font] = None
-        self.text_font: Optional[pygame.font.Font] = None
+        self.header_font: Optional[pygame.font.Font] = None
+        self.body_font: Optional[pygame.font.Font] = None
         self.small_font: Optional[pygame.font.Font] = None
     
     def on_enter(self):
-        """Called when screen becomes active."""
+        """
+        Called when screen becomes active - load data, initialize resources.
+        
+        Lifecycle hook from Screen base class. Loads Pokémon data, sprite,
+        and updates StateManager with last viewed Pokémon.
+        """
         super().on_enter()
         
-        # Initialize fonts
-        self.title_font = pygame.font.Font(None, 36)
-        self.heading_font = pygame.font.Font(None, 24)
-        self.text_font = pygame.font.Font(None, 20)
-        self.small_font = pygame.font.Font(None, 16)
+        # Initialize fonts (Orbitron Bold 24px for headers per UX spec, fallback to system)
+        try:
+            # Try to load custom fonts if available
+            self.header_font = pygame.font.Font(None, 24)  # Orbitron Bold equivalent
+        except Exception:
+            self.header_font = pygame.font.Font(None, 24)
         
-        # Load Pokemon data
+        self.body_font = pygame.font.Font(None, 16)  # Rajdhani equivalent for body
+        self.small_font = pygame.font.Font(None, 14)
+        
+        # Load Pokémon data from database
         self._load_pokemon_data()
+        
+        # Load detail sprite (128x128 variant)
+        if self.pokemon_data:
+            try:
+                self.sprite = load_detail(self.pokemon_id)
+                if self.sprite is None:
+                    logging.warning(f"Missing sprite for Pokemon #{self.pokemon_id}")
+                    # Create text placeholder
+                    self.sprite = self._create_text_placeholder(self.pokemon_data['name'])
+            except Exception as e:
+                logging.error(f"Error loading sprite for Pokemon #{self.pokemon_id}: {e}")
+                self.sprite = self._create_text_placeholder(self.pokemon_data.get('name', f'Pokemon #{self.pokemon_id}'))
+        
+        # Update StateManager with last viewed Pokémon
+        if self.state_manager:
+            try:
+                self.state_manager.set_last_viewed(self.pokemon_id)
+            except Exception as e:
+                logging.warning(f"Failed to update last viewed: {e}")
+    
+    def on_exit(self):
+        """
+        Called when screen becomes inactive - save state.
+        
+        Lifecycle hook from Screen base class. Persists last viewed Pokémon
+        to state file via StateManager.
+        """
+        if self.state_manager:
+            try:
+                self.state_manager.save_state()
+            except Exception as e:
+                logging.warning(f"Failed to save state on exit: {e}")
+        super().on_exit()
     
     def _load_pokemon_data(self):
-        """Load Pokemon data from database."""
-        if self.database:
-            try:
-                with self.database as db:
-                    # Get basic Pokemon info
-                    self.pokemon_data = db.get_pokemon_by_id(self.pokemon_id)
-                    
-                    if self.pokemon_data:
-                        # Get stats
-                        self.stats = db.get_pokemon_stats(self.pokemon_id)
-                        
-                        # Get types
-                        cursor = db.execute("""
-                            SELECT t.name
-                            FROM pokemon_types pt
-                            JOIN types t ON pt.type_id = t.id
-                            WHERE pt.pokemon_id = ?
-                            ORDER BY pt.slot
-                        """, (self.pokemon_id,))
-                        self.types = [row[0] for row in cursor.fetchall()]
-                        
-                        # Get evolutions
-                        self.evolutions = db.get_evolutions(self.pokemon_id)
-                        
-                        # Get abilities
-                        cursor = db.execute("""
-                            SELECT a.name, pa.is_hidden
-                            FROM pokemon_abilities pa
-                            JOIN abilities a ON pa.ability_id = a.id
-                            WHERE pa.pokemon_id = ?
-                            ORDER BY pa.slot
-                        """, (self.pokemon_id,))
-                        self.abilities = [
-                            {'name': row[0], 'is_hidden': row[1]}
-                            for row in cursor.fetchall()
-                        ]
-            except Exception as e:
-                print(f"Error loading Pokemon data: {e}")
-                self.pokemon_data = None
+        """
+        Load Pokémon data from database.
         
-        # Create demo data if no database
-        if not self.pokemon_data:
-            self.pokemon_data = {
-                'id': self.pokemon_id,
-                'name': f'pokemon_{self.pokemon_id}',
-                'height': 10,
-                'weight': 100,
-                'generation': 1,
-            }
-            self.stats = [
-                {'name': 'HP', 'base_stat': 45},
-                {'name': 'Attack', 'base_stat': 49},
-                {'name': 'Defense', 'base_stat': 49},
-                {'name': 'Special Attack', 'base_stat': 65},
-                {'name': 'Special Defense', 'base_stat': 65},
-                {'name': 'Speed', 'base_stat': 45},
-            ]
-            self.types = ['normal']
-            self.evolutions = []
-            self.abilities = []
+        Queries database for basic Pokémon information needed for DetailScreen.
+        Handles errors gracefully with fallback data.
+        
+        AC #7: Database query must complete in < 50ms
+        AC #8: Handle database errors gracefully
+        """
+        if not self.database:
+            logging.error("No database available for DetailScreen")
+            self._show_error_screen("Database not available")
+            return
+        
+        try:
+            with self.database as db:
+                # Get basic Pokémon info (AC #3: name and ID for header)
+                self.pokemon_data = db.get_pokemon_by_id(self.pokemon_id)
+                
+                if not self.pokemon_data:
+                    logging.error(f"Pokemon #{self.pokemon_id} not found in database")
+                    self._show_error_screen("Could not load Pokémon data")
+                    return
+                
+        except Exception as e:
+            logging.error(f"Database error loading Pokemon #{self.pokemon_id}: {e}")
+            self._show_error_screen("Could not load Pokémon data")
+    
+    def _create_text_placeholder(self, name: str) -> pygame.Surface:
+        """
+        Create text-based placeholder for missing sprites.
+        
+        Args:
+            name: Pokémon name to display
+            
+        Returns:
+            pygame.Surface with Pokémon name text on gray background
+            
+        AC #8: Missing sprites show text placeholder gracefully
+        """
+        surface = pygame.Surface((128, 128))
+        surface.fill((64, 64, 64))  # Gray background
+        
+        try:
+            font = pygame.font.Font(None, 36)
+            text = font.render(name, True, (255, 255, 255))
+            text_rect = text.get_rect(center=(64, 64))
+            surface.blit(text, text_rect)
+        except Exception:
+            pass  # Silent failure, return gray surface
+        
+        return surface
+    
+    def _show_error_screen(self, message: str):
+        """
+        Display error message when data loading fails.
+        
+        Args:
+            message: User-friendly error message
+            
+        AC #8: Database errors show friendly message, allow B button exit
+        """
+        self.pokemon_data = None
+        self.sprite = None
+        logging.error(f"DetailScreen error: {message}")
     
     def handle_input(self, action: InputAction):
-        """Handle input actions."""
+        """
+        Handle button press actions.
+        
+        Args:
+            action: InputAction enum value (BACK, LEFT, RIGHT, etc.)
+            
+        AC #1: B button returns to HomeScreen (pop navigation stack)
+        """
         if action == InputAction.BACK:
+            # Pop screen stack to return to HomeScreen
             self.screen_manager.pop()
-        elif action == InputAction.LEFT:
-            self._navigate_pokemon(-1)
-        elif action == InputAction.RIGHT:
-            self._navigate_pokemon(1)
-        elif action == InputAction.UP:
-            self._cycle_tab(-1)
-        elif action == InputAction.DOWN:
-            self._cycle_tab(1)
-    
-    def _cycle_tab(self, delta: int):
-        """Cycle through view tabs."""
-        tabs = ["stats", "evolutions", "abilities"]
-        current_idx = tabs.index(self.view_tab)
-        new_idx = (current_idx + delta) % len(tabs)
-        self.view_tab = tabs[new_idx]
-    
-    def _navigate_pokemon(self, delta: int):
-        """Navigate to adjacent Pokemon."""
-        new_id = self.pokemon_id + delta
-        
-        # Check if Pokemon exists
-        # TODO: Query database for max Pokemon ID instead of hardcoding
-        max_id = 386  # Gen 1-3 for now
-        if self.database:
-            try:
-                with self.database as db:
-                    cursor = db.execute("SELECT MAX(id) FROM pokemon")
-                    result = cursor.fetchone()
-                    if result and result[0]:
-                        max_id = result[0]
-            except Exception:
-                pass  # Use default
-        
-        if new_id >= 1 and new_id <= max_id:
-            self.pokemon_id = new_id
-            self._load_pokemon_data()
     
     def update(self, delta_time: float):
-        """Update screen state."""
-        pass
+        """
+        Update screen state logic each frame.
+        
+        Args:
+            delta_time: Time elapsed since last frame (seconds)
+            
+        Story 3.1: Minimal implementation - no animations or timers needed
+        """
+        pass  # No dynamic updates needed for basic layout
     
     def render(self, surface: pygame.Surface):
-        """Render the screen."""
+        """
+        Draw screen content to pygame surface.
+        
+        Args:
+            surface: pygame.Surface to render to
+            
+        AC #2: Large sprite display centered in left area
+        AC #3: Header with name (title case) and dex number (#025 format)
+        AC #4: Layout with header, sprite, placeholder panels
+        AC #5: Holographic blue styling (dark blue panels, electric blue borders)
+        AC #7: Render must complete in < 33ms for 30+ FPS
+        """
+        # Handle error state
         if not self.pokemon_data:
-            surface.fill(Colors.BACKGROUND)
-            error_text = self.text_font.render(
-                "Pokemon not found",
-                True,
-                Colors.ERROR
-            )
-            error_rect = error_text.get_rect(center=(240, 160))
-            surface.blit(error_text, error_rect)
+            surface.fill(Colors.DEEP_SPACE_BLACK)
+            if self.body_font:
+                error_text = self.body_font.render(
+                    "Could not load Pokémon data",
+                    True,
+                    Colors.ICE_BLUE
+                )
+                error_rect = error_text.get_rect(center=(surface.get_width() // 2, surface.get_height() // 2))
+                surface.blit(error_text, error_rect)
+                
+                help_text = self.small_font.render(
+                    "Press B to return",
+                    True,
+                    Colors.ICE_BLUE
+                )
+                help_rect = help_text.get_rect(center=(surface.get_width() // 2, surface.get_height() // 2 + 30))
+                surface.blit(help_text, help_rect)
             return
         
-        # Clear background
-        surface.fill(Colors.BACKGROUND)
+        # Fill background with deep space black
+        surface.fill(Colors.DEEP_SPACE_BLACK)
         
-        # Draw Pokemon name and ID
+        # AC #3: Render header with name and dex number
+        self._render_header(surface)
+        
+        # AC #2: Render large sprite (center-left positioning)
+        self._render_sprite(surface)
+        
+        # AC #4: Render placeholder panels for future features
+        self._render_placeholder_panels(surface)
+    
+    def _render_header(self, surface: pygame.Surface):
+        """
+        Render header section with Pokémon name and National Dex number.
+        
+        Args:
+            surface: pygame.Surface to draw on
+            
+        AC #3: Name in title case (left), dex number #025 format (right)
+        Uses Orbitron Bold 24px, white color per UX spec
+        """
+        if not self.pokemon_data or not self.header_font:
+            return
+        
+        # Pokémon name (title case, left-aligned in header)
         name = self.pokemon_data['name'].capitalize()
-        name_text = self.title_font.render(name, True, Colors.TEXT_PRIMARY)
-        name_rect = name_text.get_rect(centerx=240, top=10)
+        name_text = self.header_font.render(name, True, Colors.HOLOGRAM_WHITE)
+        name_rect = name_text.get_rect(left=20, top=16)
         surface.blit(name_text, name_rect)
         
-        id_text = self.text_font.render(
-            f"#{self.pokemon_data['id']:03d}",
-            True,
-            Colors.TEXT_SECONDARY
-        )
-        id_rect = id_text.get_rect(centerx=240, top=45)
-        surface.blit(id_text, id_rect)
+        # National Dex number (right-aligned in header, #025 format)
+        dex_number = f"#{self.pokemon_data['id']:03d}"
+        dex_text = self.header_font.render(dex_number, True, Colors.HOLOGRAM_WHITE)
+        dex_rect = dex_text.get_rect(right=surface.get_width() - 20, top=16)
+        surface.blit(dex_text, dex_rect)
+    
+    def _render_sprite(self, surface: pygame.Surface):
+        """
+        Render large Pokémon sprite in center-left area.
         
-        # Draw sprite placeholder
-        sprite_rect = pygame.Rect(180, 75, 120, 120)
-        # Attempt to load and draw the detail sprite; fall back to placeholder
-        try:
-            sprite_surf = load_detail(self.pokemon_id)
-            if sprite_surf:
-                # Scale to sprite_rect size if necessary
-                try:
-                    if sprite_surf.get_size() != (sprite_rect.width, sprite_rect.height):
-                        sprite_surf = pygame.transform.smoothscale(sprite_surf, (sprite_rect.width, sprite_rect.height))
-                except Exception:
-                    pass
+        Args:
+            surface: pygame.Surface to draw on
+            
+        AC #2: 128x128 sprite, 50-60% screen real estate, center-left position
+        Sprite has electric blue border for holographic effect
+        """
+        if not self.sprite:
+            return
+        
+        # Calculate center-left position (50-60% width allocation)
+        screen_width = surface.get_width()
+        screen_height = surface.get_height()
+        
+        # Position sprite in left-center area
+        sprite_x = screen_width // 4 - self.sprite.get_width() // 2
+        sprite_y = screen_height // 2 - self.sprite.get_height() // 2
+        
+        # Draw holographic border around sprite (AC #5: electric blue)
+        border_rect = pygame.Rect(
+            sprite_x - 4,
+            sprite_y - 4,
+            self.sprite.get_width() + 8,
+            self.sprite.get_height() + 8
+        )
+        pygame.draw.rect(surface, Colors.ELECTRIC_BLUE, border_rect, 2)
+        
+        # Blit sprite to surface
+        surface.blit(self.sprite, (sprite_x, sprite_y))
+    
+    def _render_placeholder_panels(self, surface: pygame.Surface):
+        """
+        Render placeholder panels for future features.
+        
+        Args:
+            surface: pygame.Surface to draw on
+            
+        AC #4: Layout structure with placeholders for:
+        - Stats panel (right side) - Story 3.2
+        - Type badges (below sprite) - Story 3.3
+        - Physical measurements (bottom-left) - Story 3.4
+        - Description area (bottom-center) - Story 3.5
+        
+        AC #5: Holographic blue styling (dark blue panels, electric blue borders)
+        """
+        screen_width = surface.get_width()
+        screen_height = surface.get_height()
+        
+        # Stats panel placeholder (right side, 40% width)
+        stats_panel = pygame.Rect(
+            screen_width // 2 + 20,
+            60,
+            screen_width // 2 - 40,
+            120
+        )
+        pygame.draw.rect(surface, Colors.DARK_BLUE, stats_panel)
+        pygame.draw.rect(surface, Colors.ELECTRIC_BLUE, stats_panel, 2)
+        
+        if self.small_font:
+            stats_label = self.small_font.render("Stats (Story 3.2)", True, Colors.ICE_BLUE)
+            surface.blit(stats_label, (stats_panel.x + 10, stats_panel.y + 10))
+        
+        # Type badges placeholder (below sprite, centered)
+        type_panel = pygame.Rect(
+            20,
+            screen_height // 2 + 80,
+            screen_width // 2 - 40,
+            40
+        )
+        pygame.draw.rect(surface, Colors.DARK_BLUE, type_panel)
+        pygame.draw.rect(surface, Colors.ELECTRIC_BLUE, type_panel, 2)
+        
+        if self.small_font:
+            type_label = self.small_font.render("Type Badges (Story 3.3)", True, Colors.ICE_BLUE)
+            surface.blit(type_label, (type_panel.x + 10, type_panel.y + 10))
+        
+        # Physical measurements placeholder (bottom-left)
+        phys_panel = pygame.Rect(
+            20,
+            screen_height - 80,
+            screen_width // 3 - 20,
+            60
+        )
+        pygame.draw.rect(surface, Colors.DARK_BLUE, phys_panel)
+        pygame.draw.rect(surface, Colors.ELECTRIC_BLUE, phys_panel, 2)
+        
+        if self.small_font:
+            phys_label = self.small_font.render("Physical Data (3.4)", True, Colors.ICE_BLUE)
+            surface.blit(phys_label, (phys_panel.x + 10, phys_panel.y + 10))
+        
+        # Description placeholder (bottom-center)
+        desc_panel = pygame.Rect(
+            screen_width // 3 + 20,
+            screen_height - 80,
+            screen_width - (screen_width // 3) - 40,
+            60
+        )
+        pygame.draw.rect(surface, Colors.DARK_BLUE, desc_panel)
+        pygame.draw.rect(surface, Colors.ELECTRIC_BLUE, desc_panel, 2)
+        
+        if self.small_font:
+            desc_label = self.small_font.render("Description (Story 3.5)", True, Colors.ICE_BLUE)
+            surface.blit(desc_label, (desc_panel.x + 10, desc_panel.y + 10))
 
-                surface.blit(sprite_surf, sprite_rect.topleft)
-            else:
-                pygame.draw.rect(surface, Colors.BORDER, sprite_rect, 2)
-                # Draw "Sprite" text in center
-                sprite_text = self.small_font.render("Sprite", True, Colors.TEXT_SECONDARY)
-                sprite_text_rect = sprite_text.get_rect(center=sprite_rect.center)
-                surface.blit(sprite_text, sprite_text_rect)
-        except Exception:
-            # If pygame unavailable or load fails, show placeholder
-            pygame.draw.rect(surface, Colors.BORDER, sprite_rect, 2)
-            sprite_text = self.small_font.render("Sprite", True, Colors.TEXT_SECONDARY)
-            sprite_text_rect = sprite_text.get_rect(center=sprite_rect.center)
-            surface.blit(sprite_text, sprite_text_rect)
-        
-        # Draw types
-        if self.types:
-            types_y = 205
-            types_label = self.heading_font.render("Type:", True, Colors.TEXT_PRIMARY)
-            surface.blit(types_label, (20, types_y))
-            
-            types_x = 80
-            for type_name in self.types:
-                type_color = Colors.TYPE_COLORS.get(type_name.lower(), Colors.GRAY)
-                type_rect = pygame.Rect(types_x, types_y, 70, 25)
-                pygame.draw.rect(surface, type_color, type_rect)
-                pygame.draw.rect(surface, Colors.BLACK, type_rect, 1)
-                
-                type_text = self.small_font.render(
-                    type_name.capitalize(),
-                    True,
-                    Colors.BLACK
-                )
-                type_text_rect = type_text.get_rect(center=type_rect.center)
-                surface.blit(type_text, type_text_rect)
-                
-                types_x += 75
-        
-        # Draw tabs
-        self._render_tabs(surface)
-        
-        # Draw content based on selected tab
-        if self.view_tab == "stats":
-            self._render_stats_tab(surface)
-        elif self.view_tab == "evolutions":
-            self._render_evolutions_tab(surface)
-        elif self.view_tab == "abilities":
-            self._render_abilities_tab(surface)
-        
-        # Draw help text
-        help_text = self.small_font.render(
-            "←/→: Navigate | ↑/↓: Tabs | BACK: Return",
-            True,
-            Colors.TEXT_SECONDARY
-        )
-        help_rect = help_text.get_rect(right=470, bottom=315)
-        surface.blit(help_text, help_rect)
-    
-    def _render_tabs(self, surface: pygame.Surface):
-        """Render tab buttons."""
-        tabs = [
-            ("Stats", "stats"),
-            ("Evolutions", "evolutions"),
-            ("Abilities", "abilities")
-        ]
-        
-        tab_y = 235
-        tab_width = 150
-        tab_x = 10
-        
-        for label, tab_id in tabs:
-            is_active = self.view_tab == tab_id
-            
-            # Draw tab button
-            tab_rect = pygame.Rect(tab_x, tab_y, tab_width, 20)
-            if is_active:
-                pygame.draw.rect(surface, Colors.SELECTION_BG, tab_rect)
-            pygame.draw.rect(surface, Colors.BORDER, tab_rect, 1)
-            
-            # Draw tab label
-            color = Colors.BLACK if is_active else Colors.TEXT_SECONDARY
-            tab_text = self.small_font.render(label, True, color)
-            tab_text_rect = tab_text.get_rect(center=tab_rect.center)
-            surface.blit(tab_text, tab_text_rect)
-            
-            tab_x += tab_width + 5
-    
-    def _render_stats_tab(self, surface: pygame.Surface):
-        """Render stats tab content."""
-        if not self.stats:
-            return
-        
-        stats_y = 260
-        
-        for stat in self.stats[:6]:  # Show first 6 stats
-            # Stat name
-            stat_name = self.small_font.render(
-                f"{stat['name']}:",
-                True,
-                Colors.TEXT_SECONDARY
-            )
-            surface.blit(stat_name, (20, stats_y))
-            
-            # Stat value
-            stat_value = self.text_font.render(
-                str(stat['base_stat']),
-                True,
-                Colors.TEXT_PRIMARY
-            )
-            surface.blit(stat_value, (120, stats_y - 2))
-            
-            # Stat bar
-            bar_width = int(stat['base_stat'] * 1.2)  # Scale to fit
-            max_bar_width = 200
-            bar_width = min(bar_width, max_bar_width)
-            bar_rect = pygame.Rect(170, stats_y + 2, bar_width, 10)
-            pygame.draw.rect(surface, Colors.LIGHT_GREEN, bar_rect)
-            pygame.draw.rect(surface, Colors.BORDER, bar_rect, 1)
-            
-            stats_y += 18
-        
-        # Draw physical stats
-        phys_y = 260
-        phys_x = 380
-        
-        height_m = self.pokemon_data.get('height', 0) / 10.0
-        weight_kg = self.pokemon_data.get('weight', 0) / 10.0
-        
-        height_text = self.small_font.render(
-            f"Height:",
-            True,
-            Colors.TEXT_SECONDARY
-        )
-        surface.blit(height_text, (phys_x, phys_y))
-        
-        height_value = self.text_font.render(
-            f"{height_m:.1f}m",
-            True,
-            Colors.TEXT_PRIMARY
-        )
-        surface.blit(height_value, (phys_x, phys_y + 15))
-        
-        weight_text = self.small_font.render(
-            f"Weight:",
-            True,
-            Colors.TEXT_SECONDARY
-        )
-        surface.blit(weight_text, (phys_x, phys_y + 40))
-        
-        weight_value = self.text_font.render(
-            f"{weight_kg:.1f}kg",
-            True,
-            Colors.TEXT_PRIMARY
-        )
-        surface.blit(weight_value, (phys_x, phys_y + 55))
-    
-    def _render_evolutions_tab(self, surface: pygame.Surface):
-        """Render evolutions tab content."""
-        content_y = 260
-        
-        if not self.evolutions:
-            no_evo = self.text_font.render(
-                "No evolution data",
-                True,
-                Colors.TEXT_SECONDARY
-            )
-            surface.blit(no_evo, (20, content_y + 20))
-            return
-        
-        # Draw evolution chain
-        for evo in self.evolutions[:5]:  # Show up to 5 evolutions
-            from_name = evo.get('from_name', '???')
-            to_name = evo.get('to_name', '???')
-            
-            # Draw "from" Pokemon
-            if from_name and from_name != 'None':
-                from_text = self.text_font.render(
-                    from_name.capitalize(),
-                    True,
-                    Colors.TEXT_PRIMARY
-                )
-                surface.blit(from_text, (20, content_y))
-                
-                # Draw arrow
-                arrow = self.text_font.render("→", True, Colors.LIGHT_GREEN)
-                surface.blit(arrow, (140, content_y))
-            
-            # Draw "to" Pokemon
-            to_text = self.text_font.render(
-                to_name.capitalize(),
-                True,
-                Colors.TEXT_PRIMARY
-            )
-            surface.blit(to_text, (170, content_y))
-            
-            # Draw evolution requirements
-            requirements = []
-            if evo.get('min_level'):
-                requirements.append(f"Lv.{evo['min_level']}")
-            if evo.get('item'):
-                requirements.append(evo['item'])
-            if evo.get('trigger') and evo['trigger'] not in ['level-up', 'use-item']:
-                requirements.append(evo['trigger'].replace('-', ' '))
-            
-            if requirements:
-                req_text = self.small_font.render(
-                    ' / '.join(requirements),
-                    True,
-                    Colors.TEXT_SECONDARY
-                )
-                surface.blit(req_text, (300, content_y + 3))
-            
-            content_y += 25
-    
-    def _render_abilities_tab(self, surface: pygame.Surface):
-        """Render abilities tab content."""
-        content_y = 260
-        
-        if not self.abilities:
-            no_abilities = self.text_font.render(
-                "No ability data",
-                True,
-                Colors.TEXT_SECONDARY
-            )
-            surface.blit(no_abilities, (20, content_y + 20))
-            return
-        
-        for ability in self.abilities:
-            # Draw ability name
-            ability_name = ability['name'].replace('-', ' ').title()
-            ability_text = self.text_font.render(
-                ability_name,
-                True,
-                Colors.TEXT_PRIMARY
-            )
-            surface.blit(ability_text, (20, content_y))
-            
-            # Draw hidden indicator
-            if ability.get('is_hidden'):
-                hidden_text = self.small_font.render(
-                    "(Hidden)",
-                    True,
-                    Colors.YELLOW
-                )
-                surface.blit(hidden_text, (220, content_y + 3))
-            
-            content_y += 25

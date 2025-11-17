@@ -1,0 +1,340 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<story-context id="3-1-detail-screen-layout-and-sprite-display" v="1.0">
+  <metadata>
+    <epicId>3</epicId>
+    <storyId>3.1</storyId>
+    <title>Detail Screen Layout and Sprite Display</title>
+    <status>ready-for-dev</status>
+    <generatedAt>2025-01-16</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/3-1-detail-screen-layout-and-sprite-display.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>user browsing the ShokeDex</asA>
+    <iWant>to see detailed information about a selected Pokémon with a prominent sprite display</iWant>
+    <soThat>I can view comprehensive Pokémon data in an immersive detail view that matches the holographic blue aesthetic</soThat>
+    <tasks>
+      <task id="T1" priority="critical" ac-ref="AC-1,AC-2,AC-3">
+        Create DetailScreen class structure extending Screen base class with lifecycle methods (on_enter, on_exit, handle_input, update, render). Initialize with pokemon_id parameter. Load Pokemon data and large sprite in on_enter(). Handle B button navigation to pop screen stack.
+      </task>
+      <task id="T2" priority="critical" ac-ref="AC-2">
+        Implement large sprite rendering at 120-150px size occupying 50-60% of screen real estate. Load sprite from SpriteLoader cache using detail size variant (128x128). Center sprite in left-center area. Handle missing sprites with text placeholder gracefully.
+      </task>
+      <task id="T3" priority="critical" ac-ref="AC-3">
+        Implement screen header with Pokémon name (title case) and National Dex number (#025 format). Use Orbitron Bold 24px font (or fallback). Render at top with white color for maximum contrast.
+      </task>
+      <task id="T4" priority="high" ac-ref="AC-4">
+        Implement responsive layout supporting 480x320 and 800x480 resolutions. Position header at top, large sprite center-left, placeholder panels for stats (right side) and type badges (below sprite). Follow UX specification component spacing and alignment.
+      </task>
+      <task id="T5" priority="high" ac-ref="AC-5">
+        Apply holographic blue styling with dark blue panels (rgba(26,47,74,0.9)), electric blue borders (2px #00d4ff), white text (#ffffff), and subtle glow effects matching HomeScreen aesthetic.
+      </task>
+      <task id="T6" priority="high" ac-ref="AC-6">
+        Integrate StateManager to persist last viewed Pokémon. Call set_last_viewed(pokemon_id) in on_enter(). Call save_state() in on_exit(). Verify restoration on app relaunch.
+      </task>
+      <task id="T7" priority="high" ac-ref="AC-2,AC-3,AC-7">
+        Implement database query for Pokémon basic data using Database.get_pokemon_by_id(). Use parameterized query for security. Query must complete in &lt; 50ms. Store result in self.pokemon_data dict.
+      </task>
+      <task id="T8" priority="medium" ac-ref="AC-8">
+        Implement error handling for missing sprites (show text placeholder with name), database query failures (show friendly message), and graceful degradation. Use try/except blocks with logging.
+      </task>
+      <task id="T9" priority="medium" ac-ref="AC-7">
+        Validate performance requirements with PerformanceMonitor. Target: 30+ FPS frame rate, &lt;33ms render time, &lt;10ms cached sprite load, &lt;50ms database query, &lt;300ms total transition from HomeScreen.
+      </task>
+      <task id="T10" priority="medium" ac-ref="AC-1,AC-2,AC-3,AC-6,AC-8">
+        Create integration tests in tests/test_detail_screen_basic.py covering navigation, sprite display, header rendering, StateManager integration, error handling. Modify tests/test_home_screen.py for A button navigation test.
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC-1" priority="critical">
+      <description>Detail Screen Navigation</description>
+      <given>a user is viewing HomeScreen with a selected Pokémon</given>
+      <when>the user presses the A button (SELECT action)</when>
+      <then>DetailScreen loads and becomes the active screen</then>
+      <and>the selected Pokémon's detail information is displayed</and>
+      <and>the transition completes in &lt; 300ms (per Tech Spec)</and>
+      <and>B button returns to HomeScreen (push/pop navigation stack)</and>
+    </criterion>
+    <criterion id="AC-2" priority="critical">
+      <description>Large Sprite Display</description>
+      <given>DetailScreen is displaying a Pokémon</given>
+      <when>the screen renders</when>
+      <then>a large Pokémon sprite is displayed at 120-150px size</then>
+      <and>the sprite occupies 50-60% of screen real estate (hero element per UX spec)</and>
+      <and>sprite is loaded from SpriteLoader cache using detail size variant (128x128)</and>
+      <and>sprite is center-aligned in left-center region for visual balance</and>
+    </criterion>
+    <criterion id="AC-3" priority="critical">
+      <description>Screen Header Display</description>
+      <given>DetailScreen is rendering</given>
+      <when>the header draws</when>
+      <then>Pokémon name is displayed in title case at top-left (e.g., "Pikachu")</then>
+      <and>National Dex number is displayed at top-right in format #025 (3 digits zero-padded)</and>
+      <and>header uses Orbitron Bold font at 24px (or system font fallback)</and>
+      <and>header text is white (#ffffff) for maximum readability</and>
+    </criterion>
+    <criterion id="AC-4" priority="high">
+      <description>Layout Structure Compliance</description>
+      <given>DetailScreen renders on target display</given>
+      <when>layout is calculated</when>
+      <then>header section spans full width at top (80-100px height)</then>
+      <and>large sprite is positioned center-left occupying 50-60% width</and>
+      <and>placeholder panels are positioned right side for stats (future: Story 3.2)</and>
+      <and>placeholder panels are positioned below sprite for type badges (future: Story 3.3)</and>
+      <and>layout is responsive and functional at 480x320 and 800x480 resolutions</and>
+    </criterion>
+    <criterion id="AC-5" priority="high">
+      <description>Holographic Blue Styling</description>
+      <given>DetailScreen is rendered</given>
+      <when>styling is applied</when>
+      <then>panel backgrounds use dark blue rgba(26, 47, 74, 0.9)</then>
+      <and>all borders are 2px solid electric blue (#00d4ff)</and>
+      <and>text uses white (#ffffff) for primary content</and>
+      <and>subtle glow effects are applied to active elements (2-4px blur)</and>
+      <and>overall theme matches HomeScreen holographic blue aesthetic</and>
+    </criterion>
+    <criterion id="AC-6" priority="high">
+      <description>StateManager Integration</description>
+      <given>a user navigates to DetailScreen for Pokémon #25 (Pikachu)</given>
+      <when>DetailScreen.on_enter() executes</when>
+      <then>StateManager.set_last_viewed(25) is called</then>
+      <and>state is persisted to data/shokedex_state.json</and>
+      <when>the user exits DetailScreen (B button)</when>
+      <then>DetailScreen.on_exit() saves the final state</then>
+      <and>on next application launch, StateManager.get_last_viewed_id() returns 25</and>
+      <and>HomeScreen scrolls to Pikachu on startup</and>
+    </criterion>
+    <criterion id="AC-7" priority="high">
+      <description>Performance Requirements</description>
+      <given>DetailScreen is active and rendering</given>
+      <when>any operation occurs (rendering, loading, transitions)</when>
+      <then>frame rate maintains 30+ FPS (per NFR-P1)</then>
+      <and>DetailScreen initial render time &lt; 33ms per frame (1 frame at 30 FPS)</and>
+      <and>sprite loading from cache completes in &lt; 10ms</and>
+      <and>database query for Pokémon basic info completes in &lt; 50ms</and>
+      <and>total transition from HomeScreen → DetailScreen &lt; 300ms</and>
+    </criterion>
+    <criterion id="AC-8" priority="medium">
+      <description>Error Handling and Graceful Degradation</description>
+      <given>DetailScreen attempts to load a Pokémon with missing sprite</given>
+      <when>SpriteLoader.load_sprite() returns None</when>
+      <then>a text placeholder is displayed with the Pokémon name</then>
+      <and>layout remains functional without crashing</and>
+      <given>database query fails (database unavailable or corrupt)</given>
+      <when>Database.get_pokemon_by_id() raises exception</when>
+      <then>a friendly error message is displayed: "Unable to load Pokémon data"</then>
+      <and>user can press B button to return to HomeScreen</and>
+      <and>error is logged with logging.warning() for debugging</and>
+    </criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <artifact path="docs/PRD.md" title="Product Requirements Document" section="FR3.1 - Detail Screen Display">
+        Detail Screen shall display comprehensive Pokémon information with large sprite (120-150px), name/dex number header, stats panel, type badges, and evolution chain. Navigation: A button from HomeScreen to enter, B button to return. Performance: &lt;300ms transition, 30+ FPS rendering. Holographic blue aesthetic consistent with home screen.
+      </artifact>
+      <artifact path="docs/architecture.md" title="Architecture Document" section="Screen Lifecycle & Navigation">
+        Screen base class lifecycle: on_enter() called when screen becomes active (load data, initialize fonts), on_exit() called when leaving (save state), handle_input() processes button presses, update() for logic updates, render() for drawing. ScreenManager.push() adds screen to stack, pop() returns to previous. Manager access: screens get references via screen_manager parameter (state_manager, database, sprite_loader).
+      </artifact>
+      <artifact path="docs/ux-design-specification.md" title="UX Design Specification" section="Holographic Blue Color Palette">
+        Electric Blue primary: #00d4ff (borders, highlights, active elements), Ice Blue secondary: #a8e6ff (gradients, glows). Dark Blue panels: rgba(26,47,74,0.9) for backgrounds with 90% opacity. White text: #ffffff for maximum contrast. Typography: Orbitron Bold 24px for headers/titles, Rajdhani 16px for body text. Glow effects: 2-4px blur with electric blue color at 40% opacity.
+      </artifact>
+      <artifact path="docs/ux-design-specification.md" title="UX Design Specification" section="Detail View Layout">
+        Header: Full width, 80-100px height, white text on dark background. Sprite: Center-left position, 120-150px size (detail variant 128x128), 50-60% screen real estate as hero element. Stats Panel: Right side, aligned with sprite top, 40% width. Type Badges: Below sprite, horizontally centered, 70x28px rounded rectangles. Spacing: 12-16px between components. Responsive: Support 480x320 and 800x480 displays.
+      </artifact>
+      <artifact path="docs/epics.md" title="Epic Definitions" section="Epic 3 - Detail View Implementation">
+        Epic 3 Stories: 3.1 Detail Screen Layout and Sprite Display (foundation - this story), 3.2 Base Stats Visualization, 3.3 Type Display and Effectiveness, 3.4 Physical Data Display. Prerequisites: Epic 1 complete (HomeScreen navigation, StateManager, Database, SpriteLoader), Epic 2 complete (HomeScreen with A button selection). DetailScreen integrates with: StateManager (persistence), Database (queries), SpriteLoader (sprites), ScreenManager (navigation).
+      </artifact>
+      <artifact path="docs/sprint-artifacts/tech-spec-epic-2-detail-view-with-audio.md" title="Epic 3 Technical Specification" section="DetailScreen Architecture">
+        DetailScreen class design: Constructor accepts pokemon_id parameter. on_enter() loads data (Database.get_pokemon_by_id, get_pokemon_stats, get_pokemon_types), loads sprite (SpriteLoader.load_detail()), calls StateManager.set_last_viewed(). on_exit() calls StateManager.save_state(). handle_input() processes B button (pop screen). render() draws header, sprite, stats panel, type badges with holographic styling. Performance targets: &lt;33ms render, &lt;300ms transition, 30+ FPS sustained.
+      </artifact>
+    </docs>
+    <code>
+      <artifact path="src/ui/screen.py" kind="base-class" symbol="Screen" lines="11-65" reason="Abstract base class defining screen interface with lifecycle methods">
+        Screen base class with abstract methods handle_input(action), update(delta_time), render(surface). Lifecycle hooks: on_enter() called when screen becomes active (default sets _active=True), on_exit() called when leaving (default sets _active=False). Constructor: __init__(screen_manager) stores reference to ScreenManager. DetailScreen must extend this class and implement all abstract methods.
+      </artifact>
+      <artifact path="src/ui/screen_manager.py" kind="manager" symbol="ScreenManager" lines="11-120" reason="Screen stack navigation coordinator managing screen lifecycle">
+        ScreenManager manages screen stack with push(screen), pop(), replace(screen) methods. Handles screen lifecycle: calls on_exit() on old screen, on_enter() on new screen. Routes input/update/render to active screen (top of stack). Provides manager references (database, state_manager, sprite_loader, input_manager) to screens via constructor injection pattern. HomeScreen is root (never popped).
+      </artifact>
+      <artifact path="src/ui/home_screen.py" kind="screen" symbol="HomeScreen._select_pokemon" lines="646-673" reason="Example of navigation pattern from HomeScreen to DetailScreen with lazy import">
+        HomeScreen._select_pokemon() method shows navigation pattern: lazy import DetailScreen to avoid circular dependency, create DetailScreen instance with pokemon_id parameter, call screen_manager.push(detail_screen). Also tracks recent views by adding pokemon_id to recent_views list (max 12 items). Pattern: from .detail_screen import DetailScreen inside method, not at module level.
+      </artifact>
+      <artifact path="src/ui/detail_screen.py" kind="screen" symbol="DetailScreen" lines="1-150" reason="Existing DetailScreen implementation - PARTIAL, needs Story 3.1 refinements">
+        DetailScreen already exists but implements full Epic 3 scope (stats, evolutions, abilities tabs). For Story 3.1, focus on: basic layout, large sprite display, header with name/dex number, holographic styling, StateManager integration, B button navigation. Current implementation: loads data in _load_pokemon_data(), renders sprite with load_detail(), has tab system (defer to later stories), handles input with B button pop(). Needs: performance validation, error handling improvements, layout refinement per UX spec.
+      </artifact>
+      <artifact path="src/ui/sprite_loader.py" kind="module" symbol="load_detail" lines="136-162" reason="Sprite loading function with LRU caching for detail-sized sprites">
+        load_detail(pokemon_id) loads 96x96 detail sprite from assets/sprites/detail/{id:03d}.png. Uses OrderedDict LRU cache (_CACHE) with max 50 sprites. Returns pygame.Surface or None if file missing. Tracks cache hits/misses for performance monitoring (get_cache_stats()). Cache hit: &lt;10ms (memory lookup), Cache miss: &lt;150ms (disk load). Auto-evicts least recently used sprite when cache exceeds 50 items. Move-to-end on access maintains LRU order.
+      </artifact>
+      <artifact path="src/state_manager.py" kind="manager" symbol="StateManager" lines="19-180" reason="State persistence singleton for last viewed Pokemon tracking">
+        StateManager stores state in data/shokedex_state.json with atomic write pattern. Methods: get_last_viewed_id() returns pokemon_id (1-386), get_last_viewed_generation() returns generation (1-3), set_last_viewed(pokemon_id, generation=None) updates state (auto-detects generation if None), save_state() persists to JSON file (&lt;50ms). State structure: last_viewed.pokemon_id, last_viewed.generation, favorites list, recent list (max 10). Handles corrupt JSON gracefully (resets to defaults). Used by screens in on_enter()/on_exit() lifecycle.
+      </artifact>
+      <artifact path="src/data/database.py" kind="module" symbol="Database.get_pokemon_by_id" lines="257-276" reason="Database query method for Pokemon basic data with parameterized SQL">
+        get_pokemon_by_id(pokemon_id) returns Dict with keys: id, name, height, weight, generation, types (comma-separated string). Uses parameterized query: WHERE p.id = ? with pokemon_id tuple. LEFT JOINs pokemon_types and types tables, uses GROUP_CONCAT for types string. Query time: &lt;50ms target. Returns None if pokemon_id not found. Context manager pattern: with Database() as db. Always use parameterized statements for SQL injection prevention.
+      </artifact>
+      <artifact path="src/ui/colors.py" kind="constants" symbol="Colors" lines="1-30" reason="Holographic blue color constants for consistent styling">
+        Colors class defines holographic blue palette: ELECTRIC_BLUE=#00d4ff (borders, highlights), ICE_BLUE=#a8e6ff (gradients, glows), DARK_BLUE=rgba(26,47,74,0.9) (panels), WHITE=#ffffff (text), TEXT_SECONDARY=rgba(255,255,255,0.7) (secondary text), BORDER=ELECTRIC_BLUE, BACKGROUND=DARK_BLUE, GLOW=(0,212,255,102) for 40% opacity glow effects. Used throughout UI for consistent holographic aesthetic.
+      </artifact>
+      <artifact path="src/performance_monitor.py" kind="module" symbol="PerformanceMonitor" lines="1-100" reason="FPS tracking and performance validation utility">
+        PerformanceMonitor tracks frame rate with record_frame() method. get_average_fps() returns rolling average over last 60 frames. get_frame_time_ms() returns last frame duration in milliseconds. Used to validate NFR-P1 (30+ FPS) and AC #7 (&lt;33ms render time). Example: perf_monitor.record_frame() at end of render(), log warning if get_average_fps() &lt; 30. Also tracks memory usage with get_memory_usage_mb().
+      </artifact>
+    </code>
+    <dependencies>
+      <dependency name="pygame" version="2.5.0+" scope="required">
+        Graphics rendering library. Used for: Surface creation, image loading/blitting, font rendering, rect operations, color handling. DetailScreen uses: pygame.Surface for rendering, pygame.font.Font for text, pygame.Rect for layout positioning, pygame.draw for borders/shapes, pygame.transform for sprite scaling (if needed).
+      </dependency>
+      <dependency name="Pillow" version="10.0.0+" scope="optional">
+        Image processing library. Used by SpriteProcessor for sprite generation from PokéAPI. Not directly used by DetailScreen but sprites must exist at assets/sprites/detail/ before loading. Run: python src/data/sprite_processor.py to generate sprites if missing.
+      </dependency>
+      <dependency name="Python" version="3.11+" scope="required">
+        Programming language. DetailScreen uses: type hints (Optional, Dict, List), pathlib.Path for file paths, logging module for error handling, json module (via StateManager), sqlite3 (via Database context manager).
+      </dependency>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint id="PERF-1" critical="true">
+      Frame rate MUST maintain 30+ FPS during all DetailScreen operations (rendering, sprite loading, database queries). Target: 33ms maximum frame time. Validate with PerformanceMonitor.record_frame() and get_average_fps(). Log warnings if FPS drops below 30.
+    </constraint>
+    <constraint id="PERF-2" critical="true">
+      Total transition time from HomeScreen A button press to DetailScreen first render MUST complete in &lt; 300ms. This includes: input latency, screen push, on_enter() execution (database query, sprite load), first render. Measure with time.perf_counter() in tests.
+    </constraint>
+    <constraint id="SEC-1" critical="true">
+      All database queries MUST use parameterized statements with ? placeholders. NEVER use f-strings or string formatting in SQL queries to prevent SQL injection. Example: cursor.execute("SELECT * FROM pokemon WHERE id = ?", (pokemon_id,)) ✅, NOT cursor.execute(f"SELECT * FROM pokemon WHERE id = {pokemon_id}") ❌
+    </constraint>
+    <constraint id="ARCH-1" critical="true">
+      DetailScreen MUST extend Screen base class and implement all abstract methods: handle_input(action), update(delta_time), render(surface). Use lifecycle hooks: on_enter() for loading data, on_exit() for saving state. Access managers via self.screen_manager reference (state_manager, database, sprite_loader). Never create new manager instances.
+    </constraint>
+    <constraint id="ARCH-2" critical="true">
+      Navigation MUST use ScreenManager.push() and pop() for stack management. B button in handle_input() MUST call self.screen_manager.pop() to return to HomeScreen. Do not use replace() for DetailScreen navigation (preserves back stack). HomeScreen creates DetailScreen with pokemon_id parameter in _select_pokemon().
+    </constraint>
+    <constraint id="UI-1" priority="high">
+      Layout MUST be responsive for 480x320 and 800x480 displays. Use relative positioning and scaling factors. Test both resolutions. Header: full width top section. Sprite: center-left 50-60% width. Stats panel: right side 40% width. Type badges: below sprite, centered. Maintain 12-16px component spacing.
+    </constraint>
+    <constraint id="UI-2" priority="high">
+      Styling MUST match holographic blue aesthetic from HomeScreen. Use Colors.DARK_BLUE for panels (rgba(26,47,74,0.9)), Colors.ELECTRIC_BLUE for borders (2px solid #00d4ff), Colors.WHITE for text (#ffffff). Apply glow effects with 2-4px blur at 40% opacity. Font: Orbitron Bold 24px for headers (fallback to system font if unavailable).
+    </constraint>
+    <constraint id="ERR-1" priority="high">
+      Error handling MUST be graceful - no crashes allowed. Missing sprite: show text placeholder with pokemon name. Database error: show friendly message "Unable to load Pokémon data", allow B button exit. Log all errors with logging.warning() or logging.error(). Use try/except blocks around sprite loading and database queries.
+    </constraint>
+    <constraint id="TEST-1" priority="medium">
+      Integration tests MUST cover: HomeScreen A button navigation to DetailScreen, DetailScreen B button return to HomeScreen, sprite display for valid pokemon_id, header rendering with name and dex number, StateManager.set_last_viewed() called in on_enter(), StateManager.save_state() called in on_exit(), graceful handling of missing sprite, graceful handling of database query failure. Performance tests MUST validate &lt;300ms transition and 30+ FPS rendering.
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface name="Screen.on_enter" kind="lifecycle">
+      <signature>def on_enter(self) -> None</signature>
+      <description>Called when screen becomes active - load data, initialize resources</description>
+      <implementation>DetailScreen: Call super().on_enter(), initialize fonts (pygame.font.Font), call _load_pokemon_data() for database query, load sprite with sprite_loader.load_detail(pokemon_id), call state_manager.set_last_viewed(pokemon_id). Handle exceptions gracefully.</implementation>
+      <path>src/ui/screen.py</path>
+    </interface>
+    <interface name="Screen.on_exit" kind="lifecycle">
+      <signature>def on_exit(self) -> None</signature>
+      <description>Called when screen becomes inactive - save state, cleanup resources</description>
+      <implementation>DetailScreen: Call state_manager.save_state() to persist last viewed pokemon. Call super().on_exit(). No sprite cleanup needed (LRU cache manages memory automatically).</implementation>
+      <path>src/ui/screen.py</path>
+    </interface>
+    <interface name="Screen.handle_input" kind="input-handler">
+      <signature>def handle_input(self, action: InputAction) -> None</signature>
+      <description>Process button press actions from InputManager</description>
+      <implementation>DetailScreen: if action == InputAction.BACK: self.screen_manager.pop(). Story 3.1 only implements B button (BACK). L/R navigation (adjacent pokemon) deferred to Story 3.5.</implementation>
+      <path>src/ui/screen.py</path>
+    </interface>
+    <interface name="Screen.update" kind="logic">
+      <signature>def update(self, delta_time: float) -> None</signature>
+      <description>Update screen state logic each frame</description>
+      <implementation>DetailScreen Story 3.1: Minimal implementation - pass or placeholder. No animations or timers needed for basic layout. Sprite transitions deferred to later stories.</implementation>
+      <path>src/ui/screen.py</path>
+    </interface>
+    <interface name="Screen.render" kind="rendering">
+      <signature>def render(self, surface: pygame.Surface) -> None</signature>
+      <description>Draw screen content to pygame surface</description>
+      <implementation>DetailScreen: Fill background with Colors.DARK_BLUE. Draw holographic border (2px Colors.ELECTRIC_BLUE). Render header: pokemon name (title case) left-aligned, dex number (#025 format) right-aligned, Orbitron Bold 24px white. Blit sprite at center-left position (120x120 rect). Draw placeholder panels for stats (right) and type badges (below). Apply glow effects to active elements. Track render time with PerformanceMonitor if available.</implementation>
+      <path>src/ui/screen.py</path>
+    </interface>
+    <interface name="StateManager.set_last_viewed" kind="method">
+      <signature>def set_last_viewed(self, pokemon_id: int, generation: Optional[int] = None) -> None</signature>
+      <description>Update last viewed Pokemon and optionally generation. Auto-detects generation if None.</description>
+      <implementation>DetailScreen calls in on_enter() after loading data: self.state_manager.set_last_viewed(self.pokemon_id). Generation auto-detected from pokemon_id ranges (1-151=Gen1, 152-251=Gen2, 252-386=Gen3). Does not automatically save - must call save_state() separately.</implementation>
+      <path>src/state_manager.py</path>
+    </interface>
+    <interface name="StateManager.save_state" kind="method">
+      <signature>def save_state(self) -> bool</signature>
+      <description>Persist current state to JSON file with atomic write pattern</description>
+      <implementation>DetailScreen calls in on_exit(): self.state_manager.save_state(). Returns True if successful, False on IOError. Uses temp file + rename for atomicity. Target: &lt;50ms operation time.</implementation>
+      <path>src/state_manager.py</path>
+    </interface>
+    <interface name="Database.get_pokemon_by_id" kind="method">
+      <signature>def get_pokemon_by_id(self, pokemon_id: int) -> Optional[Dict[str, Any]]</signature>
+      <description>Get Pokemon by National Dex number with types as comma-separated string</description>
+      <implementation>DetailScreen calls in _load_pokemon_data(): with self.database as db: self.pokemon_data = db.get_pokemon_by_id(self.pokemon_id). Returns Dict with keys: id, name, height, weight, generation, types. Uses parameterized query with LEFT JOIN for types. Returns None if pokemon_id not found. Target: &lt;50ms query time.</implementation>
+      <path>src/data/database.py</path>
+    </interface>
+    <interface name="SpriteLoader.load_detail" kind="function">
+      <signature>def load_detail(pokemon_id: int) -> Optional[pygame.Surface]</signature>
+      <description>Load detail-sized sprite (96x96) from cache or disk with LRU caching</description>
+      <implementation>DetailScreen calls in on_enter(): self.sprite = load_detail(self.pokemon_id). Returns pygame.Surface or None if sprite file missing (assets/sprites/detail/{id:03d}.png). LRU cache with 50 sprite max. Cache hit: &lt;10ms, cache miss: &lt;150ms. Returns None for missing sprites - handle gracefully with text placeholder.</implementation>
+      <path>src/ui/sprite_loader.py</path>
+    </interface>
+    <interface name="ScreenManager.push" kind="method">
+      <signature>def push(self, screen: Screen) -> None</signature>
+      <description>Navigate to new screen by pushing onto stack, calling lifecycle methods</description>
+      <implementation>HomeScreen._select_pokemon() calls: screen_manager.push(DetailScreen(screen_manager, pokemon_id)). ScreenManager handles: call current_screen.on_exit(), add new screen to stack, call new_screen.on_enter(), set new screen as active.</implementation>
+      <path>src/ui/screen_manager.py</path>
+    </interface>
+    <interface name="ScreenManager.pop" kind="method">
+      <signature>def pop(self) -> None</signature>
+      <description>Return to previous screen by popping stack, calling lifecycle methods</description>
+      <implementation>DetailScreen.handle_input() calls on B button: self.screen_manager.pop(). ScreenManager handles: call current_screen.on_exit(), remove from stack, call previous_screen.on_enter(), set previous screen as active. Does not pop if only one screen remains (prevents empty stack).</implementation>
+      <path>src/ui/screen_manager.py</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      <standard>Use pytest framework with pytest.ini configuration. Test files in tests/ directory with test_ prefix.</standard>
+      <standard>Integration tests use real Database (with test data) and StateManager (with temp state file). Mock only external dependencies (API calls, file I/O where appropriate).</standard>
+      <standard>Performance tests validate timing requirements: &lt;300ms transition, &lt;33ms render, &lt;50ms database query, &lt;10ms cached sprite load, 30+ FPS sustained. Use time.perf_counter() for measurements.</standard>
+      <standard>Each AC should have 1-3 test functions. Test both happy path and error cases. Parametrize tests for multiple pokemon_id values where applicable.</standard>
+      <standard>Use fixtures for common setup: pygame.init(), create screen_manager with mocked managers, seed database with test data, create temp state file. Clean up in teardown.</standard>
+      <standard>Test naming convention: test_{feature}_{scenario}_{expected_result}. Example: test_detail_screen_navigation_a_button_pushes_screen, test_sprite_display_missing_sprite_shows_placeholder.</standard>
+    </standards>
+    <locations>
+      <location path="tests/test_detail_screen_basic.py" type="new">
+        Integration tests for Story 3.1: DetailScreen layout, sprite display, header rendering, navigation, StateManager integration, error handling, performance validation. Use DetailScreen class directly with mocked ScreenManager.
+      </location>
+      <location path="tests/test_home_screen.py" type="modify">
+        Add test for A button navigation from HomeScreen to DetailScreen: test_select_pokemon_pushes_detail_screen. Verify screen_manager.push() called with DetailScreen instance, pokemon_id parameter passed correctly.
+      </location>
+      <location path="tests/test_state_manager.py" type="reference">
+        Existing StateManager tests validate set_last_viewed() and save_state() functionality. DetailScreen tests can rely on StateManager working correctly (unit tested separately).
+      </location>
+      <location path="tests/test_sprite_loader.py" type="reference">
+        Existing SpriteLoader tests validate LRU caching, load_detail() function, cache hit rates, performance. DetailScreen tests can rely on sprite loading working correctly (unit tested separately).
+      </location>
+    </locations>
+    <ideas>
+      <idea ac-ref="AC-1">test_detail_screen_navigation_from_home_screen: Create HomeScreen, select pokemon (id=25), press SELECT action, verify ScreenManager.push() called with DetailScreen instance, verify DetailScreen.on_enter() executed, verify transition time &lt; 300ms</idea>
+      <idea ac-ref="AC-1">test_detail_screen_back_button_pops_screen: Create DetailScreen(pokemon_id=25), call on_enter(), simulate BACK action in handle_input(), verify ScreenManager.pop() called, verify on_exit() executed</idea>
+      <idea ac-ref="AC-2">test_large_sprite_displays_correctly: Create DetailScreen(pokemon_id=25), call on_enter(), verify sprite loaded via load_detail(25), verify sprite not None, verify sprite blitted to surface in center-left region (50-60% width), measure sprite size 120-150px range</idea>
+      <idea ac-ref="AC-2">test_sprite_loading_from_cache_fast: Create DetailScreen, load same pokemon twice, measure second load time, verify &lt; 10ms (cache hit), verify cache stats show hit count incremented</idea>
+      <idea ac-ref="AC-3">test_header_displays_name_and_dex_number: Create DetailScreen(pokemon_id=25), render to surface, verify "Pikachu" text rendered (title case), verify "#025" text rendered (3-digit format), verify Orbitron Bold 24px font used (or fallback), verify white color</idea>
+      <idea ac-ref="AC-4">test_layout_responsive_480x320: Create DetailScreen, render to 480x320 surface, verify header spans full width, verify sprite in left-center 50-60%, verify stats placeholder right 40%, verify type badges below sprite centered, verify 12-16px spacing</idea>
+      <idea ac-ref="AC-4">test_layout_responsive_800x480: Create DetailScreen, render to 800x480 surface, verify same layout proportions as 480x320, verify all components visible and positioned correctly</idea>
+      <idea ac-ref="AC-5">test_holographic_blue_styling_applied: Create DetailScreen, render, verify background Colors.DARK_BLUE (rgba(26,47,74,0.9)), verify borders 2px Colors.ELECTRIC_BLUE (#00d4ff), verify text Colors.WHITE (#ffffff), verify glow effects on active elements</idea>
+      <idea ac-ref="AC-6">test_state_manager_set_last_viewed_called: Create DetailScreen(pokemon_id=25) with mock StateManager, call on_enter(), verify mock.set_last_viewed(25) called once, verify generation auto-detected (1 for Pikachu)</idea>
+      <idea ac-ref="AC-6">test_state_manager_save_state_on_exit: Create DetailScreen with mock StateManager, call on_exit(), verify mock.save_state() called once</idea>
+      <idea ac-ref="AC-6">test_last_viewed_persists_across_restart: Create StateManager with temp state file, create DetailScreen(pokemon_id=25), call on_enter() then on_exit(), create new StateManager instance, verify get_last_viewed_id() returns 25</idea>
+      <idea ac-ref="AC-7">test_performance_render_time_under_33ms: Create DetailScreen, call on_enter(), measure render() execution time with time.perf_counter(), verify &lt; 33ms, repeat 10 times and average</idea>
+      <idea ac-ref="AC-7">test_performance_database_query_under_50ms: Create DetailScreen, measure _load_pokemon_data() execution time, verify &lt; 50ms for get_pokemon_by_id() call</idea>
+      <idea ac-ref="AC-7">test_performance_fps_maintains_30_plus: Create DetailScreen with PerformanceMonitor, render 100 frames in game loop, verify get_average_fps() &gt;= 30</idea>
+      <idea ac-ref="AC-7">test_performance_total_transition_under_300ms: Measure time from HomeScreen A button press to DetailScreen first render completion, verify total &lt; 300ms (includes input latency, screen push, on_enter, first render)</idea>
+      <idea ac-ref="AC-8">test_error_handling_missing_sprite_shows_placeholder: Create DetailScreen with pokemon_id that has no sprite file, call on_enter(), verify load_detail() returns None, verify text placeholder displayed with pokemon name, verify no crash</idea>
+      <idea ac-ref="AC-8">test_error_handling_database_query_failure: Mock Database.get_pokemon_by_id() to raise exception, create DetailScreen, call on_enter(), verify friendly error message displayed, verify B button allows exit, verify error logged</idea>
+      <idea ac-ref="AC-8">test_error_handling_graceful_degradation: Create DetailScreen with missing sprite AND database error, verify screen renders with error message, verify B button functional, verify no crash, verify multiple errors logged</idea>
+    </ideas>
+  </tests>
+</story-context>
