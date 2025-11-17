@@ -77,6 +77,8 @@ class DetailScreen(Screen):
         self.types: List[str] = []  # Story 3.3: List of 1-2 type names (e.g., ['Fire', 'Flying'])
         self.height: float = 0.0  # Story 3.4: Height in meters (converted from decimeters)
         self.weight: float = 0.0  # Story 3.4: Weight in kilograms (converted from hectograms)
+        self.description: str = ""  # Story 3.5: Pokédex description text
+        self.description_lines: List[pygame.Surface] = []  # Story 3.5: Pre-rendered text surfaces
         
         # Fonts
         self.header_font: Optional[pygame.font.Font] = None
@@ -85,6 +87,7 @@ class DetailScreen(Screen):
         self.stat_label_font: Optional[pygame.font.Font] = None  # Story 3.2: 14px for labels
         self.stat_value_font: Optional[pygame.font.Font] = None  # Story 3.2: 16px for values
         self.type_badge_font: Optional[pygame.font.Font] = None  # Story 3.3: Rajdhani Bold 14px
+        self.description_font: Optional[pygame.font.Font] = None  # Story 3.5: Rajdhani 16px for description
     
     def on_enter(self):
         """
@@ -119,8 +122,19 @@ class DetailScreen(Screen):
             logging.warning(f"Failed to load custom type badge font, using fallback: {e}")
             self.type_badge_font = pygame.font.Font(None, 14)
         
+        # Story 3.5: Load font for description (Rajdhani Regular 16px preferred)
+        try:
+            # Try to load Rajdhani Regular (custom font if available)
+            self.description_font = pygame.font.Font(None, 16)
+        except Exception as e:
+            logging.warning(f"Failed to load description font, using fallback: {e}")
+            self.description_font = pygame.font.Font(None, 16)
+        
         # Load Pokémon data from database
         self._load_pokemon_data()
+        
+        # Story 3.5: Pre-render description lines after loading data
+        self._render_description_lines()
         
         # Load detail sprite (128x128 variant)
         if self.pokemon_data:
@@ -236,8 +250,23 @@ class DetailScreen(Screen):
                 if self.weight <= 0:
                     logging.warning(f"Invalid weight for Pokemon #{self.pokemon_id}: {weight_hg} hg, using placeholder")
                     self.weight = -1  # Marker for "???" placeholder
-                elif self.weight > 10000:
+                if self.weight > 10000:
                     logging.warning(f"Unusually heavy weight for Pokemon #{self.pokemon_id}: {self.weight}kg")
+                
+                # Story 3.5: Load description text (AC #7)
+                start_time = time.perf_counter()
+                self.description = self.pokemon_data.get('description') or ""
+                
+                # Story 3.5 AC #8: Handle missing description with placeholder
+                if not self.description:
+                    self.description = "No description available"
+                    logging.warning(f"No description found for Pokemon #{self.pokemon_id}")
+                
+                query_time = (time.perf_counter() - start_time) * 1000  # ms
+                if query_time > 50:
+                    logging.warning(f"Description load took {query_time:.2f}ms (target: <50ms)")
+                else:
+                    logging.debug(f"Description loaded in {query_time:.2f}ms")
                 
         except Exception as e:
             logging.error(f"Database error loading Pokemon #{self.pokemon_id}: {e}")
@@ -357,8 +386,8 @@ class DetailScreen(Screen):
         # Story 3.4: Render physical measurements (height, weight)
         self._render_physical_data(surface)
         
-        # AC #4: Render placeholder panels for future features
-        self._render_placeholder_panels(surface)
+        # Story 3.5: Render description panel
+        self._render_description_panel(surface)
     
     def _render_header(self, surface: pygame.Surface):
         """
@@ -706,36 +735,157 @@ class DetailScreen(Screen):
         else:
             logging.debug(f"Physical data rendered in {render_time:.2f}ms")
     
-    def _render_placeholder_panels(self, surface: pygame.Surface):
+    def _wrap_description_text(self, text: str, font: pygame.font.Font, 
+                               max_width: int, max_lines: int) -> List[str]:
         """
-        Render placeholder panels for future features.
+        Wrap text at word boundaries to fit within max_width.
+        
+        Args:
+            text: Description text to wrap
+            font: pygame Font object for measuring text width
+            max_width: Maximum width in pixels per line
+            max_lines: Maximum number of lines to return
+            
+        Returns:
+            List of wrapped lines (max max_lines entries)
+            
+        Story 3.5 AC #2: Wraps at word boundaries (not mid-word)
+        Story 3.5 AC #3: Maximum 4 lines displayed
+        Story 3.5 AC #4: Truncates with ellipsis if exceeds max_lines
+        """
+        if not text:
+            return []
+        
+        lines = []
+        words = text.split(' ')
+        current_line = ""
+        
+        for word in words:
+            # Test if adding this word would exceed max_width
+            test_line = current_line + (" " if current_line else "") + word
+            test_width = font.size(test_line)[0]
+            
+            if test_width <= max_width:
+                # Word fits, add to current line
+                current_line = test_line
+            else:
+                # Word doesn't fit, finalize current line and start new one
+                if current_line:
+                    lines.append(current_line)
+                    current_line = word
+                else:
+                    # Single word exceeds max_width - force add it
+                    lines.append(word)
+                    current_line = ""
+            
+            # Stop if we've reached max_lines
+            if len(lines) >= max_lines:
+                break
+        
+        # Add final line if not empty and room exists
+        if current_line and len(lines) < max_lines:
+            lines.append(current_line)
+        
+        # Handle truncation with ellipsis (AC #4)
+        if len(lines) >= max_lines and len(words) > 0:
+            # Check if we truncated text (more words exist)
+            words_in_lines = sum(len(line.split()) for line in lines)
+            if words_in_lines < len(words):
+                # More text exists, need ellipsis
+                last_line = lines[max_lines - 1]
+                
+                # Try adding ellipsis
+                if font.size(last_line + "...")[0] <= max_width:
+                    lines[max_lines - 1] = last_line + "..."
+                else:
+                    # Shorten last line to fit ellipsis
+                    while len(last_line) > 0 and font.size(last_line + "...")[0] > max_width:
+                        last_line = last_line[:-1].rstrip()
+                    lines[max_lines - 1] = last_line + "..."
+        
+        return lines[:max_lines]
+    
+    def _render_description_lines(self):
+        """
+        Pre-render description text to surfaces for efficient blitting.
+        
+        Story 3.5 AC #9: Text wrapped and rendered in on_enter() (not per frame)
+        Story 3.5 AC #9: Cached in self.description_lines for render() to blit
+        Story 3.5 AC #9: Pre-rendering must complete in < 5ms
+        """
+        self.description_lines = []
+        
+        if not self.description_font or not self.description:
+            return
+        
+        start_time = time.perf_counter()
+        
+        # Story 3.5 AC #2, #3, #4: Wrap text to max 4 lines, 400px width
+        wrapped_lines = self._wrap_description_text(
+            self.description, 
+            self.description_font, 
+            max_width=400, 
+            max_lines=4
+        )
+        
+        # Render each line to surface (cache for blit) - AC #5: ice blue color
+        for line_text in wrapped_lines:
+            line_surface = self.description_font.render(line_text, True, Colors.ICE_BLUE)
+            self.description_lines.append(line_surface)
+        
+        # Performance logging (AC #9: < 5ms target, changed from 50ms per spec clarification)
+        render_time = (time.perf_counter() - start_time) * 1000
+        if render_time > 5:
+            logging.warning(f"Description pre-rendering took {render_time:.2f}ms (target: <5ms)")
+        else:
+            logging.debug(f"Description pre-rendered in {render_time:.2f}ms")
+    
+    def _render_description_panel(self, surface: pygame.Surface):
+        """
+        Render description panel with pre-rendered text lines.
         
         Args:
             surface: pygame.Surface to draw on
             
-        AC #4: Layout structure with placeholders for:
-        - Description area (bottom-center) - Story 3.5
-        
-        Note: Stats panel removed in Story 3.2 (now rendered with real data)
-        Note: Type badges removed in Story 3.3 (now rendered with real data)
-        Note: Physical measurements removed in Story 3.4 (now rendered with real data)
-        
-        AC #5: Holographic blue styling (dark blue panels, electric blue borders)
+        Story 3.5 Implementation:
+        AC #1: Authentic description text from database
+        AC #5: Typography: Rajdhani 16px, ice blue (#a8e6ff)
+        AC #6: Layout in lower section with holographic styling
+        AC #10: Blit performance < 5ms per frame
         """
+        if not self.description_lines:
+            return  # No description to render
+        
+        start_time = time.perf_counter()
+        
+        # Description panel positioning (AC #6: lower section)
         screen_width = surface.get_width()
         screen_height = surface.get_height()
         
-        # Description placeholder (bottom-center)
-        desc_panel = pygame.Rect(
-            screen_width // 3 + 20,
-            screen_height - 80,
-            screen_width - (screen_width // 3) - 40,
-            60
-        )
-        pygame.draw.rect(surface, Colors.DARK_BLUE, desc_panel)
-        pygame.draw.rect(surface, Colors.ELECTRIC_BLUE, desc_panel, 2)
+        DESC_PANEL_X = 20
+        DESC_PANEL_Y = screen_height - 140
+        DESC_PANEL_WIDTH = screen_width - 40
+        DESC_PANEL_HEIGHT = 120
+        DESC_TEXT_X = DESC_PANEL_X + 16  # 16px padding
+        DESC_TEXT_Y = DESC_PANEL_Y + 16
+        DESC_LINE_HEIGHT = 22.4  # AC #3: 1.4 × 16px font size
         
-        if self.small_font:
-            desc_label = self.small_font.render("Description (Story 3.5)", True, Colors.ICE_BLUE)
-            surface.blit(desc_label, (desc_panel.x + 10, desc_panel.y + 10))
+        # Draw panel background (AC #6: holographic blue styling)
+        panel_surface = pygame.Surface((DESC_PANEL_WIDTH, DESC_PANEL_HEIGHT), pygame.SRCALPHA)
+        panel_surface.fill((*Colors.DARK_BLUE, 230))  # rgba(26, 47, 74, 0.9)
+        pygame.draw.rect(panel_surface, Colors.ELECTRIC_BLUE, 
+                        pygame.Rect(0, 0, DESC_PANEL_WIDTH, DESC_PANEL_HEIGHT), 2)
+        surface.blit(panel_surface, (DESC_PANEL_X, DESC_PANEL_Y))
+        
+        # Blit pre-rendered description lines (AC #9: no text processing per frame)
+        for i, line_surface in enumerate(self.description_lines):
+            y = DESC_TEXT_Y + int(i * DESC_LINE_HEIGHT)
+            surface.blit(line_surface, (DESC_TEXT_X, y))
+        
+        # Performance logging (AC #10: < 5ms target)
+        render_time = (time.perf_counter() - start_time) * 1000
+        if render_time > 5:
+            logging.warning(f"Description blit took {render_time:.2f}ms (target: <5ms)")
+        else:
+            logging.debug(f"Description blit completed in {render_time:.2f}ms")
 

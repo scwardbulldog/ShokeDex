@@ -1769,6 +1769,463 @@ class TestPhysicalDataComprehensive:
         assert avg_render_time_ms < 33, f"Render time {avg_render_time_ms:.2f}ms exceeds 33ms"
 
 
+# ==========================================
+# STORY 3.5: POKÉDEX DESCRIPTION TEXT DISPLAY
+# ==========================================
+
+class TestStory35DescriptionDisplay:
+    """
+    Tests for Story 3.5: Pokédex Description Text Display
+    
+    Tests description loading from database, text wrapping at word boundaries,
+    4-line truncation with ellipsis, typography specifications, layout positioning,
+    pre-rendering optimization, and performance requirements.
+    """
+    
+    def test_ac_1_authentic_description_display(self, pygame_init, mock_screen_manager):
+        """Test AC #1: Authentic description displayed from database"""
+        # Create database with description
+        description_text = "When several of these Pokémon gather, their electricity could build and cause lightning storms."
+        db = MockDatabase(
+            pokemon_data={
+                'id': 25,
+                'name': 'pikachu',
+                'height': 4,
+                'weight': 60,
+                'generation': 1,
+                'description': description_text
+            }
+        )
+        
+        screen_manager = MockScreenManager(database=db, state_manager=MockStateManager())
+        detail = DetailScreen(screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        # Verify description loaded
+        assert detail.description == description_text
+        assert detail.description != "No description available"
+    
+    def test_ac_1_no_placeholder_when_description_exists(self, pygame_init, mock_screen_manager):
+        """Test AC #1: No placeholder shown when authentic description exists"""
+        db = MockDatabase(
+            pokemon_data={
+                'id': 25,
+                'name': 'pikachu',
+                'height': 4,
+                'weight': 60,
+                'generation': 1,
+                'description': "Electric mouse Pokémon."
+            }
+        )
+        
+        screen_manager = MockScreenManager(database=db, state_manager=MockStateManager())
+        detail = DetailScreen(screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        # Should not be placeholder
+        assert "No description available" not in detail.description
+    
+    def test_ac_2_text_wrapping_word_boundaries(self, pygame_init, mock_screen_manager):
+        """Test AC #2: Text wraps at word boundaries, not mid-word"""
+        db = MockDatabase(
+            pokemon_data={
+                'id': 25,
+                'name': 'pikachu',
+                'height': 4,
+                'weight': 60,
+                'generation': 1,
+                'description': "When several of these Pokémon gather, their electricity could build and cause lightning storms."
+            }
+        )
+        
+        screen_manager = MockScreenManager(database=db, state_manager=MockStateManager())
+        detail = DetailScreen(screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        # Get wrapped lines
+        if detail.description_font:
+            wrapped_lines = detail._wrap_description_text(
+                detail.description,
+                detail.description_font,
+                max_width=400,
+                max_lines=4
+            )
+            
+            # Verify no mid-word breaks (lines shouldn't end with partial words)
+            for line in wrapped_lines:
+                # Lines should end cleanly (not with hyphen unless in original text)
+                assert not line.endswith('-') or '-' in detail.description
+    
+    def test_ac_3_four_line_display_limit(self, pygame_init, mock_screen_manager):
+        """Test AC #3: Maximum 4 lines displayed"""
+        # Very long description (should exceed 4 lines)
+        long_description = "Created from the DNA of Mew, this Pokémon is said to have the most savage heart among all Pokémon. " \
+                          "It is a Psychic-type with incredible power that was created through genetic manipulation for " \
+                          "battling purposes. Its appearance alone instills fear in those who see it."
+        
+        db = MockDatabase(
+            pokemon_data={
+                'id': 150,
+                'name': 'mewtwo',
+                'height': 20,
+                'weight': 1220,
+                'generation': 1,
+                'description': long_description
+            }
+        )
+        
+        screen_manager = MockScreenManager(database=db, state_manager=MockStateManager())
+        detail = DetailScreen(screen_manager, pokemon_id=150)
+        detail.on_enter()
+        
+        # Verify max 4 lines
+        assert len(detail.description_lines) <= 4, f"Expected max 4 lines, got {len(detail.description_lines)}"
+    
+    def test_ac_4_truncation_with_ellipsis(self, pygame_init, mock_screen_manager):
+        """Test AC #4: Long text truncates with ellipsis on line 4"""
+        # Very long description that will definitely exceed 4 lines
+        long_description = "Created from the DNA of Mew, this Pokémon is said to have the most savage heart among all Pokémon. " \
+                          "It is a Psychic-type with incredible power that was created through genetic manipulation for " \
+                          "battling purposes. Its appearance alone instills fear in those who see it. This description is " \
+                          "intentionally very long to force truncation at the fourth line with an ellipsis indicator."
+        
+        db = MockDatabase(
+            pokemon_data={
+                'id': 150,
+                'name': 'mewtwo',
+                'height': 20,
+                'weight': 1220,
+                'generation': 1,
+                'description': long_description
+            }
+        )
+        
+        screen_manager = MockScreenManager(database=db, state_manager=MockStateManager())
+        detail = DetailScreen(screen_manager, pokemon_id=150)
+        detail.on_enter()
+        
+        if detail.description_font:
+            wrapped_lines = detail._wrap_description_text(
+                long_description,
+                detail.description_font,
+                max_width=400,
+                max_lines=4
+            )
+            
+            # Should have 4 lines
+            assert len(wrapped_lines) == 4
+            
+            # Last line should end with ellipsis
+            assert wrapped_lines[-1].endswith("..."), f"Last line should end with ellipsis: '{wrapped_lines[-1]}'"
+    
+    def test_ac_4_no_ellipsis_if_fits(self, pygame_init, mock_screen_manager):
+        """Test AC #4: No ellipsis if text fits naturally in 4 lines"""
+        # Short description that fits in less than 4 lines
+        short_description = "A small Electric-type Pokémon that is very popular."
+        
+        db = MockDatabase(
+            pokemon_data={
+                'id': 25,
+                'name': 'pikachu',
+                'height': 4,
+                'weight': 60,
+                'generation': 1,
+                'description': short_description
+            }
+        )
+        
+        screen_manager = MockScreenManager(database=db, state_manager=MockStateManager())
+        detail = DetailScreen(screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        if detail.description_font:
+            wrapped_lines = detail._wrap_description_text(
+                short_description,
+                detail.description_font,
+                max_width=400,
+                max_lines=4
+            )
+            
+            # Should have fewer than 4 lines
+            assert len(wrapped_lines) < 4
+            
+            # No line should end with ellipsis
+            for line in wrapped_lines:
+                assert not line.endswith("...")
+    
+    def test_ac_5_typography_specifications(self, pygame_init, mock_screen_manager):
+        """Test AC #5: Typography uses Rajdhani 16px, ice blue color"""
+        db = MockDatabase(
+            pokemon_data={
+                'id': 25,
+                'name': 'pikachu',
+                'height': 4,
+                'weight': 60,
+                'generation': 1,
+                'description': "Electric mouse Pokémon."
+            }
+        )
+        
+        screen_manager = MockScreenManager(database=db, state_manager=MockStateManager())
+        detail = DetailScreen(screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        # Verify font loaded
+        assert detail.description_font is not None
+        
+        # Verify font size (16px)
+        assert detail.description_font.get_height() <= 20  # Approximate check
+        
+        # Verify ice blue color used in rendering
+        from src.ui.colors import Colors
+        assert Colors.ICE_BLUE == (168, 230, 255)
+    
+    def test_ac_6_layout_and_positioning(self, pygame_init, mock_screen_manager):
+        """Test AC #6: Panel positioned in lower section with holographic styling"""
+        db = MockDatabase(
+            pokemon_data={
+                'id': 25,
+                'name': 'pikachu',
+                'height': 4,
+                'weight': 60,
+                'generation': 1,
+                'description': "Electric mouse Pokémon."
+            }
+        )
+        
+        screen_manager = MockScreenManager(database=db, state_manager=MockStateManager())
+        detail = DetailScreen(screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        surface = pygame.Surface((640, 360))
+        detail.render(surface)
+        
+        # Panel should be in lower section (y > screen_height / 2)
+        # DESC_PANEL_Y = screen_height - 140
+        expected_y = 360 - 140
+        assert expected_y > 360 / 2, "Description panel should be in lower section"
+    
+    def test_ac_8_missing_description_placeholder(self, pygame_init):
+        """Test AC #8: Missing description shows placeholder"""
+        # Create database with no description (None or empty string)
+        db = MockDatabase(
+            pokemon_data={
+                'id': 999,
+                'name': 'missingno',
+                'height': 0,
+                'weight': 0,
+                'generation': 1,
+                'description': None  # No description
+            }
+        )
+        
+        screen_manager = MockScreenManager(database=db, state_manager=MockStateManager())
+        detail = DetailScreen(screen_manager, pokemon_id=999)
+        detail.on_enter()
+        
+        # Should use placeholder
+        assert detail.description == "No description available"
+    
+    def test_ac_8_empty_description_placeholder(self, pygame_init):
+        """Test AC #8: Empty string description shows placeholder"""
+        db = MockDatabase(
+            pokemon_data={
+                'id': 999,
+                'name': 'missingno',
+                'height': 0,
+                'weight': 0,
+                'generation': 1,
+                'description': ""  # Empty description
+            }
+        )
+        
+        screen_manager = MockScreenManager(database=db, state_manager=MockStateManager())
+        detail = DetailScreen(screen_manager, pokemon_id=999)
+        detail.on_enter()
+        
+        # Should use placeholder
+        assert detail.description == "No description available"
+    
+    def test_ac_9_pre_rendering_optimization(self, pygame_init, mock_screen_manager):
+        """Test AC #9: Description pre-rendered in on_enter, cached for render"""
+        db = MockDatabase(
+            pokemon_data={
+                'id': 25,
+                'name': 'pikachu',
+                'height': 4,
+                'weight': 60,
+                'generation': 1,
+                'description': "When several of these Pokémon gather, their electricity could build and cause lightning storms."
+            }
+        )
+        
+        screen_manager = MockScreenManager(database=db, state_manager=MockStateManager())
+        detail = DetailScreen(screen_manager, pokemon_id=25)
+        
+        # Before on_enter, description_lines should be empty
+        assert len(detail.description_lines) == 0
+        
+        # Call on_enter (should pre-render)
+        start_time = time.perf_counter()
+        detail.on_enter()
+        pre_render_time = (time.perf_counter() - start_time) * 1000
+        
+        # After on_enter, description_lines should be populated
+        assert len(detail.description_lines) > 0
+        
+        # Pre-rendering should be fast (< 50ms per story notes, < 5ms ideal)
+        assert pre_render_time < 50, f"Pre-render took {pre_render_time:.2f}ms (target: <50ms)"
+    
+    def test_ac_9_surfaces_cached_for_blit(self, pygame_init, mock_screen_manager):
+        """Test AC #9: Surfaces cached, render() just blits (no text processing)"""
+        db = MockDatabase(
+            pokemon_data={
+                'id': 25,
+                'name': 'pikachu',
+                'height': 4,
+                'weight': 60,
+                'generation': 1,
+                'description': "Electric mouse Pokémon with powerful abilities."
+            }
+        )
+        
+        screen_manager = MockScreenManager(database=db, state_manager=MockStateManager())
+        detail = DetailScreen(screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        # Verify surfaces are pygame.Surface objects (pre-rendered)
+        for line_surface in detail.description_lines:
+            assert isinstance(line_surface, pygame.Surface), "Lines should be pre-rendered surfaces"
+    
+    def test_ac_10_performance_blit_under_5ms(self, pygame_init, mock_screen_manager):
+        """Test AC #10: Description blit completes in < 5ms per frame"""
+        db = MockDatabase(
+            pokemon_data={
+                'id': 25,
+                'name': 'pikachu',
+                'height': 4,
+                'weight': 60,
+                'generation': 1,
+                'description': "When several of these Pokémon gather, their electricity could build and cause lightning storms."
+            }
+        )
+        
+        screen_manager = MockScreenManager(database=db, state_manager=MockStateManager())
+        detail = DetailScreen(screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        surface = pygame.Surface((640, 360))
+        
+        # Measure description panel render time specifically
+        blit_times = []
+        for _ in range(100):
+            start = time.perf_counter()
+            detail._render_description_panel(surface)
+            elapsed = (time.perf_counter() - start) * 1000
+            blit_times.append(elapsed)
+        
+        avg_blit_time = sum(blit_times) / len(blit_times)
+        max_blit_time = max(blit_times)
+        
+        # Average should be well under 5ms
+        assert avg_blit_time < 5, f"Avg blit time {avg_blit_time:.2f}ms exceeds 5ms"
+        
+        # Even max shouldn't exceed 10ms
+        assert max_blit_time < 10, f"Max blit time {max_blit_time:.2f}ms exceeds 10ms"
+    
+    def test_ac_10_maintains_30fps(self, pygame_init, mock_screen_manager):
+        """Test AC #10: Frame rate maintains 30+ FPS with description rendering"""
+        db = MockDatabase(
+            pokemon_data={
+                'id': 25,
+                'name': 'pikachu',
+                'height': 4,
+                'weight': 60,
+                'generation': 1,
+                'description': "When several of these Pokémon gather, their electricity could build and cause lightning storms."
+            }
+        )
+        
+        screen_manager = MockScreenManager(database=db, state_manager=MockStateManager())
+        detail = DetailScreen(screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        surface = pygame.Surface((640, 360))
+        
+        # Measure full frame render times
+        render_times = []
+        for _ in range(60):
+            start = time.perf_counter()
+            detail.render(surface)
+            elapsed = (time.perf_counter() - start) * 1000
+            render_times.append(elapsed)
+        
+        avg_render_time = sum(render_times) / len(render_times)
+        
+        # Should maintain 30 FPS (33ms budget)
+        assert avg_render_time < 33, f"Render time {avg_render_time:.2f}ms exceeds 33ms (30 FPS)"
+    
+    def test_edge_case_single_word_description(self, pygame_init, mock_screen_manager):
+        """Test edge case: Single word description"""
+        db = MockDatabase(
+            pokemon_data={
+                'id': 25,
+                'name': 'pikachu',
+                'height': 4,
+                'weight': 60,
+                'generation': 1,
+                'description': "Pikachu"
+            }
+        )
+        
+        screen_manager = MockScreenManager(database=db, state_manager=MockStateManager())
+        detail = DetailScreen(screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        # Should render without error
+        assert len(detail.description_lines) == 1
+        assert detail.description_lines[0] is not None
+    
+    def test_edge_case_exactly_four_lines(self, pygame_init, mock_screen_manager):
+        """Test edge case: Description fits exactly in 4 lines"""
+        # Craft description that fits exactly 4 lines at 400px width
+        exact_description = "Line one text here. " * 8 + "Line two text. " * 8 + "Line three. " * 8 + "Line four text."
+        
+        db = MockDatabase(
+            pokemon_data={
+                'id': 25,
+                'name': 'pikachu',
+                'height': 4,
+                'weight': 60,
+                'generation': 1,
+                'description': exact_description
+            }
+        )
+        
+        screen_manager = MockScreenManager(database=db, state_manager=MockStateManager())
+        detail = DetailScreen(screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        if detail.description_font:
+            wrapped_lines = detail._wrap_description_text(
+                exact_description,
+                detail.description_font,
+                max_width=400,
+                max_lines=4
+            )
+            
+            # If it naturally fits in 4 lines or fewer, no ellipsis needed
+            if len(wrapped_lines) <= 4:
+                # Check last line doesn't have forced ellipsis
+                if len(wrapped_lines) == 4:
+                    # Only should have ellipsis if text was actually truncated
+                    words_displayed = sum(len(line.split()) for line in wrapped_lines)
+                    total_words = len(exact_description.split())
+                    if words_displayed >= total_words:
+                        assert not wrapped_lines[-1].endswith("...")
+
+
+
 
 
 

@@ -261,7 +261,17 @@ class Database:
         self.conn.commit()
         
     def get_pokemon_by_id(self, pokemon_id: int) -> Optional[Dict[str, Any]]:
-        """Get Pokémon by ID with all related data"""
+        """
+        Get Pokémon by ID with all related data including description.
+        
+        Args:
+            pokemon_id: National Dex number (1-386)
+            
+        Returns:
+            Dict with pokemon data including description field, or None if not found
+            
+        Story 3.5 AC #7: Query includes description column, uses parameterized statement
+        """
         cursor = self.execute("""
             SELECT p.*, GROUP_CONCAT(DISTINCT t.name) as types
             FROM pokemon p
