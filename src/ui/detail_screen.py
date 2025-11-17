@@ -4,6 +4,7 @@ Detail Screen for ShokeDex - Detailed Pokémon view
 Story 3.1: Basic layout with large sprite, header, and placeholder panels.
 Story 3.2: Six base stats with visual progress bars, color-coded by value.
 Story 3.3: Type badges with holographic colors and rounded rectangle styling.
+Story 3.4: Physical measurements (height in meters, weight in kilograms) display.
 """
 
 import pygame
@@ -43,6 +44,14 @@ class DetailScreen(Screen):
     - Rajdhani Bold 14px typography, white text, uppercase
     - 2px border with lighter shade of type color
     - Positioned near sprite without overlapping sprite or stats
+    
+    Story 3.4 Implementation:
+    - Height displayed in meters (e.g., "0.4m") with one decimal place
+    - Weight displayed in kilograms (e.g., "6.0kg") with one decimal place
+    - Unit conversion: decimeters → meters (/10), hectograms → kilograms (/10)
+    - Labels (ice blue) right-aligned, values (white) left-aligned
+    - 8px vertical spacing between height and weight lines
+    - Positioned below sprite and type badges without overlap
     """
     
     def __init__(self, screen_manager, pokemon_id: int):
@@ -66,6 +75,8 @@ class DetailScreen(Screen):
         self.sprite: Optional[pygame.Surface] = None
         self.stats: List[Dict] = []  # Story 3.2: List of stat dicts with 'name', 'base_stat'
         self.types: List[str] = []  # Story 3.3: List of 1-2 type names (e.g., ['Fire', 'Flying'])
+        self.height: float = 0.0  # Story 3.4: Height in meters (converted from decimeters)
+        self.weight: float = 0.0  # Story 3.4: Weight in kilograms (converted from hectograms)
         
         # Fonts
         self.header_font: Optional[pygame.font.Font] = None
@@ -204,6 +215,30 @@ class DetailScreen(Screen):
                 else:
                     logging.debug(f"Types loaded in {query_time:.2f}ms")
                 
+                # Story 3.4: Load physical data (height, weight) from pokemon_data
+                # Database stores: height in decimeters (dm), weight in hectograms (hg)
+                # Convert to: meters (m), kilograms (kg)
+                # Formula: meters = decimeters / 10, kilograms = hectograms / 10
+                height_dm = self.pokemon_data.get('height', 0)
+                weight_hg = self.pokemon_data.get('weight', 0)
+                
+                # Convert units (AC #6: unit conversion)
+                self.height = height_dm / 10.0 if height_dm else 0.0
+                self.weight = weight_hg / 10.0 if weight_hg else 0.0
+                
+                # Story 3.4 AC #7: Edge case validation and logging
+                if self.height <= 0:
+                    logging.warning(f"Invalid height for Pokemon #{self.pokemon_id}: {height_dm} dm, using placeholder")
+                    self.height = -1  # Marker for "???" placeholder
+                elif self.height > 100:
+                    logging.warning(f"Unusually large height for Pokemon #{self.pokemon_id}: {self.height}m")
+                
+                if self.weight <= 0:
+                    logging.warning(f"Invalid weight for Pokemon #{self.pokemon_id}: {weight_hg} hg, using placeholder")
+                    self.weight = -1  # Marker for "???" placeholder
+                elif self.weight > 10000:
+                    logging.warning(f"Unusually heavy weight for Pokemon #{self.pokemon_id}: {self.weight}kg")
+                
         except Exception as e:
             logging.error(f"Database error loading Pokemon #{self.pokemon_id}: {e}")
             self._show_error_screen("Could not load Pokémon data")
@@ -318,6 +353,9 @@ class DetailScreen(Screen):
         
         # Story 3.3: Render type badges (replaces placeholder from 3.1)
         self._render_type_badges(surface)
+        
+        # Story 3.4: Render physical measurements (height, weight)
+        self._render_physical_data(surface)
         
         # AC #4: Render placeholder panels for future features
         self._render_placeholder_panels(surface)
@@ -602,6 +640,72 @@ class DetailScreen(Screen):
         else:
             logging.debug(f"Type badges rendered in {render_time:.2f}ms")
     
+    def _render_physical_data(self, surface: pygame.Surface):
+        """
+        Render height and weight measurements with labels and values.
+        
+        Args:
+            surface: pygame.Surface to draw on
+            
+        Story 3.4 Implementation:
+        AC #1: Height displayed in meters with format "X.Xm" (one decimal place)
+        AC #2: Weight displayed in kilograms with format "X.Xkg" (one decimal place)
+        AC #3: Positioned in lower section without overlapping sprite, stats, types
+        AC #4: Labels right-aligned (80px width), values left-aligned (10px offset), 8px spacing
+        AC #9: Labels ice blue (#a8e6ff), values white (#ffffff), Rajdhani 16px
+        AC #10: Rendering must complete in < 2ms per frame
+        """
+        if self.height == 0.0 and self.weight == 0.0:
+            return  # No data loaded yet
+        
+        start_time = time.perf_counter()
+        
+        # Positioning constants (AC #3, #4)
+        PHYSICAL_DATA_X = 30
+        PHYSICAL_DATA_Y = surface.get_height() - 120  # Below sprite and type badges
+        LABEL_WIDTH = 80  # Fixed width for right-aligned labels
+        VALUE_OFFSET = 10  # Gap between label and value
+        LINE_HEIGHT = 24  # Vertical spacing (8px base + font height)
+        
+        # Use body_font (16px) for physical data - matches Rajdhani 16px spec
+        if not self.body_font:
+            return  # Can't render without font
+        
+        # Format values with placeholders for invalid data (AC #6, #7, #8)
+        height_str = f"{self.height:.1f}m" if self.height > 0 else "???"
+        weight_str = f"{self.weight:.1f}kg" if self.weight > 0 else "???"
+        
+        # Render height line (AC #1, #4, #9)
+        # Label: right-aligned at LABEL_WIDTH
+        height_label = self.body_font.render("Height:", True, Colors.ICE_BLUE)
+        label_rect = height_label.get_rect(topright=(PHYSICAL_DATA_X + LABEL_WIDTH, PHYSICAL_DATA_Y))
+        surface.blit(height_label, label_rect)
+        
+        # Value: left-aligned after label
+        height_value = self.body_font.render(height_str, True, Colors.HOLOGRAM_WHITE)
+        value_rect = height_value.get_rect(topleft=(PHYSICAL_DATA_X + LABEL_WIDTH + VALUE_OFFSET, PHYSICAL_DATA_Y))
+        surface.blit(height_value, value_rect)
+        
+        # Render weight line (AC #2, #4, #9)
+        weight_y = PHYSICAL_DATA_Y + LINE_HEIGHT
+        
+        # Label: right-aligned at LABEL_WIDTH
+        weight_label = self.body_font.render("Weight:", True, Colors.ICE_BLUE)
+        label_rect = weight_label.get_rect(topright=(PHYSICAL_DATA_X + LABEL_WIDTH, weight_y))
+        surface.blit(weight_label, label_rect)
+        
+        # Value: left-aligned after label
+        weight_value = self.body_font.render(weight_str, True, Colors.HOLOGRAM_WHITE)
+        value_rect = weight_value.get_rect(topleft=(PHYSICAL_DATA_X + LABEL_WIDTH + VALUE_OFFSET, weight_y))
+        surface.blit(weight_value, value_rect)
+        
+        # Performance logging (AC #10: < 2ms target)
+        render_time = (time.perf_counter() - start_time) * 1000
+        if render_time > 2:
+            logging.warning(f"Physical data rendered in {render_time:.2f}ms (target: <2ms)")
+        else:
+            logging.debug(f"Physical data rendered in {render_time:.2f}ms")
+    
     def _render_placeholder_panels(self, surface: pygame.Surface):
         """
         Render placeholder panels for future features.
@@ -610,30 +714,16 @@ class DetailScreen(Screen):
             surface: pygame.Surface to draw on
             
         AC #4: Layout structure with placeholders for:
-        - Physical measurements (bottom-left) - Story 3.4
         - Description area (bottom-center) - Story 3.5
         
         Note: Stats panel removed in Story 3.2 (now rendered with real data)
         Note: Type badges removed in Story 3.3 (now rendered with real data)
+        Note: Physical measurements removed in Story 3.4 (now rendered with real data)
         
         AC #5: Holographic blue styling (dark blue panels, electric blue borders)
         """
         screen_width = surface.get_width()
         screen_height = surface.get_height()
-        
-        # Physical measurements placeholder (bottom-left)
-        phys_panel = pygame.Rect(
-            20,
-            screen_height - 80,
-            screen_width // 3 - 20,
-            60
-        )
-        pygame.draw.rect(surface, Colors.DARK_BLUE, phys_panel)
-        pygame.draw.rect(surface, Colors.ELECTRIC_BLUE, phys_panel, 2)
-        
-        if self.small_font:
-            phys_label = self.small_font.render("Physical Data (3.4)", True, Colors.ICE_BLUE)
-            surface.blit(phys_label, (phys_panel.x + 10, phys_panel.y + 10))
         
         # Description placeholder (bottom-center)
         desc_panel = pygame.Rect(

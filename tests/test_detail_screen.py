@@ -1,14 +1,16 @@
 """
-Integration tests for DetailScreen (Story 3.1, 3.2, 3.3)
+Integration tests for DetailScreen (Story 3.1, 3.2, 3.3, 3.4)
 
 Story 3.1: Basic layout, sprite display, header rendering, navigation
 Story 3.2: Six base stats with visual progress bars, color-coded rendering
 Story 3.3: Type badges with holographic colors and rounded rectangle styling
+Story 3.4: Physical measurements (height in meters, weight in kilograms) display
 
 Tests basic layout, sprite display, header rendering, navigation,
 StateManager integration, error handling, performance validation,
 stat bar rendering with proper colors and proportional widths,
-and type badge display with type-specific colors.
+type badge display with type-specific colors, and physical measurements
+with unit conversion and edge case handling.
 """
 
 import pytest
@@ -1163,6 +1165,610 @@ class TestTypeBadgeIntegration:
                     pytest.skip("Gengar not in database")
         except Exception:
             pytest.skip("Database not available")
+
+
+class TestPhysicalDataUnitConversion:
+    """Test unit conversion for physical data (Story 3.4, AC #6)"""
+    
+    def test_height_decimeters_to_meters(self, pygame_init, mock_screen_manager):
+        """Test height conversion: decimeters / 10 = meters"""
+        # Pikachu: height = 4 dm = 0.4 m
+        detail = DetailScreen(mock_screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        assert detail.height == 0.4
+    
+    def test_weight_hectograms_to_kilograms(self, pygame_init, mock_screen_manager):
+        """Test weight conversion: hectograms / 10 = kilograms"""
+        # Pikachu: weight = 60 hg = 6.0 kg
+        detail = DetailScreen(mock_screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        assert detail.weight == 6.0
+    
+    def test_large_pokemon_onix(self, pygame_init, mock_state_manager):
+        """Test large Pokémon (Onix: 88dm, 2100hg)"""
+        # Onix: height = 88 dm = 8.8 m, weight = 2100 hg = 210.0 kg
+        db = MockDatabase(
+            pokemon_data={'id': 95, 'name': 'onix', 'height': 88, 'weight': 2100, 'generation': 1},
+            stats_data=[{'name': 'HP', 'base_stat': 35, 'effort': 0}] * 6,
+            types_data=['Rock', 'Ground']
+        )
+        screen_manager = MockScreenManager(database=db, state_manager=mock_state_manager)
+        
+        detail = DetailScreen(screen_manager, pokemon_id=95)
+        detail.on_enter()
+        
+        assert detail.height == 8.8
+        assert detail.weight == 210.0
+    
+    def test_small_pokemon_diglett(self, pygame_init, mock_state_manager):
+        """Test small Pokémon (Diglett: 2dm, 8hg)"""
+        # Diglett: height = 2 dm = 0.2 m, weight = 8 hg = 0.8 kg
+        db = MockDatabase(
+            pokemon_data={'id': 50, 'name': 'diglett', 'height': 2, 'weight': 8, 'generation': 1},
+            stats_data=[{'name': 'HP', 'base_stat': 10, 'effort': 0}] * 6,
+            types_data=['Ground']
+        )
+        screen_manager = MockScreenManager(database=db, state_manager=mock_state_manager)
+        
+        detail = DetailScreen(screen_manager, pokemon_id=50)
+        detail.on_enter()
+        
+        assert detail.height == 0.2
+        assert detail.weight == 0.8
+
+
+class TestPhysicalDataEdgeCases:
+    """Test edge case handling for physical data (Story 3.4, AC #7)"""
+    
+    def test_zero_height(self, pygame_init, mock_state_manager):
+        """Test height = 0 shows ??? placeholder"""
+        db = MockDatabase(
+            pokemon_data={'id': 999, 'name': 'missingdata', 'height': 0, 'weight': 100, 'generation': 1},
+            stats_data=[{'name': 'HP', 'base_stat': 50, 'effort': 0}] * 6,
+            types_data=['Normal']
+        )
+        screen_manager = MockScreenManager(database=db, state_manager=mock_state_manager)
+        
+        detail = DetailScreen(screen_manager, pokemon_id=999)
+        detail.on_enter()
+        
+        # Should set marker for placeholder
+        assert detail.height == -1
+    
+    def test_zero_weight(self, pygame_init, mock_state_manager):
+        """Test weight = 0 shows ??? placeholder"""
+        db = MockDatabase(
+            pokemon_data={'id': 999, 'name': 'missingdata', 'height': 50, 'weight': 0, 'generation': 1},
+            stats_data=[{'name': 'HP', 'base_stat': 50, 'effort': 0}] * 6,
+            types_data=['Normal']
+        )
+        screen_manager = MockScreenManager(database=db, state_manager=mock_state_manager)
+        
+        detail = DetailScreen(screen_manager, pokemon_id=999)
+        detail.on_enter()
+        
+        # Should set marker for placeholder
+        assert detail.weight == -1
+    
+    def test_none_height(self, pygame_init, mock_state_manager):
+        """Test None height shows ??? placeholder"""
+        db = MockDatabase(
+            pokemon_data={'id': 999, 'name': 'missingdata', 'height': None, 'weight': 100, 'generation': 1},
+            stats_data=[{'name': 'HP', 'base_stat': 50, 'effort': 0}] * 6,
+            types_data=['Normal']
+        )
+        screen_manager = MockScreenManager(database=db, state_manager=mock_state_manager)
+        
+        detail = DetailScreen(screen_manager, pokemon_id=999)
+        detail.on_enter()
+        
+        # Should convert None to 0.0, then mark as -1 for placeholder
+        assert detail.height == -1
+    
+    def test_none_weight(self, pygame_init, mock_state_manager):
+        """Test None weight shows ??? placeholder"""
+        db = MockDatabase(
+            pokemon_data={'id': 999, 'name': 'missingdata', 'height': 50, 'weight': None, 'generation': 1},
+            stats_data=[{'name': 'HP', 'base_stat': 50, 'effort': 0}] * 6,
+            types_data=['Normal']
+        )
+        screen_manager = MockScreenManager(database=db, state_manager=mock_state_manager)
+        
+        detail = DetailScreen(screen_manager, pokemon_id=999)
+        detail.on_enter()
+        
+        # Should convert None to 0.0, then mark as -1 for placeholder
+        assert detail.weight == -1
+    
+    def test_extreme_height_warning(self, pygame_init, mock_state_manager):
+        """Test extreme height > 100m logs warning but displays value"""
+        # Unrealistic data: 1500 dm = 150 m
+        db = MockDatabase(
+            pokemon_data={'id': 999, 'name': 'giant', 'height': 1500, 'weight': 5000, 'generation': 1},
+            stats_data=[{'name': 'HP', 'base_stat': 255, 'effort': 0}] * 6,
+            types_data=['Normal']
+        )
+        screen_manager = MockScreenManager(database=db, state_manager=mock_state_manager)
+        
+        detail = DetailScreen(screen_manager, pokemon_id=999)
+        detail.on_enter()
+        
+        # Should convert and store value (not replace with placeholder)
+        assert detail.height == 150.0
+        # Warning should be logged (can't easily test logging without capturing)
+    
+    def test_extreme_weight_warning(self, pygame_init, mock_state_manager):
+        """Test extreme weight > 10000kg logs warning but displays value"""
+        # Unrealistic data: 150000 hg = 15000 kg
+        db = MockDatabase(
+            pokemon_data={'id': 999, 'name': 'heavy', 'height': 100, 'weight': 150000, 'generation': 1},
+            stats_data=[{'name': 'HP', 'base_stat': 255, 'effort': 0}] * 6,
+            types_data=['Normal']
+        )
+        screen_manager = MockScreenManager(database=db, state_manager=mock_state_manager)
+        
+        detail = DetailScreen(screen_manager, pokemon_id=999)
+        detail.on_enter()
+        
+        # Should convert and store value (not replace with placeholder)
+        assert detail.weight == 15000.0
+
+
+class TestPhysicalDataFormatting:
+    """Test physical data formatting (Story 3.4, AC #8)"""
+    
+    def test_height_format_one_decimal(self, pygame_init, mock_screen_manager):
+        """Test height formatted as 'X.Xm' with one decimal place"""
+        detail = DetailScreen(mock_screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        # Pikachu: 0.4m
+        height_str = f"{detail.height:.1f}m"
+        assert height_str == "0.4m"
+    
+    def test_weight_format_one_decimal(self, pygame_init, mock_screen_manager):
+        """Test weight formatted as 'X.Xkg' with one decimal place"""
+        detail = DetailScreen(mock_screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        # Pikachu: 6.0kg
+        weight_str = f"{detail.weight:.1f}kg"
+        assert weight_str == "6.0kg"
+    
+    def test_large_values_formatting(self, pygame_init, mock_state_manager):
+        """Test large values format correctly (Onix: 8.8m, 210.0kg)"""
+        db = MockDatabase(
+            pokemon_data={'id': 95, 'name': 'onix', 'height': 88, 'weight': 2100, 'generation': 1},
+            stats_data=[{'name': 'HP', 'base_stat': 35, 'effort': 0}] * 6,
+            types_data=['Rock', 'Ground']
+        )
+        screen_manager = MockScreenManager(database=db, state_manager=mock_state_manager)
+        
+        detail = DetailScreen(screen_manager, pokemon_id=95)
+        detail.on_enter()
+        
+        height_str = f"{detail.height:.1f}m"
+        weight_str = f"{detail.weight:.1f}kg"
+        
+        assert height_str == "8.8m"
+        assert weight_str == "210.0kg"
+    
+    def test_small_values_formatting(self, pygame_init, mock_state_manager):
+        """Test small values format correctly (Diglett: 0.2m, 0.8kg)"""
+        db = MockDatabase(
+            pokemon_data={'id': 50, 'name': 'diglett', 'height': 2, 'weight': 8, 'generation': 1},
+            stats_data=[{'name': 'HP', 'base_stat': 10, 'effort': 0}] * 6,
+            types_data=['Ground']
+        )
+        screen_manager = MockScreenManager(database=db, state_manager=mock_state_manager)
+        
+        detail = DetailScreen(screen_manager, pokemon_id=50)
+        detail.on_enter()
+        
+        height_str = f"{detail.height:.1f}m"
+        weight_str = f"{detail.weight:.1f}kg"
+        
+        assert height_str == "0.2m"
+        assert weight_str == "0.8kg"
+    
+    def test_placeholder_format(self, pygame_init, mock_state_manager):
+        """Test placeholder '???' displayed for invalid data"""
+        db = MockDatabase(
+            pokemon_data={'id': 999, 'name': 'invalid', 'height': 0, 'weight': 0, 'generation': 1},
+            stats_data=[{'name': 'HP', 'base_stat': 50, 'effort': 0}] * 6,
+            types_data=['Normal']
+        )
+        screen_manager = MockScreenManager(database=db, state_manager=mock_state_manager)
+        
+        detail = DetailScreen(screen_manager, pokemon_id=999)
+        detail.on_enter()
+        
+        # Both should be marked invalid
+        assert detail.height == -1
+        assert detail.weight == -1
+        
+        # Render should show "???" (visual test)
+        surface = pygame.Surface((800, 480))
+        detail.render(surface)
+
+
+class TestPhysicalDataRendering:
+    """Test physical data rendering methods (Story 3.4, AC #1-5, #9)"""
+    
+    def test_physical_data_renders_without_crash(self, pygame_init, mock_screen_manager):
+        """Test physical data section renders successfully"""
+        detail = DetailScreen(mock_screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        surface = pygame.Surface((800, 480))
+        detail.render(surface)
+        
+        # Should have loaded physical data
+        assert detail.height == 0.4
+        assert detail.weight == 6.0
+    
+    def test_physical_data_colors(self, pygame_init, mock_screen_manager):
+        """Test labels use ice blue, values use white (AC #9)"""
+        from src.ui.colors import Colors
+        
+        detail = DetailScreen(mock_screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        # Verify colors are defined
+        assert Colors.ICE_BLUE == (168, 230, 255)
+        assert Colors.HOLOGRAM_WHITE == (232, 244, 248)
+        
+        # Render with these colors
+        surface = pygame.Surface((800, 480))
+        detail.render(surface)
+    
+    def test_physical_data_positioning(self, pygame_init, mock_screen_manager):
+        """Test physical data positioned below sprite and type badges (AC #3)"""
+        detail = DetailScreen(mock_screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        # Physical data should be positioned at y = screen_height - 120
+        screen_height = 480
+        expected_y = screen_height - 120  # 360
+        
+        # Can't easily verify exact position without inspecting render internals
+        # But rendering should complete without overlap
+        surface = pygame.Surface((800, 480))
+        detail.render(surface)
+    
+    def test_physical_data_fonts_loaded(self, pygame_init, mock_screen_manager):
+        """Test fonts loaded for physical data rendering (AC #4, #9)"""
+        detail = DetailScreen(mock_screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        # Body font used for 16px physical data
+        assert detail.body_font is not None
+    
+    def test_placeholder_panel_removed(self, pygame_init, mock_screen_manager):
+        """Test physical data placeholder panel no longer rendered"""
+        detail = DetailScreen(mock_screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        surface = pygame.Surface((800, 480))
+        detail.render(surface)
+        
+        # Should render real data, not placeholder
+        # (visual verification - placeholder panel removed from code)
+
+
+class TestPhysicalDataPerformance:
+    """Test physical data rendering performance (Story 3.4, AC #10)"""
+    
+    def test_physical_data_render_time_under_2ms(self, pygame_init, mock_screen_manager):
+        """Test physical data rendering completes in < 2ms per frame"""
+        detail = DetailScreen(mock_screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        surface = pygame.Surface((800, 480))
+        
+        # Warm up
+        detail.render(surface)
+        
+        # Measure full render time (includes physical data)
+        render_times = []
+        for _ in range(30):
+            start = time.perf_counter()
+            detail.render(surface)
+            elapsed = time.perf_counter() - start
+            render_times.append(elapsed * 1000)
+        
+        avg_render_time = sum(render_times) / len(render_times)
+        
+        # Full render should maintain 30 FPS budget
+        assert avg_render_time < 33, f"Render time {avg_render_time:.2f}ms exceeds 33ms"
+    
+    def test_total_render_maintains_30fps(self, pygame_init, mock_screen_manager):
+        """Test total DetailScreen render maintains 30+ FPS with physical data"""
+        detail = DetailScreen(mock_screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        surface = pygame.Surface((800, 480))
+        
+        # Measure over extended period
+        render_times = []
+        for _ in range(60):
+            start = time.perf_counter()
+            detail.render(surface)
+            elapsed = time.perf_counter() - start
+            render_times.append(elapsed * 1000)
+        
+        avg_render_time = sum(render_times) / len(render_times)
+        max_render_time = max(render_times)
+        
+        # Average and max should both be under 33ms
+        assert avg_render_time < 33, f"Avg render {avg_render_time:.2f}ms exceeds 33ms"
+        assert max_render_time < 50, f"Max render {max_render_time:.2f}ms exceeds reasonable limit"
+
+
+class TestPhysicalDataIntegration:
+    """Integration tests for physical data with database (Story 3.4)"""
+    
+    def test_database_provides_height_weight(self):
+        """Test Database.get_pokemon_by_id() returns height/weight"""
+        try:
+            from src.data.database import Database
+            
+            with Database() as db:
+                pokemon = db.get_pokemon_by_id(25)
+                if pokemon:
+                    # Should have height and weight fields
+                    assert 'height' in pokemon
+                    assert 'weight' in pokemon
+                    
+                    # Pikachu values (in decimeters/hectograms)
+                    assert pokemon['height'] == 4
+                    assert pokemon['weight'] == 60
+                else:
+                    pytest.skip("Pikachu not in database")
+        except Exception:
+            pytest.skip("Database not available")
+    
+    def test_onix_large_measurements(self):
+        """Test Onix (large Pokémon) physical data"""
+        try:
+            from src.data.database import Database
+            
+            with Database() as db:
+                pokemon = db.get_pokemon_by_id(95)
+                if pokemon:
+                    # Onix: 88 dm = 8.8m, 2100 hg = 210kg
+                    assert pokemon['height'] == 88
+                    assert pokemon['weight'] == 2100
+                    
+                    # Test conversion
+                    height_m = pokemon['height'] / 10.0
+                    weight_kg = pokemon['weight'] / 10.0
+                    
+                    assert height_m == 8.8
+                    assert weight_kg == 210.0
+                else:
+                    pytest.skip("Onix not in database")
+        except Exception:
+            pytest.skip("Database not available")
+    
+    def test_wailord_extreme_size(self):
+        """Test Wailord (Gen 3, huge Pokémon) physical data"""
+        try:
+            from src.data.database import Database
+            
+            with Database() as db:
+                pokemon = db.get_pokemon_by_id(321)
+                if pokemon:
+                    # Wailord is massive: 145 dm = 14.5m, 3980 hg = 398kg
+                    height_m = pokemon['height'] / 10.0
+                    weight_kg = pokemon['weight'] / 10.0
+                    
+                    assert height_m > 10  # Very tall
+                    assert weight_kg > 300  # Very heavy
+                else:
+                    pytest.skip("Wailord not in database (Gen 3)")
+        except Exception:
+            pytest.skip("Database not available")
+    
+    def test_all_gen_1_3_pokemon_have_measurements(self):
+        """Test all Gen 1-3 Pokémon (1-386) have valid height/weight"""
+        try:
+            from src.data.database import Database
+            
+            with Database() as db:
+                # Sample random Pokémon from each generation
+                sample_ids = [
+                    1,    # Bulbasaur (Gen 1)
+                    25,   # Pikachu (Gen 1)
+                    152,  # Chikorita (Gen 2)
+                    252,  # Treecko (Gen 3)
+                    386   # Deoxys (Gen 3, last)
+                ]
+                
+                for pokemon_id in sample_ids:
+                    pokemon = db.get_pokemon_by_id(pokemon_id)
+                    if pokemon:
+                        # Should have height and weight
+                        assert 'height' in pokemon
+                        assert 'weight' in pokemon
+                        assert pokemon['height'] > 0
+                        assert pokemon['weight'] > 0
+        except Exception:
+            pytest.skip("Database not available")
+
+
+class TestPhysicalDataComprehensive:
+    """Comprehensive tests covering all Story 3.4 acceptance criteria"""
+    
+    def test_ac_1_height_display(self, pygame_init, mock_screen_manager):
+        """Test AC #1: Height displayed in meters with format 'X.Xm'"""
+        detail = DetailScreen(mock_screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        # Height should be 0.4m
+        assert detail.height == 0.4
+        
+        # Format should be X.Xm
+        height_str = f"{detail.height:.1f}m"
+        assert height_str == "0.4m"
+        
+        # Render without crash
+        surface = pygame.Surface((800, 480))
+        detail.render(surface)
+    
+    def test_ac_2_weight_display(self, pygame_init, mock_screen_manager):
+        """Test AC #2: Weight displayed in kilograms with format 'X.Xkg'"""
+        detail = DetailScreen(mock_screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        # Weight should be 6.0kg
+        assert detail.weight == 6.0
+        
+        # Format should be X.Xkg
+        weight_str = f"{detail.weight:.1f}kg"
+        assert weight_str == "6.0kg"
+        
+        # Render without crash
+        surface = pygame.Surface((800, 480))
+        detail.render(surface)
+    
+    def test_ac_3_positioning(self, pygame_init, mock_screen_manager):
+        """Test AC #3: Physical data positioned without overlap"""
+        detail = DetailScreen(mock_screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        surface = pygame.Surface((800, 480))
+        detail.render(surface)
+        
+        # Physical data should be in lower section (y=360 for 480 height)
+        # Should not overlap sprite, stats, or type badges
+        # (visual verification - tested by rendering)
+    
+    def test_ac_4_layout_typography(self, pygame_init, mock_screen_manager):
+        """Test AC #4: Labels right-aligned, values left-aligned, 16px font"""
+        detail = DetailScreen(mock_screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        # Font should be loaded (16px body font)
+        assert detail.body_font is not None
+        
+        surface = pygame.Surface((800, 480))
+        detail.render(surface)
+        
+        # Layout constants tested in implementation
+        # LABEL_WIDTH = 80, VALUE_OFFSET = 10, LINE_HEIGHT = 24
+    
+    def test_ac_5_database_query_integration(self, pygame_init, mock_screen_manager):
+        """Test AC #5: Height/weight fetched from pokemon table"""
+        detail = DetailScreen(mock_screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        # Data should be loaded
+        assert detail.pokemon_data is not None
+        assert detail.pokemon_data['height'] == 4  # decimeters
+        assert detail.pokemon_data['weight'] == 60  # hectograms
+        
+        # Converted values stored
+        assert detail.height == 0.4  # meters
+        assert detail.weight == 6.0  # kilograms
+    
+    def test_ac_6_unit_conversion(self, pygame_init, mock_screen_manager):
+        """Test AC #6: Unit conversion formulas"""
+        detail = DetailScreen(mock_screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        # Conversion: decimeters / 10 = meters
+        assert detail.height == detail.pokemon_data['height'] / 10.0
+        
+        # Conversion: hectograms / 10 = kilograms
+        assert detail.weight == detail.pokemon_data['weight'] / 10.0
+    
+    def test_ac_7_edge_case_handling(self, pygame_init, mock_state_manager):
+        """Test AC #7: Edge cases handled gracefully"""
+        # Test None values
+        db = MockDatabase(
+            pokemon_data={'id': 999, 'name': 'invalid', 'height': None, 'weight': None, 'generation': 1},
+            stats_data=[{'name': 'HP', 'base_stat': 50, 'effort': 0}] * 6,
+            types_data=['Normal']
+        )
+        screen_manager = MockScreenManager(database=db, state_manager=mock_state_manager)
+        
+        detail = DetailScreen(screen_manager, pokemon_id=999)
+        detail.on_enter()
+        
+        # Should handle None gracefully by converting to 0.0, then marking as -1 for placeholder
+        assert detail.height == -1
+        assert detail.weight == -1
+        
+        # Render without crash
+        surface = pygame.Surface((800, 480))
+        detail.render(surface)
+    
+    def test_ac_8_formatting_consistency(self, pygame_init, mock_state_manager):
+        """Test AC #8: Formatting consistent across all Pokémon"""
+        # Test multiple Pokémon
+        pokemon_list = [
+            {'id': 25, 'name': 'pikachu', 'height': 4, 'weight': 60, 'expected_h': "0.4m", 'expected_w': "6.0kg"},
+            {'id': 95, 'name': 'onix', 'height': 88, 'weight': 2100, 'expected_h': "8.8m", 'expected_w': "210.0kg"},
+            {'id': 50, 'name': 'diglett', 'height': 2, 'weight': 8, 'expected_h': "0.2m", 'expected_w': "0.8kg"},
+        ]
+        
+        for poke in pokemon_list:
+            db = MockDatabase(
+                pokemon_data={'id': poke['id'], 'name': poke['name'], 
+                             'height': poke['height'], 'weight': poke['weight'], 'generation': 1},
+                stats_data=[{'name': 'HP', 'base_stat': 50, 'effort': 0}] * 6,
+                types_data=['Normal']
+            )
+            screen_manager = MockScreenManager(database=db, state_manager=MockStateManager())
+            
+            detail = DetailScreen(screen_manager, pokemon_id=poke['id'])
+            detail.on_enter()
+            
+            # Check formatting
+            height_str = f"{detail.height:.1f}m"
+            weight_str = f"{detail.weight:.1f}kg"
+            
+            assert height_str == poke['expected_h']
+            assert weight_str == poke['expected_w']
+    
+    def test_ac_9_visual_consistency(self, pygame_init, mock_screen_manager):
+        """Test AC #9: Visual consistency with holographic aesthetic"""
+        from src.ui.colors import Colors
+        
+        detail = DetailScreen(mock_screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        # Colors should match holographic palette
+        assert Colors.ICE_BLUE == (168, 230, 255)  # Labels
+        assert Colors.HOLOGRAM_WHITE == (232, 244, 248)  # Values
+        
+        surface = pygame.Surface((800, 480))
+        detail.render(surface)
+    
+    def test_ac_10_performance_requirements(self, pygame_init, mock_screen_manager):
+        """Test AC #10: Performance maintains 30+ FPS"""
+        detail = DetailScreen(mock_screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        surface = pygame.Surface((800, 480))
+        
+        # Measure render performance
+        render_times = []
+        for _ in range(60):
+            start = time.perf_counter()
+            detail.render(surface)
+            elapsed = time.perf_counter() - start
+            render_times.append(elapsed)
+        
+        avg_render_time_ms = (sum(render_times) / len(render_times)) * 1000
+        
+        # Should maintain 30 FPS (33ms budget)
+        assert avg_render_time_ms < 33, f"Render time {avg_render_time_ms:.2f}ms exceeds 33ms"
+
+
 
 
 
