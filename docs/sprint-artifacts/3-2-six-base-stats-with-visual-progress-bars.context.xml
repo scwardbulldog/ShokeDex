@@ -1,0 +1,223 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>3</epicId>
+    <storyId>2</storyId>
+    <title>Six Base Stats with Visual Progress Bars</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-16</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/3-2-six-base-stats-with-visual-progress-bars.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>a user</asA>
+    <iWant>to see all six base stats with visual bars</iWant>
+    <soThat>I can quickly compare a Pokémon's strengths and weaknesses</soThat>
+    <tasks>
+      <task id="1" ac="7">Implement Database Query for Stats - get_pokemon_stats(pokemon_id)</task>
+      <task id="2" ac="7">Load Stats in DetailScreen Lifecycle - _load_pokemon_data()</task>
+      <task id="3" ac="3">Create Stat Bar Color Mapping Function - get_stat_color(value)</task>
+      <task id="4" ac="1,2,4">Implement Stat Bar Rendering Logic - _render_stat_bars()</task>
+      <task id="5" ac="6">Apply Holographic Styling to Stats Panel</task>
+      <task id="6" ac="5">Implement Font Loading for Stat Labels/Values</task>
+      <task id="7" ac="8">Implement Data Validation and Error Handling</task>
+      <task id="8" ac="9">Performance Optimization - 30+ FPS, < 10ms stat rendering</task>
+      <task id="9" ac="all">Integration Testing - 6 stats, proportional bars, colors, glow</task>
+      <task id="10" ac="all">Update Tests and Documentation</task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="1">
+      <title>Six Base Stats Display</title>
+      <description>All 6 base stats shown (HP, Attack, Defense, Sp.Atk, Sp.Def, Speed) in canonical order with label, bar, and value. Stats accurate from database. Panel positioned on right side.</description>
+    </criterion>
+    <criterion id="2">
+      <title>Proportional Bar Width</title>
+      <description>Bar width proportional to stat value: (base_stat / 255) * max_bar_width. Stat 255 fills 100%, stat 1 shows minimal bar, stat 127-128 fills ~50%.</description>
+    </criterion>
+    <criterion id="3">
+      <title>Stat Bar Color Coding</title>
+      <description>0-50 Gray (#718096), 51-100 Electric blue (#00d4ff), 101-150 Bright cyan (#4df7ff), 151+ Plasma orange (#ff6b35). High stats visually prominent.</description>
+    </criterion>
+    <criterion id="4">
+      <title>High Stat Glow Effect</title>
+      <description>Stats >= 100 have subtle glow (second bar, alpha=128, +2px offset, same color). No FPS impact (30+ FPS maintained).</description>
+    </criterion>
+    <criterion id="5">
+      <title>Stat Labels and Values Display</title>
+      <description>Labels: Share Tech Mono 14px ice blue (#a8e6ff) left-aligned. Values: Share Tech Mono 16px white (#ffffff) right-aligned. Monospace for vertical alignment.</description>
+    </criterion>
+    <criterion id="6">
+      <title>Stats Panel Layout</title>
+      <description>Panel on right (40% width), holographic blue styling (dark blue bg rgba(26,47,74,0.9), 2px electric blue border). 6 bars fit with 16px padding, no overlap.</description>
+    </criterion>
+    <criterion id="7">
+      <title>Database Query Integration</title>
+      <description>get_pokemon_stats(id) called in _load_pokemon_data(), returns List[Tuple[str,int]] with 6 entries. Query < 50ms, parameterized statement, all 6 stats validated.</description>
+    </criterion>
+    <criterion id="8">
+      <title>Error Handling and Data Validation</title>
+      <description>If stat count ≠ 6, log warning + "???" placeholder. Values < 0 or > 255 clamped with warning. Null values show "???". No crashes. Logged messages for debugging.</description>
+    </criterion>
+    <criterion id="9">
+      <title>Performance Requirements</title>
+      <description>30+ FPS maintained, stat rendering < 10ms/frame, glow effects no frame drops, total DetailScreen render < 33ms/frame.</description>
+    </criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/PRD.md</path>
+        <title>Product Requirements Document</title>
+        <section>FR3.2 - Base Stats Visualization</section>
+        <snippet>Base stats (HP, Attack, Defense, Sp.Atk, Sp.Def, Speed) with visual bars. Stats displayed in detail view with proportional bar widths showing relative strength.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture.md</path>
+        <title>ShokeDex Architecture</title>
+        <section>Manager Architecture Pattern - Database Access</section>
+        <snippet>All database queries use parameterized statements to prevent SQL injection. Manager instances created once at startup and passed to ScreenManager. DetailScreen accesses database via screen_manager.database.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-2-detail-view-with-audio.md</path>
+        <title>Epic Technical Specification: Detail View Implementation</title>
+        <section>AC #1-2: Comprehensive Stat Display and Color Coding</section>
+        <snippet>Stat bar width calculation: (base_stat / 255) * max_bar_width. Color coding: 0-50 Gray, 51-100 Electric blue, 101-150 Bright cyan, 151+ Plasma orange. Glow effect for stats >= 100 using alpha=128 second bar offset +2px.</snippet>
+      </doc>
+      <doc>
+        <path>docs/ux-design-specification.md</path>
+        <title>ShokeDex UX Design Specification</title>
+        <section>Color System - Holographic Blue Palette</section>
+        <snippet>Electric Blue #00d4ff for primary UI borders, Ice Blue #a8e6ff for secondary text/labels, Dark Blue #1a2f4a for panel backgrounds, Hologram White #e8f4f8 for primary text.</snippet>
+      </doc>
+      <doc>
+        <path>docs/database_schema.md</path>
+        <title>ShokeDex Database Schema</title>
+        <section>pokemon_stats and stats tables</section>
+        <snippet>stats table has 6 entries: HP, Attack, Defense, Special Attack, Special Defense, Speed. pokemon_stats junction table stores base_stat values (1-255) for each pokemon_id + stat_id combination.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <artifact>
+        <path>src/ui/detail_screen.py</path>
+        <kind>component</kind>
+        <symbol>DetailScreen</symbol>
+        <lines>1-400</lines>
+        <reason>Primary file to modify - implements DetailScreen with placeholder stat panel. Need to add _render_stat_bars() method and stat data loading.</reason>
+      </artifact>
+      <artifact>
+        <path>src/data/database.py</path>
+        <kind>module</kind>
+        <symbol>get_pokemon_stats</symbol>
+        <lines>295-305</lines>
+        <reason>Database method already exists - returns List[Dict] with 'name', 'base_stat', 'effort' keys. Query uses parameterized statements and ORDER BY s.id for canonical order.</reason>
+      </artifact>
+      <artifact>
+        <path>src/ui/colors.py</path>
+        <kind>constants</kind>
+        <symbol>Colors</symbol>
+        <lines>1-100</lines>
+        <reason>Color constants file - contains ELECTRIC_BLUE, ICE_BLUE, HOLOGRAM_WHITE for holographic styling. Need to add STAT_COLORS constant for bar color coding.</reason>
+      </artifact>
+      <artifact>
+        <path>src/ui/sprite_loader.py</path>
+        <kind>module</kind>
+        <symbol>load_detail</symbol>
+        <lines>1-200</lines>
+        <reason>Reference for LRU caching pattern - DetailScreen already uses this for sprite loading. Same caching approach may apply to stat rendering if needed.</reason>
+      </artifact>
+      <artifact>
+        <path>src/ui/screen.py</path>
+        <kind>base-class</kind>
+        <symbol>Screen</symbol>
+        <lines>1-100</lines>
+        <reason>Base class for DetailScreen - defines lifecycle methods (on_enter, on_exit, render, update, handle_input).</reason>
+      </artifact>
+      <artifact>
+        <path>src/performance_monitor.py</path>
+        <kind>utility</kind>
+        <symbol>PerformanceMonitor</symbol>
+        <lines>1-100</lines>
+        <reason>Performance tracking - use to verify stat rendering meets < 10ms target and overall frame rate stays 30+ FPS.</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <python>
+        <package name="pygame" version="2.5.0+">Graphics rendering, font loading, surface blitting for stat bars</package>
+        <package name="sqlite3" version="stdlib">Database queries for stat data via existing Database class</package>
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="performance">Frame rate must maintain 30+ FPS - stat bar rendering must complete in < 10ms per frame. Total DetailScreen render < 33ms.</constraint>
+    <constraint type="security">All database queries must use parameterized statements - never use string formatting for SQL queries.</constraint>
+    <constraint type="validation">Stat values must be validated and clamped to 0-255 range. Invalid data logged with warnings, display "???" placeholder.</constraint>
+    <constraint type="architecture">Access managers via screen_manager (no new instances). Follow Screen lifecycle pattern: load data in on_enter(), save state in on_exit().</constraint>
+    <constraint type="visual">Follow holographic blue color palette from UX spec. Stats panel uses DARK_BLUE background, ELECTRIC_BLUE borders, ICE_BLUE labels, HOLOGRAM_WHITE values.</constraint>
+    <constraint type="layout">Stats panel positioned on right side (40% width), 16px padding, all 6 bars must fit without overflow. No UI elements cut off at screen edges.</constraint>
+  </constraints>
+  
+  <interfaces>
+    <interface>
+      <name>Database.get_pokemon_stats</name>
+      <kind>method</kind>
+      <signature>get_pokemon_stats(pokemon_id: int) -> List[Dict[str, Any]]</signature>
+      <path>src/data/database.py</path>
+      <description>Returns list of dicts with 'name', 'base_stat', 'effort' keys. Query ordered by stat_id for canonical order (HP, Attack, Defense, Sp.Atk, Sp.Def, Speed).</description>
+    </interface>
+    <interface>
+      <name>DetailScreen._render_stat_bars</name>
+      <kind>method</kind>
+      <signature>_render_stat_bars(surface: pygame.Surface) -> None</signature>
+      <path>src/ui/detail_screen.py</path>
+      <description>New method to render all 6 stat bars with labels, bars, and values. Called from render() method.</description>
+    </interface>
+    <interface>
+      <name>get_stat_color</name>
+      <kind>function</kind>
+      <signature>get_stat_color(value: int) -> Tuple[int, int, int]</signature>
+      <path>src/ui/colors.py or src/ui/detail_screen.py</path>
+      <description>Maps stat value to RGB color based on ranges: 0-50 Gray, 51-100 Electric blue, 101-150 Bright cyan, 151+ Plasma orange.</description>
+    </interface>
+    <interface>
+      <name>Colors.STAT_COLORS</name>
+      <kind>constant</kind>
+      <signature>Dict[str, Tuple[int, int, int]]</signature>
+      <path>src/ui/colors.py</path>
+      <description>Color mapping constant: {'low': (113,128,150), 'medium': (0,212,255), 'high': (77,247,255), 'exceptional': (255,107,53)}</description>
+    </interface>
+  </interfaces>
+  
+  <tests>
+    <standards>
+      Use pytest for all tests. Unit tests in tests/test_detail_screen.py for stat rendering logic.
+      Integration tests verify database queries + rendering together.
+      Performance tests measure FPS and render times on actual hardware.
+      Follow existing test patterns from tests/test_database.py and tests/test_detail_screen.py.
+      All database operations tested with parameterized queries.
+      Edge cases: min stat (1), max stat (255), invalid data (None, negative, >255).
+    </standards>
+    
+    <locations>
+      <location>tests/test_detail_screen.py</location>
+      <location>tests/test_database.py</location>
+      <location>tests/test_performance_mvp.py</location>
+    </locations>
+    
+    <ideas>
+      <idea ac="1,7">test_six_stats_display() - Load DetailScreen for Pikachu (#25), verify self.stats has 6 entries in correct order (HP first, Speed last)</idea>
+      <idea ac="2">test_stat_bar_proportional_width() - Verify bar width calculation: stat 255 = 100% bar, stat 127 = ~50% bar, stat 1 = minimal visible bar</idea>
+      <idea ac="3">test_stat_color_coding() - Test get_stat_color() with values 25, 75, 125, 200 - verify correct color returned for each range</idea>
+      <idea ac="4">test_stat_glow_effect() - Verify stats >= 100 have glow rendered, stats < 100 do not. Check alpha=128 and +2px offset.</idea>
+      <idea ac="5">test_stat_labels_and_values() - Verify labels left-aligned, values right-aligned, correct fonts and colors (ICE_BLUE labels, HOLOGRAM_WHITE values)</idea>
+      <idea ac="6">test_stats_panel_layout() - Verify panel positioned at 40% width on right, 16px padding, holographic styling (DARK_BLUE bg, ELECTRIC_BLUE border)</idea>
+      <idea ac="7">test_database_query_stats() - Call get_pokemon_stats(25), verify returns 6 stats, query time < 50ms, parameterized statement used</idea>
+      <idea ac="8">test_invalid_stat_data_handling() - Mock database return with 5 stats, negative value, None value - verify graceful handling with warnings logged</idea>
+      <idea ac="9">test_stat_rendering_performance() - Measure _render_stat_bars() time with perf_counter, assert < 10ms. Verify 30+ FPS maintained during rendering.</idea>
+      <idea ac="all">test_edge_cases() - Test Shedinja (#292, HP=1), Blissey (#242, HP=255), Mewtwo (#150, multiple high stats with glow)</idea>
+    </ideas>
+  </tests>
+</story-context>
