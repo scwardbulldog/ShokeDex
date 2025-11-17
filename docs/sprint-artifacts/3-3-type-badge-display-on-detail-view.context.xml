@@ -1,0 +1,422 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>3</epicId>
+    <storyId>3</storyId>
+    <title>Type Badge Display on Detail View</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-16</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/3-3-type-badge-display-on-detail-view.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>user</asA>
+    <iWant>to see the Pokémon's type(s) with visual badges on the detail screen</iWant>
+    <soThat>I can quickly identify what type(s) it is at a glance</soThat>
+    <tasks>
+      - Add TYPE_COLORS constant to colors.py with all 17 Gen 1-3 type colors
+      - Implement Database.get_pokemon_types(pokemon_id) query method
+      - Load types in DetailScreen lifecycle (on_enter)
+      - Create _render_type_badge() method with rounded rectangles and color coding
+      - Implement _render_type_badges() section rendering for single and dual types
+      - Apply Rajdhani Bold 14px typography to type badge text
+      - Add optional glow effect to badges for holographic aesthetic
+      - Implement data validation and error handling for edge cases
+      - Performance optimization: ensure &lt;5ms render time per frame
+      - Integration testing with various Pokemon (single/dual type, known colors)
+      - Update tests and documentation
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criteria id="AC-1" title="Single Type Display">
+      Given a Pokemon with a single type (e.g., Pikachu - Electric)
+      When DetailScreen displays the type section
+      Then one type badge is shown with the type name
+      And the badge uses the appropriate type-specific color from holographic palette
+      And the type name is displayed clearly within the badge
+    </criteria>
+    
+    <criteria id="AC-2" title="Dual Type Display">
+      Given a Pokemon with dual types (e.g., Charizard - Fire/Flying)
+      When DetailScreen displays the type section
+      Then two type badges are shown side-by-side
+      And each badge displays its type name (e.g., "FIRE" and "FLYING")
+      And badges are positioned with 8px spacing between them
+      And badges use distinct type-specific colors for visual differentiation
+    </criteria>
+    
+    <criteria id="AC-3" title="Type Badge Styling">
+      Given any type badge is rendered
+      When the badge is displayed
+      Then the badge has a rounded rectangular shape with 8px border radius
+      And the badge background color matches the type-specific color from UX spec
+      And the badge has a 2px solid border using a lighter shade of the type color
+      And the type name text is white (#e8f4f8) for maximum contrast
+      And the badge has subtle glow effect matching holographic blue aesthetic
+    </criteria>
+    
+    <criteria id="AC-4" title="Type Badge Positioning">
+      Given DetailScreen is rendering with sprite and stats
+      When type badges are positioned
+      Then badges are displayed near the sprite (top-right or below sprite area)
+      And badges do not overlap the sprite or stat bars
+      And badges remain fully within display boundaries (no cutoff)
+      And badge positioning is consistent across all Pokemon (single and dual types)
+    </criteria>
+    
+    <criteria id="AC-5" title="Type Badge Typography">
+      Given type badges display type names
+      When text is rendered within badges
+      Then font is Rajdhani Bold, 14px size
+      And text is white (#e8f4f8) for maximum readability
+      And text is centered within the badge both horizontally and vertically
+      And text is uppercase (e.g., "FIRE" not "Fire")
+    </criteria>
+    
+    <criteria id="AC-6" title="Type Colors from UX Spec">
+      Given the UX Design Specification defines holographic type colors
+      When type badges are rendered
+      Then each type uses the correct color from UX spec (17 types defined)
+      And Normal: #b8b8d0, Fire: #ff6b35, Water: #4d9fff, Electric: #ffd23f
+      And Grass: #6bff6b, Ice: #a8e6ff, Fighting: #ff4757, Poison: #b24dff
+      And Ground: #d4a574, Flying: #8d9fff, Psychic: #ff6bbd, Bug: #b8d848
+      And Rock: #c4b07a, Ghost: #9d7cce, Dragon: #8d4dff, Dark: #8b7355, Steel: #cbd5e0
+    </criteria>
+    
+    <criteria id="AC-7" title="Database Query Integration">
+      Given DetailScreen needs to load type data
+      When DetailScreen._load_pokemon_data() executes
+      Then Database.get_pokemon_types(pokemon_id) is called
+      And query returns List[str] with 1 or 2 type names
+      And query completes in &lt;50ms (per performance target)
+      And query uses parameterized statement (SQL injection prevention)
+      And types are returned in order (primary type first, secondary type second)
+    </criteria>
+    
+    <criteria id="AC-8" title="Error Handling and Data Validation">
+      Given database query returns unexpected data
+      When types are processed
+      Then if type list is empty, warning is logged and "???" placeholder shown
+      And if type name not recognized, default gray badge shown with type name
+      And if more than 2 types returned, only first 2 are displayed with warning logged
+      And application does not crash on invalid type data
+      And error messages logged for debugging
+    </criteria>
+    
+    <criteria id="AC-9" title="Badge Sizing and Dimensions">
+      Given type badges need to fit within layout
+      When badges are rendered
+      Then each badge has fixed height of 32px
+      And badge width auto-adjusts based on type name length (min 80px, max 120px)
+      And horizontal padding within badge is 16px (8px on each side of text)
+      And vertical padding is 6px (top and bottom)
+      And badges have 8px border radius for rounded corners
+    </criteria>
+    
+    <criteria id="AC-10" title="Performance Requirements">
+      Given DetailScreen renders with type badges
+      When any operation occurs
+      Then frame rate maintains 30+ FPS during rendering
+      And type badge rendering completes in &lt;5ms per frame
+      And badge rendering does not cause stuttering during navigation
+      And DetailScreen total render time remains &lt;33ms per frame
+    </criteria>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/PRD.md</path>
+        <title>Product Requirements Document</title>
+        <section>FR3.3 - Type Display</section>
+        <snippet>Pokémon type(s) shall be displayed with clear visual indicators. Type badges shall use type-specific colors for recognition.</snippet>
+      </doc>
+      <doc>
+        <path>docs/ux-design-specification.md</path>
+        <title>UX Design Specification</title>
+        <section>Type Colors - Holographic Palette</section>
+        <snippet>TYPE_COLORS defines 17 types with holographic styling: Normal #b8b8d0, Fire #ff6b35 (plasma orange), Water #4d9fff (electric blue), Electric #ffd23f (neon yellow), etc. Each color enhanced for holographic aesthetic.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture.md</path>
+        <title>Architecture Documentation</title>
+        <section>Database Access Pattern</section>
+        <snippet>ALWAYS use parameterized queries: cursor.execute("SELECT * FROM pokemon WHERE id = ?", (pokemon_id,)). NEVER use string formatting for SQL queries.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-2-detail-view-with-audio.md</path>
+        <title>Epic Technical Specification: Detail View</title>
+        <section>AC #3: Type Badge Display</section>
+        <snippet>Type Badge Specification: Rounded rectangular badges (8px border radius), Type-specific background colors from UX spec, 2px border using lighter shade of type color, White text (#e8f4f8) for maximum contrast, Subtle glow effect optional for holographic aesthetic.</snippet>
+      </doc>
+      <doc>
+        <path>docs/database_schema.md</path>
+        <title>Database Schema</title>
+        <section>types table, pokemon_types table</section>
+        <snippet>types table: id, name (17 types for Gen 1-3). pokemon_types table: pokemon_id, type_id, slot (slot 1 = primary, slot 2 = secondary). Query pattern: SELECT t.name FROM types t JOIN pokemon_types pt ON t.id = pt.type_id WHERE pt.pokemon_id = ? ORDER BY pt.slot</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/3-2-six-base-stats-with-visual-progress-bars.md</path>
+        <title>Story 3.2: Six Base Stats with Visual Progress Bars</title>
+        <section>Learnings from Previous Story</section>
+        <snippet>Holographic Styling Established: Panel backgrounds use dark blue (rgba(26, 47, 74, 0.9)), Borders are 2px solid electric blue (#00d4ff), Text uses ice blue (#a8e6ff) for labels. COLOR_COLORS constant pattern: Same pattern applies here: TYPE_COLORS constant for type badge colors.</snippet>
+      </doc>
+    </docs>
+    
+    <code>
+      <artifact>
+        <path>src/ui/detail_screen.py</path>
+        <kind>module</kind>
+        <symbol>DetailScreen</symbol>
+        <lines>1-end</lines>
+        <reason>Primary implementation file for type badge rendering. Need to add _render_type_badges() and _render_type_badge() methods, integrate database query in _load_pokemon_data().</reason>
+      </artifact>
+      <artifact>
+        <path>src/ui/colors.py</path>
+        <kind>module</kind>
+        <symbol>Colors, STAT_COLORS</symbol>
+        <lines>1-end</lines>
+        <reason>Need to add TYPE_COLORS constant with all 17 Gen 1-3 type color definitions. Pattern already established with STAT_COLORS constant.</reason>
+      </artifact>
+      <artifact>
+        <path>src/data/database.py</path>
+        <kind>module</kind>
+        <symbol>Database</symbol>
+        <lines>1-end</lines>
+        <reason>Need to verify or implement get_pokemon_types(pokemon_id) method using parameterized query joining types and pokemon_types tables.</reason>
+      </artifact>
+      <artifact>
+        <path>src/ui/screen.py</path>
+        <kind>module</kind>
+        <symbol>Screen</symbol>
+        <lines>1-end</lines>
+        <reason>Base Screen class that DetailScreen inherits from. Provides lifecycle methods (on_enter, on_exit, render, handle_input).</reason>
+      </artifact>
+      <artifact>
+        <path>src/state_manager.py</path>
+        <kind>module</kind>
+        <symbol>StateManager</symbol>
+        <lines>1-end</lines>
+        <reason>StateManager singleton for persisting last viewed Pokemon. DetailScreen accesses via screen_manager.state_manager.</reason>
+      </artifact>
+      <artifact>
+        <path>src/performance_monitor.py</path>
+        <kind>module</kind>
+        <symbol>PerformanceMonitor</symbol>
+        <lines>1-end</lines>
+        <reason>Used for profiling type badge rendering time to ensure &lt;5ms target. Track frame times and FPS during rendering.</reason>
+      </artifact>
+      <artifact>
+        <path>tests/test_detail_screen.py</path>
+        <kind>test</kind>
+        <symbol>test_detail_screen</symbol>
+        <lines>1-end</lines>
+        <reason>Add integration tests for type badge display: test_single_type_display(), test_dual_type_display(), test_type_badge_styling(), test_type_colors_match_spec(), test_missing_types_handled().</reason>
+      </artifact>
+    </code>
+    
+    <dependencies>
+      <python>
+        <package name="pygame" version="2.5.0+">Graphics rendering and display management, used for drawing rounded rectangles and text</package>
+        <package name="Pillow" version="10.0.0+">Image processing (if type icons needed)</package>
+        <package name="sqlite3" version="stdlib">Database queries for type data</package>
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint>All database queries must use parameterized statements to prevent SQL injection - never use string formatting for SQL</constraint>
+    <constraint>Type badge rendering must complete in &lt;5ms per frame to maintain 30+ FPS performance on Raspberry Pi 3B+</constraint>
+    <constraint>Badge dimensions: 32px height (fixed), 80-120px width (auto-adjust), 8px border radius, 2px border, 8px horizontal padding</constraint>
+    <constraint>Typography: Rajdhani Bold 14px, white text (#e8f4f8), uppercase type names, centered alignment</constraint>
+    <constraint>All 17 Gen 1-3 type colors must match UX Design Specification exactly (no Fairy type for Gen 1-3)</constraint>
+    <constraint>Badge positioning must not overlap sprite or stat bars, must remain within display boundaries</constraint>
+    <constraint>Graceful error handling required: empty types → "???" placeholder, unknown type → default gray, excess types → log warning and show first 2 only</constraint>
+    <constraint>Font loading must use pygame.font.Font(None, 14) as fallback if custom Rajdhani Bold not available, with warning logged</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>Database.get_pokemon_types(pokemon_id: int) -&gt; List[str]</name>
+      <kind>database method</kind>
+      <signature>
+def get_pokemon_types(self, pokemon_id: int) -&gt; List[str]:
+    """Get Pokemon types in slot order (primary first, secondary second).
+    
+    Args:
+        pokemon_id: National Dex number (1-386)
+        
+    Returns:
+        List of 1-2 type names in order (e.g., ['Fire', 'Flying'] for Charizard)
+        
+    Query:
+        SELECT t.name 
+        FROM types t
+        JOIN pokemon_types pt ON t.id = pt.type_id
+        WHERE pt.pokemon_id = ?
+        ORDER BY pt.slot
+    """
+      </signature>
+      <path>src/data/database.py</path>
+    </interface>
+    
+    <interface>
+      <name>DetailScreen._render_type_badge(surface, type_name, x, y) -&gt; int</name>
+      <kind>rendering method</kind>
+      <signature>
+def _render_type_badge(self, surface: pygame.Surface, type_name: str, x: int, y: int) -&gt; int:
+    """Render a single type badge with rounded rectangle and text.
+    
+    Args:
+        surface: Target surface to draw on
+        type_name: Type name (e.g., "Fire", "Electric")
+        x: X position for badge top-left
+        y: Y position for badge top-left
+        
+    Returns:
+        Width of rendered badge (for positioning next badge)
+        
+    Visual:
+        - Height: 32px (fixed)
+        - Width: auto (min 80px, max 120px, based on text length + padding)
+        - Padding: 16px horizontal, 6px vertical
+        - Border: 2px solid (lighter shade of type color)
+        - Border radius: 8px
+        - Background: type-specific color from TYPE_COLORS
+        - Text: Rajdhani Bold 14px, white, uppercase, centered
+    """
+      </signature>
+      <path>src/ui/detail_screen.py</path>
+    </interface>
+    
+    <interface>
+      <name>TYPE_COLORS constant</name>
+      <kind>color palette constant</kind>
+      <signature>
+TYPE_COLORS = {
+    'normal': (184, 184, 208),    # #b8b8d0 - cooler futuristic gray
+    'fire': (255, 107, 53),       # #ff6b35 - plasma orange
+    'water': (77, 159, 255),      # #4d9fff - electric blue
+    'electric': (255, 210, 63),   # #ffd23f - neon yellow
+    'grass': (107, 255, 107),     # #6bff6b - bright holographic green
+    'ice': (168, 230, 255),       # #a8e6ff - ice blue
+    'fighting': (255, 71, 87),    # #ff4757 - energetic red
+    'poison': (178, 77, 255),     # #b24dff - neon purple
+    'ground': (212, 165, 116),    # #d4a574 - sandy hologram
+    'flying': (141, 159, 255),    # #8d9fff - sky hologram
+    'psychic': (255, 107, 189),   # #ff6bbd - bright psychic pink
+    'bug': (184, 216, 72),        # #b8d848 - bioluminescent green
+    'rock': (196, 176, 122),      # #c4b07a - stone with glow
+    'ghost': (157, 124, 206),     # #9d7cce - spectral purple
+    'dragon': (141, 77, 255),     # #8d4dff - majestic purple-blue
+    'dark': (139, 115, 85),       # #8b7355 - shadowed brown
+    'steel': (203, 213, 224)      # #cbd5e0 - metallic shimmer
+}
+      </signature>
+      <path>src/ui/colors.py</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Use Python unittest module. Run tests with: python -m unittest discover tests -v
+      Test pattern: test_{method_name}_{scenario}
+      Integration tests should use real database with test Pokemon data
+      Mock external dependencies when needed (database can be in-memory for speed)
+      Performance tests should measure render times and validate against targets
+      Visual tests require manual verification on actual hardware display
+    </standards>
+    
+    <locations>
+      tests/test_detail_screen.py - DetailScreen integration tests
+      tests/test_database.py - Database query unit tests
+      tests/test_performance_mvp.py - Performance validation tests
+    </locations>
+    
+    <ideas>
+      <test id="T1" ac="AC-1">
+        test_single_type_display():
+        - Query Pikachu (#25) types, verify returns ['Electric']
+        - Render DetailScreen, verify one type badge rendered
+        - Check badge color matches TYPE_COLORS['electric']
+        - Verify badge dimensions and positioning
+      </test>
+      
+      <test id="T2" ac="AC-2">
+        test_dual_type_display():
+        - Query Charizard (#6) types, verify returns ['Fire', 'Flying']
+        - Render DetailScreen, verify two badges rendered side-by-side
+        - Check 8px spacing between badges
+        - Verify distinct colors for each type
+      </test>
+      
+      <test id="T3" ac="AC-3, AC-9">
+        test_type_badge_styling():
+        - Create badge for "ELECTRIC" type
+        - Verify rounded rectangle with 8px border radius
+        - Verify 2px border with lighter shade of type color
+        - Verify badge dimensions: 32px height, 80-120px width
+        - Verify padding: 16px horizontal, 6px vertical
+      </test>
+      
+      <test id="T4" ac="AC-4">
+        test_type_badge_positioning():
+        - Render DetailScreen with sprite and stat bars
+        - Verify type badges positioned near sprite (top-right or below)
+        - Check no overlap with sprite or stat bars
+        - Verify badges fully within display boundaries (480x320)
+      </test>
+      
+      <test id="T5" ac="AC-5">
+        test_type_badge_typography():
+        - Render badge with type name
+        - Verify font is Rajdhani Bold 14px (or fallback)
+        - Verify text is white (#e8f4f8)
+        - Verify text is uppercase
+        - Verify text is centered in badge
+      </test>
+      
+      <test id="T6" ac="AC-6">
+        test_type_colors_match_spec():
+        - For each of 17 Gen 1-3 types, verify TYPE_COLORS[type] matches UX spec
+        - Test: assert TYPE_COLORS['fire'] == (255, 107, 53)
+        - Test: assert TYPE_COLORS['water'] == (77, 159, 255)
+        - Verify all 17 types defined and correct
+      </test>
+      
+      <test id="T7" ac="AC-7">
+        test_database_query_integration():
+        - Call Database.get_pokemon_types(25), verify returns ['Electric']
+        - Call Database.get_pokemon_types(6), verify returns ['Fire', 'Flying']
+        - Measure query time, assert &lt;50ms
+        - Verify query uses parameterized statement (inspect SQL)
+        - Verify types returned in slot order (primary first)
+      </test>
+      
+      <test id="T8" ac="AC-8">
+        test_error_handling_edge_cases():
+        - Mock database return with empty list, verify "???" placeholder shown
+        - Mock database return with unknown type name, verify default gray badge
+        - Mock database return with 3 types, verify only first 2 displayed, warning logged
+        - Verify application doesn't crash on invalid data
+      </test>
+      
+      <test id="T9" ac="AC-10">
+        test_type_badge_rendering_performance():
+        - Profile _render_type_badges() with time.perf_counter()
+        - Render 100 frames, measure average render time
+        - Assert average &lt;5ms per frame
+        - Monitor FPS with PerformanceMonitor, assert 30+ FPS maintained
+      </test>
+      
+      <test id="T10" ac="All">
+        test_visual_verification_manual():
+        - Test with various Pokemon: Pikachu (single), Charizard (dual), Bulbasaur (dual)
+        - Verify colors match printed UX color chart
+        - Check badge positioning on actual display (480x320 LCD)
+        - Confirm readability and aesthetic match holographic theme
+      </test>
+    </ideas>
+  </tests>
+</story-context>

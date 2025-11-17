@@ -303,6 +303,29 @@ class Database:
         """, (pokemon_id,))
         
         return [dict(row) for row in cursor.fetchall()]
+    
+    def get_pokemon_types(self, pokemon_id: int) -> List[str]:
+        """
+        Get Pokemon types in slot order (primary first, secondary second).
+        
+        Args:
+            pokemon_id: National Dex number (1-386)
+            
+        Returns:
+            List of 1-2 type names in order (e.g., ['Fire', 'Flying'] for Charizard)
+            Returns empty list if no types found.
+            
+        Story 3.3 AC #7: Parameterized query, returns in slot order, <50ms target
+        """
+        cursor = self.execute("""
+            SELECT t.name
+            FROM types t
+            JOIN pokemon_types pt ON t.id = pt.type_id
+            WHERE pt.pokemon_id = ?
+            ORDER BY pt.slot
+        """, (pokemon_id,))
+        
+        return [row[0] for row in cursor.fetchall()]
         
     def get_pokemon_by_generation(self, generation: int) -> List[Dict[str, Any]]:
         """

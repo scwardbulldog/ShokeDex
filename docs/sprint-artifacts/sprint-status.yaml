@@ -67,7 +67,7 @@ development_status:
   epic-3-detail-view: contexted
   3-1-detail-screen-layout-and-sprite-display: review
   3-2-six-base-stats-with-visual-progress-bars: done
-  3-3-type-badge-display-on-detail-view: backlog
+  3-3-type-badge-display-on-detail-view: review
   3-4-physical-measurements-display: backlog
   3-5-pokedex-description-text-display: backlog
   3-6-adjacent-pokemon-navigation-in-detail-view: backlog

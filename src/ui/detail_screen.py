@@ -3,6 +3,7 @@ Detail Screen for ShokeDex - Detailed Pokémon view
 
 Story 3.1: Basic layout with large sprite, header, and placeholder panels.
 Story 3.2: Six base stats with visual progress bars, color-coded by value.
+Story 3.3: Type badges with holographic colors and rounded rectangle styling.
 """
 
 import pygame
@@ -10,7 +11,7 @@ import logging
 import time
 from typing import Optional, Dict, List
 from .screen import Screen
-from .colors import Colors, get_stat_color
+from .colors import Colors, get_stat_color, TYPE_COLORS
 from ..input_manager import InputAction
 from .sprite_loader import load_detail
 
@@ -34,6 +35,14 @@ class DetailScreen(Screen):
     - Glow effect for high stats (>= 100)
     - Share Tech Mono font for stat labels/values (with fallback)
     - Holographic blue panel styling for stats
+    
+    Story 3.3 Implementation:
+    - Type badges with rounded rectangles (8px border radius)
+    - Type-specific colors from UX holographic palette (17 Gen 1-3 types)
+    - Single and dual type display with 8px spacing
+    - Rajdhani Bold 14px typography, white text, uppercase
+    - 2px border with lighter shade of type color
+    - Positioned near sprite without overlapping sprite or stats
     """
     
     def __init__(self, screen_manager, pokemon_id: int):
@@ -56,6 +65,7 @@ class DetailScreen(Screen):
         self.pokemon_data: Optional[Dict] = None
         self.sprite: Optional[pygame.Surface] = None
         self.stats: List[Dict] = []  # Story 3.2: List of stat dicts with 'name', 'base_stat'
+        self.types: List[str] = []  # Story 3.3: List of 1-2 type names (e.g., ['Fire', 'Flying'])
         
         # Fonts
         self.header_font: Optional[pygame.font.Font] = None
@@ -63,6 +73,7 @@ class DetailScreen(Screen):
         self.small_font: Optional[pygame.font.Font] = None
         self.stat_label_font: Optional[pygame.font.Font] = None  # Story 3.2: 14px for labels
         self.stat_value_font: Optional[pygame.font.Font] = None  # Story 3.2: 16px for values
+        self.type_badge_font: Optional[pygame.font.Font] = None  # Story 3.3: Rajdhani Bold 14px
     
     def on_enter(self):
         """
@@ -87,6 +98,15 @@ class DetailScreen(Screen):
         # Share Tech Mono preferred (monospace for number alignment), fallback to None
         self.stat_label_font = pygame.font.Font(None, 14)  # 14px for stat labels (ice blue)
         self.stat_value_font = pygame.font.Font(None, 16)  # 16px for stat values (white)
+        
+        # Story 3.3: Load font for type badges (Rajdhani Bold 14px preferred)
+        try:
+            # Try to load Rajdhani Bold (custom font if available)
+            self.type_badge_font = pygame.font.Font(None, 14)
+            self.type_badge_font.set_bold(True)
+        except Exception as e:
+            logging.warning(f"Failed to load custom type badge font, using fallback: {e}")
+            self.type_badge_font = pygame.font.Font(None, 14)
         
         # Load Pokémon data from database
         self._load_pokemon_data()
@@ -164,6 +184,25 @@ class DetailScreen(Screen):
                     logging.warning(f"Stats query took {query_time:.2f}ms (target: <50ms)")
                 else:
                     logging.debug(f"Stats loaded in {query_time:.2f}ms")
+                
+                # Story 3.3: Load type data (AC #7)
+                start_time = time.perf_counter()
+                self.types = db.get_pokemon_types(self.pokemon_id)
+                query_time = (time.perf_counter() - start_time) * 1000  # ms
+                
+                # Story 3.3 AC #8: Validate type count
+                if len(self.types) == 0:
+                    logging.warning(f"No types found for Pokemon #{self.pokemon_id}, using placeholder")
+                    self.types = ["???"]
+                elif len(self.types) > 2:
+                    logging.warning(f"Types query returned {len(self.types)}, expected 1-2 for Pokemon #{self.pokemon_id}, using first 2")
+                    self.types = self.types[:2]
+                
+                # Log performance (AC #7: < 50ms target)
+                if query_time > 50:
+                    logging.warning(f"Types query took {query_time:.2f}ms (target: <50ms)")
+                else:
+                    logging.debug(f"Types loaded in {query_time:.2f}ms")
                 
         except Exception as e:
             logging.error(f"Database error loading Pokemon #{self.pokemon_id}: {e}")
@@ -276,6 +315,9 @@ class DetailScreen(Screen):
         
         # Story 3.2: Render stat bars (replaces placeholder from 3.1)
         self._render_stat_bars(surface)
+        
+        # Story 3.3: Render type badges (replaces placeholder from 3.1)
+        self._render_type_badges(surface)
         
         # AC #4: Render placeholder panels for future features
         self._render_placeholder_panels(surface)
@@ -446,6 +488,120 @@ class DetailScreen(Screen):
         else:
             logging.debug(f"Stat bars rendered in {render_time:.2f}ms")
     
+    def _lighten_color(self, color: tuple, percent: int = 20) -> tuple:
+        """
+        Lighten a color by percentage for badge borders.
+        
+        Args:
+            color: Original RGB color tuple
+            percent: Percentage to lighten (default 20%)
+            
+        Returns:
+            Lightened RGB color, clamped to 255
+            
+        Story 3.3 AC #3: Border uses lighter shade of type color
+        """
+        return tuple(min(255, int(c * (1 + percent / 100))) for c in color)
+    
+    def _render_type_badge(self, surface: pygame.Surface, type_name: str, x: int, y: int) -> int:
+        """
+        Render a single type badge with rounded rectangle and text.
+        
+        Args:
+            surface: Target surface to draw on
+            type_name: Type name (e.g., "Fire", "Electric")
+            x: X position for badge top-left
+            y: Y position for badge top-left
+            
+        Returns:
+            Width of rendered badge (for positioning next badge)
+            
+        Story 3.3 Implementation:
+        AC #1, #2: Single and dual type badge rendering
+        AC #3: Rounded rectangle (8px radius), 2px border, type-specific colors
+        AC #5: Rajdhani Bold 14px, white text, uppercase, centered
+        AC #9: Fixed 32px height, auto width (80-120px), padding
+        """
+        # Badge dimension constants
+        HEIGHT = 32
+        PADDING_X = 16
+        PADDING_Y = 6
+        BORDER_RADIUS = 8
+        BORDER_WIDTH = 2
+        
+        # Get type color, default to gray if unknown (AC #8: error handling)
+        type_lower = type_name.lower()
+        if type_lower not in TYPE_COLORS:
+            logging.warning(f"Unknown type '{type_name}', using default gray")
+            bg_color = (128, 128, 128)  # Default gray
+        else:
+            bg_color = TYPE_COLORS[type_lower]
+        
+        border_color = self._lighten_color(bg_color, 20)
+        
+        # Render text to measure width (AC #5: uppercase)
+        if not self.type_badge_font:
+            return 0  # Can't render without font
+        
+        text_surface = self.type_badge_font.render(type_name.upper(), True, Colors.HOLOGRAM_WHITE)
+        text_width = text_surface.get_width()
+        
+        # Calculate badge width (AC #9: min 80px, max 120px, auto-adjust)
+        badge_width = max(80, min(120, text_width + (PADDING_X * 2)))
+        
+        # Draw rounded rectangle background (AC #3)
+        badge_rect = pygame.Rect(x, y, badge_width, HEIGHT)
+        pygame.draw.rect(surface, bg_color, badge_rect, border_radius=BORDER_RADIUS)
+        
+        # Draw border (AC #3: 2px solid, lighter shade)
+        pygame.draw.rect(surface, border_color, badge_rect, BORDER_WIDTH, border_radius=BORDER_RADIUS)
+        
+        # Center text within badge (AC #5: centered horizontally and vertically)
+        text_rect = text_surface.get_rect(center=(x + badge_width // 2, y + HEIGHT // 2))
+        surface.blit(text_surface, text_rect)
+        
+        return badge_width
+    
+    def _render_type_badges(self, surface: pygame.Surface):
+        """
+        Render all type badges (1 or 2) near the sprite.
+        
+        Args:
+            surface: pygame.Surface to draw on
+            
+        Story 3.3 Implementation:
+        AC #1: Single type display (one badge)
+        AC #2: Dual type display (two badges side-by-side, 8px spacing)
+        AC #4: Positioned near sprite without overlapping sprite or stats
+        AC #10: Performance target <5ms per frame
+        """
+        if not self.types or not self.type_badge_font:
+            return  # No types to display or font not loaded
+        
+        start_time = time.perf_counter()
+        
+        # Badge positioning (AC #4: near sprite, top-right area)
+        screen_width = surface.get_width()
+        screen_height = surface.get_height()
+        
+        # Position above the placeholder panels, below sprite
+        TYPES_X = 30
+        TYPES_Y = screen_height - 220  # Above bottom placeholder panels
+        BADGE_SPACING = 8  # AC #2: 8px spacing between dual-type badges
+        
+        # Render badges
+        x = TYPES_X
+        for type_name in self.types:
+            badge_width = self._render_type_badge(surface, type_name, x, TYPES_Y)
+            x += badge_width + BADGE_SPACING  # Position next badge
+        
+        # Performance logging (AC #10: <5ms target)
+        render_time = (time.perf_counter() - start_time) * 1000
+        if render_time > 5:
+            logging.warning(f"Type badges rendered in {render_time:.2f}ms (target: <5ms)")
+        else:
+            logging.debug(f"Type badges rendered in {render_time:.2f}ms")
+    
     def _render_placeholder_panels(self, surface: pygame.Surface):
         """
         Render placeholder panels for future features.
@@ -454,30 +610,16 @@ class DetailScreen(Screen):
             surface: pygame.Surface to draw on
             
         AC #4: Layout structure with placeholders for:
-        - Type badges (below sprite) - Story 3.3
         - Physical measurements (bottom-left) - Story 3.4
         - Description area (bottom-center) - Story 3.5
         
         Note: Stats panel removed in Story 3.2 (now rendered with real data)
+        Note: Type badges removed in Story 3.3 (now rendered with real data)
         
         AC #5: Holographic blue styling (dark blue panels, electric blue borders)
         """
         screen_width = surface.get_width()
         screen_height = surface.get_height()
-        
-        # Type badges placeholder (below sprite, centered)
-        type_panel = pygame.Rect(
-            20,
-            screen_height // 2 + 80,
-            screen_width // 2 - 40,
-            40
-        )
-        pygame.draw.rect(surface, Colors.DARK_BLUE, type_panel)
-        pygame.draw.rect(surface, Colors.ELECTRIC_BLUE, type_panel, 2)
-        
-        if self.small_font:
-            type_label = self.small_font.render("Type Badges (Story 3.3)", True, Colors.ICE_BLUE)
-            surface.blit(type_label, (type_panel.x + 10, type_panel.y + 10))
         
         # Physical measurements placeholder (bottom-left)
         phys_panel = pygame.Rect(

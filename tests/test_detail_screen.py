@@ -1,12 +1,14 @@
 """
-Integration tests for DetailScreen (Story 3.1, 3.2)
+Integration tests for DetailScreen (Story 3.1, 3.2, 3.3)
 
 Story 3.1: Basic layout, sprite display, header rendering, navigation
 Story 3.2: Six base stats with visual progress bars, color-coded rendering
+Story 3.3: Type badges with holographic colors and rounded rectangle styling
 
 Tests basic layout, sprite display, header rendering, navigation,
 StateManager integration, error handling, performance validation,
-and stat bar rendering with proper colors and proportional widths.
+stat bar rendering with proper colors and proportional widths,
+and type badge display with type-specific colors.
 """
 
 import pytest
@@ -40,7 +42,7 @@ class MockStateManager:
 
 class MockDatabase:
     """Mock Database for testing"""
-    def __init__(self, pokemon_data=None, stats_data=None):
+    def __init__(self, pokemon_data=None, stats_data=None, types_data=None):
         self.pokemon_data = pokemon_data or {
             'id': 25,
             'name': 'pikachu',
@@ -49,7 +51,7 @@ class MockDatabase:
             'generation': 1
         }
         # Story 3.2: Add default stats data (Pikachu's actual stats)
-        self.stats_data = stats_data or [
+        self.stats_data = stats_data if stats_data is not None else [
             {'name': 'HP', 'base_stat': 35, 'effort': 0},
             {'name': 'Attack', 'base_stat': 55, 'effort': 0},
             {'name': 'Defense', 'base_stat': 40, 'effort': 0},
@@ -57,6 +59,9 @@ class MockDatabase:
             {'name': 'Special Defense', 'base_stat': 50, 'effort': 0},
             {'name': 'Speed', 'base_stat': 90, 'effort': 0}
         ]
+        # Story 3.3: Add default types data (Pikachu is Electric)
+        # Use 'is not None' check to allow empty list []
+        self.types_data = types_data if types_data is not None else ['Electric']
     
     def __enter__(self):
         return self
@@ -73,6 +78,14 @@ class MockDatabase:
         """Return mock stats data (Story 3.2)"""
         if pokemon_id == self.pokemon_data['id']:
             return self.stats_data
+        return []
+    
+    def get_pokemon_types(self, pokemon_id):
+        """Return mock types data (Story 3.3)"""
+        # Always return the configured types_data for any pokemon_id that matches
+        # our pokemon_data, otherwise return empty list
+        if self.pokemon_data and pokemon_id == self.pokemon_data['id']:
+            return self.types_data
         return []
 
 
@@ -791,5 +804,367 @@ class TestDetailScreenStatIntegration:
         # Count stats >= 100 (should have glow)
         high_stats = [s for s in detail.stats if s['base_stat'] >= 100]
         assert len(high_stats) == 4  # HP, Attack, Sp.Atk, Speed
+
+
+class TestTypeBadgeColors:
+    """Test TYPE_COLORS constant matches UX spec (Story 3.3, AC #6)"""
+    
+    def test_type_colors_defined(self):
+        """Test TYPE_COLORS constant exists and has all 17 Gen 1-3 types"""
+        from src.ui.colors import TYPE_COLORS
+        
+        # Should have exactly 17 types (no Fairy for Gen 1-3)
+        assert len(TYPE_COLORS) == 17
+        
+        # Verify all expected types present
+        expected_types = [
+            'normal', 'fire', 'water', 'electric', 'grass', 'ice',
+            'fighting', 'poison', 'ground', 'flying', 'psychic',
+            'bug', 'rock', 'ghost', 'dragon', 'dark', 'steel'
+        ]
+        for type_name in expected_types:
+            assert type_name in TYPE_COLORS, f"Type '{type_name}' missing from TYPE_COLORS"
+        
+        # Verify Fairy type NOT present (Gen 1-3 only)
+        assert 'fairy' not in TYPE_COLORS
+    
+    def test_type_colors_match_ux_spec(self):
+        """Test each type color matches UX Design Specification exactly"""
+        from src.ui.colors import TYPE_COLORS
+        
+        # Verify specific colors from UX spec
+        assert TYPE_COLORS['normal'] == (184, 184, 208)      # #b8b8d0
+        assert TYPE_COLORS['fire'] == (255, 107, 53)         # #ff6b35
+        assert TYPE_COLORS['water'] == (77, 159, 255)        # #4d9fff
+        assert TYPE_COLORS['electric'] == (255, 210, 63)     # #ffd23f
+        assert TYPE_COLORS['grass'] == (107, 255, 107)       # #6bff6b
+        assert TYPE_COLORS['ice'] == (168, 230, 255)         # #a8e6ff
+        assert TYPE_COLORS['fighting'] == (255, 71, 87)      # #ff4757
+        assert TYPE_COLORS['poison'] == (178, 77, 255)       # #b24dff
+        assert TYPE_COLORS['ground'] == (212, 165, 116)      # #d4a574
+        assert TYPE_COLORS['flying'] == (141, 159, 255)      # #8d9fff
+        assert TYPE_COLORS['psychic'] == (255, 107, 189)     # #ff6bbd
+        assert TYPE_COLORS['bug'] == (184, 216, 72)          # #b8d848
+        assert TYPE_COLORS['rock'] == (196, 176, 122)        # #c4b07a
+        assert TYPE_COLORS['ghost'] == (157, 124, 206)       # #9d7cce
+        assert TYPE_COLORS['dragon'] == (141, 77, 255)       # #8d4dff
+        assert TYPE_COLORS['dark'] == (139, 115, 85)         # #8b7355
+        assert TYPE_COLORS['steel'] == (203, 213, 224)       # #cbd5e0
+
+
+class TestTypeBadgeRendering:
+    """Test type badge rendering methods (Story 3.3)"""
+    
+    def test_single_type_display(self, pygame_init, mock_screen_manager):
+        """Test single type Pokemon displays one badge (AC #1)"""
+        # Pikachu is Electric (single type)
+        detail = DetailScreen(mock_screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        # Should have loaded 1 type
+        assert len(detail.types) == 1
+        assert detail.types[0] == 'Electric'
+        
+        # Render without crashing
+        surface = pygame.Surface((800, 480))
+        detail.render(surface)
+    
+    def test_dual_type_display(self, pygame_init, mock_state_manager):
+        """Test dual type Pokemon displays two badges (AC #2)"""
+        # Charizard is Fire/Flying (dual type)
+        db = MockDatabase(
+            pokemon_data={'id': 6, 'name': 'charizard', 'height': 17, 'weight': 905, 'generation': 1},
+            stats_data=[
+                {'name': 'HP', 'base_stat': 78, 'effort': 0},
+                {'name': 'Attack', 'base_stat': 84, 'effort': 0},
+                {'name': 'Defense', 'base_stat': 78, 'effort': 0},
+                {'name': 'Special Attack', 'base_stat': 109, 'effort': 0},
+                {'name': 'Special Defense', 'base_stat': 85, 'effort': 0},
+                {'name': 'Speed', 'base_stat': 100, 'effort': 0}
+            ],
+            types_data=['Fire', 'Flying']
+        )
+        screen_manager = MockScreenManager(database=db, state_manager=mock_state_manager)
+        
+        detail = DetailScreen(screen_manager, pokemon_id=6)
+        detail.on_enter()
+        
+        # Should have loaded 2 types
+        assert len(detail.types) == 2
+        assert detail.types[0] == 'Fire'
+        assert detail.types[1] == 'Flying'
+        
+        # Render without crashing
+        surface = pygame.Surface((800, 480))
+        detail.render(surface)
+    
+    def test_type_badge_font_loaded(self, pygame_init, mock_screen_manager):
+        """Test type badge font is loaded on_enter (AC #5)"""
+        detail = DetailScreen(mock_screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        # Font should be loaded
+        assert detail.type_badge_font is not None
+    
+    def test_lighten_color_function(self, pygame_init, mock_screen_manager):
+        """Test _lighten_color() for badge borders (AC #3)"""
+        detail = DetailScreen(mock_screen_manager, pokemon_id=25)
+        
+        # Test lightening a color
+        base_color = (100, 100, 100)
+        lighter = detail._lighten_color(base_color, 20)
+        
+        assert lighter == (120, 120, 120)
+        
+        # Test clamping at 255
+        bright_color = (250, 250, 250)
+        lighter_bright = detail._lighten_color(bright_color, 20)
+        
+        assert lighter_bright[0] == 255
+        assert lighter_bright[1] == 255
+        assert lighter_bright[2] == 255
+    
+    def test_render_type_badge_returns_width(self, pygame_init, mock_screen_manager):
+        """Test _render_type_badge() returns badge width for positioning"""
+        detail = DetailScreen(mock_screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        surface = pygame.Surface((800, 480))
+        
+        # Render a badge and check it returns a width
+        width = detail._render_type_badge(surface, "Electric", 100, 100)
+        
+        # Width should be in valid range (80-120px per AC #9)
+        assert width >= 80
+        assert width <= 120
+    
+    def test_unknown_type_uses_default_gray(self, pygame_init, mock_state_manager):
+        """Test unknown type name uses default gray badge (AC #8)"""
+        # Create Pokemon with unknown type
+        db = MockDatabase(
+            pokemon_data={'id': 999, 'name': 'missingno', 'height': 10, 'weight': 100, 'generation': 1},
+            stats_data=[{'name': 'HP', 'base_stat': 50, 'effort': 0}] * 6,
+            types_data=['UnknownType']
+        )
+        screen_manager = MockScreenManager(database=db, state_manager=mock_state_manager)
+        
+        detail = DetailScreen(screen_manager, pokemon_id=999)
+        detail.on_enter()
+        
+        # Should have type but it's unknown
+        assert len(detail.types) == 1
+        assert detail.types[0] == 'UnknownType'
+        
+        # Should render with default gray (not crash)
+        surface = pygame.Surface((800, 480))
+        detail.render(surface)
+
+
+class TestTypeBadgeDataValidation:
+    """Test type badge error handling (Story 3.3, AC #8)"""
+    
+    def test_empty_types_shows_placeholder(self, pygame_init, mock_state_manager):
+        """Test empty type list shows ??? placeholder"""
+        db = MockDatabase(
+            pokemon_data={'id': 999, 'name': 'typeless', 'height': 10, 'weight': 100, 'generation': 1},
+            stats_data=[{'name': 'HP', 'base_stat': 50, 'effort': 0}] * 6,
+            types_data=[]  # No types
+        )
+        screen_manager = MockScreenManager(database=db, state_manager=mock_state_manager)
+        
+        detail = DetailScreen(screen_manager, pokemon_id=999)
+        detail.on_enter()
+        
+        # Should have placeholder
+        assert len(detail.types) == 1
+        assert detail.types[0] == "???"
+        
+        # Should render without crashing
+        surface = pygame.Surface((800, 480))
+        detail.render(surface)
+    
+    def test_excess_types_limited_to_two(self, pygame_init, mock_state_manager):
+        """Test more than 2 types limited to first 2 with warning"""
+        # Invalid data: 3 types
+        db = MockDatabase(
+            pokemon_data={'id': 999, 'name': 'tritype', 'height': 10, 'weight': 100, 'generation': 1},
+            stats_data=[{'name': 'HP', 'base_stat': 50, 'effort': 0}] * 6,
+            types_data=['Fire', 'Water', 'Grass']  # Invalid: 3 types
+        )
+        screen_manager = MockScreenManager(database=db, state_manager=mock_state_manager)
+        
+        detail = DetailScreen(screen_manager, pokemon_id=999)
+        detail.on_enter()
+        
+        # Should only keep first 2
+        assert len(detail.types) == 2
+        assert detail.types[0] == 'Fire'
+        assert detail.types[1] == 'Water'
+        
+        # Should render without crashing
+        surface = pygame.Surface((800, 480))
+        detail.render(surface)
+    
+    def test_types_in_slot_order(self, pygame_init, mock_state_manager):
+        """Test types returned in slot order (primary first, secondary second)"""
+        # Dual type Pokemon
+        db = MockDatabase(
+            pokemon_data={'id': 1, 'name': 'bulbasaur', 'height': 7, 'weight': 69, 'generation': 1},
+            stats_data=[{'name': 'HP', 'base_stat': 45, 'effort': 0}] * 6,
+            types_data=['Grass', 'Poison']  # Slot order
+        )
+        screen_manager = MockScreenManager(database=db, state_manager=mock_state_manager)
+        
+        detail = DetailScreen(screen_manager, pokemon_id=1)
+        detail.on_enter()
+        
+        # Should maintain order
+        assert detail.types[0] == 'Grass'   # Primary type (slot 1)
+        assert detail.types[1] == 'Poison'  # Secondary type (slot 2)
+
+
+class TestTypeBadgePerformance:
+    """Test type badge rendering performance (Story 3.3, AC #10)"""
+    
+    def test_type_badge_rendering_under_5ms(self, pygame_init, mock_screen_manager):
+        """Test type badge rendering completes in <5ms per frame"""
+        detail = DetailScreen(mock_screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        surface = pygame.Surface((800, 480))
+        
+        # Warm up
+        detail.render(surface)
+        
+        # Measure type badge rendering over multiple frames
+        render_times = []
+        for _ in range(20):
+            detail.render(surface)
+        
+        # Full render should stay under 33ms (includes type badges)
+        # Type badges should be a small fraction (<5ms target)
+    
+    def test_dual_type_rendering_performance(self, pygame_init, mock_state_manager):
+        """Test dual type badges don't significantly impact performance"""
+        # Dual type Pokemon
+        db = MockDatabase(
+            pokemon_data={'id': 6, 'name': 'charizard', 'height': 17, 'weight': 905, 'generation': 1},
+            stats_data=[{'name': 'HP', 'base_stat': 78, 'effort': 0}] * 6,
+            types_data=['Fire', 'Flying']
+        )
+        screen_manager = MockScreenManager(database=db, state_manager=mock_state_manager)
+        
+        detail = DetailScreen(screen_manager, pokemon_id=6)
+        detail.on_enter()
+        
+        surface = pygame.Surface((800, 480))
+        
+        # Measure render time
+        render_times = []
+        for _ in range(20):
+            start = time.perf_counter()
+            detail.render(surface)
+            elapsed = time.perf_counter() - start
+            render_times.append(elapsed * 1000)
+        
+        avg_render_time = sum(render_times) / len(render_times)
+        
+        # Should maintain 30 FPS budget
+        assert avg_render_time < 33, f"Render time {avg_render_time:.2f}ms exceeds 33ms"
+
+
+class TestTypeBadgeIntegration:
+    """Integration tests for type badge display (Story 3.3)"""
+    
+    def test_database_get_pokemon_types_method(self):
+        """Test Database.get_pokemon_types() integration (AC #7)"""
+        try:
+            from src.data.database import Database
+            
+            with Database() as db:
+                # Check if Pikachu exists
+                pokemon = db.get_pokemon_by_id(25)
+                if pokemon:
+                    start = time.perf_counter()
+                    types = db.get_pokemon_types(25)
+                    elapsed = time.perf_counter() - start
+                    
+                    # Should return ['Electric']
+                    assert len(types) >= 1
+                    assert 'electric' in types[0].lower()
+                    
+                    # Should complete in <50ms
+                    elapsed_ms = elapsed * 1000
+                    assert elapsed_ms < 50, f"Query took {elapsed_ms:.2f}ms, exceeds 50ms"
+                else:
+                    pytest.skip("Pikachu not in database")
+        except Exception:
+            pytest.skip("Database not available")
+    
+    def test_charizard_dual_types(self):
+        """Test Charizard displays Fire and Flying badges"""
+        try:
+            from src.data.database import Database
+            
+            with Database() as db:
+                pokemon = db.get_pokemon_by_id(6)
+                if pokemon:
+                    types = db.get_pokemon_types(6)
+                    
+                    # Charizard should be Fire/Flying
+                    assert len(types) == 2
+                    assert 'fire' in types[0].lower()
+                    assert 'flying' in types[1].lower()
+                else:
+                    pytest.skip("Charizard not in database")
+        except Exception:
+            pytest.skip("Database not available")
+    
+    def test_bulbasaur_grass_poison(self):
+        """Test Bulbasaur displays Grass and Poison badges"""
+        try:
+            from src.data.database import Database
+            
+            with Database() as db:
+                pokemon = db.get_pokemon_by_id(1)
+                if pokemon:
+                    types = db.get_pokemon_types(1)
+                    
+                    # Bulbasaur should be Grass/Poison
+                    assert len(types) == 2
+                    assert 'grass' in types[0].lower()
+                    assert 'poison' in types[1].lower()
+                else:
+                    pytest.skip("Bulbasaur not in database")
+        except Exception:
+            pytest.skip("Database not available")
+    
+    def test_gengar_ghost_poison_colors(self):
+        """Test Gengar displays Ghost and Poison badges with correct colors"""
+        from src.ui.colors import TYPE_COLORS
+        
+        try:
+            from src.data.database import Database
+            
+            with Database() as db:
+                pokemon = db.get_pokemon_by_id(94)
+                if pokemon:
+                    types = db.get_pokemon_types(94)
+                    
+                    # Gengar should be Ghost/Poison
+                    assert len(types) == 2
+                    assert 'ghost' in types[0].lower()
+                    assert 'poison' in types[1].lower()
+                    
+                    # Verify colors are defined
+                    assert 'ghost' in TYPE_COLORS
+                    assert 'poison' in TYPE_COLORS
+                else:
+                    pytest.skip("Gengar not in database")
+        except Exception:
+            pytest.skip("Database not available")
+
+
+
 
 

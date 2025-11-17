@@ -66,28 +66,30 @@ class Colors:
         'high': (77, 247, 255),          # 101-150: Bright cyan #4df7ff
         'exceptional': (255, 107, 53)    # 151+: Plasma orange #ff6b35
     }
-    
-    # Type colors (for Pokemon types)
-    TYPE_COLORS = {
-        'normal': GRAY,
-        'fire': RED,
-        'water': BLUE,
-        'electric': YELLOW,
-        'grass': GREEN,
-        'ice': LIGHT_BLUE,
-        'fighting': DARK_RED,
-        'poison': (160, 64, 160),
-        'ground': (226, 191, 101),
-        'flying': (169, 143, 243),
-        'psychic': (249, 85, 135),
-        'bug': (166, 185, 26),
-        'rock': (182, 161, 54),
-        'ghost': (115, 87, 151),
-        'dragon': (111, 53, 252),
-        'dark': (112, 87, 70),
-        'steel': (183, 183, 206),
-        'fairy': (214, 133, 173),
-    }
+
+
+# Type colors for Pokemon type badges (Story 3.3)
+# Based on UX Design Specification - Holographic Palette (Gen 1-3 types only)
+# Source: docs/ux-design-specification.md#Type-Colors
+TYPE_COLORS = {
+    'normal': (184, 184, 208),      # #b8b8d0 - Cooler futuristic gray
+    'fire': (255, 107, 53),         # #ff6b35 - Plasma orange
+    'water': (77, 159, 255),        # #4d9fff - Electric blue
+    'electric': (255, 210, 63),     # #ffd23f - Neon yellow
+    'grass': (107, 255, 107),       # #6bff6b - Bright holographic green
+    'ice': (168, 230, 255),         # #a8e6ff - Ice blue
+    'fighting': (255, 71, 87),      # #ff4757 - Energetic red
+    'poison': (178, 77, 255),       # #b24dff - Neon purple
+    'ground': (212, 165, 116),      # #d4a574 - Sandy hologram
+    'flying': (141, 159, 255),      # #8d9fff - Sky hologram
+    'psychic': (255, 107, 189),     # #ff6bbd - Bright psychic pink
+    'bug': (184, 216, 72),          # #b8d848 - Bioluminescent green
+    'rock': (196, 176, 122),        # #c4b07a - Stone with glow
+    'ghost': (157, 124, 206),       # #9d7cce - Spectral purple
+    'dragon': (141, 77, 255),       # #8d4dff - Majestic purple-blue
+    'dark': (139, 115, 85),         # #8b7355 - Shadowed brown
+    'steel': (203, 213, 224)        # #cbd5e0 - Metallic shimmer
+}
 
 
 def get_stat_color(value: int) -> tuple:
