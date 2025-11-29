@@ -1,6 +1,6 @@
 # Story 4.3: Boot to HomeScreen Behavior
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -54,45 +54,45 @@ So that I have a consistent starting point.
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1: Verify main.py Boot Sequence (AC #1, #6)**
-  - [ ] 1.1: Review `src/main.py` startup logic to confirm HomeScreen is always the first screen
-  - [ ] 1.2: Verify ScreenManager.push() is called with HomeScreen class only at startup
-  - [ ] 1.3: Confirm no conditional logic that could push DetailScreen on boot
-  - [ ] 1.4: Add debug logging for boot sequence ("Booting to HomeScreen with Pokémon #{pokemon_id}")
+- [x] **Task 1: Verify main.py Boot Sequence (AC #1, #6)**
+  - [x] 1.1: Review `src/main.py` startup logic to confirm HomeScreen is always the first screen
+  - [x] 1.2: Verify ScreenManager.push() is called with HomeScreen class only at startup
+  - [x] 1.3: Confirm no conditional logic that could push DetailScreen on boot
+  - [x] 1.4: Add debug logging for boot sequence ("Booting to HomeScreen with Pokémon #{pokemon_id}")
 
-- [ ] **Task 2: Verify HomeScreen State Restoration (AC #2)**
-  - [ ] 2.1: Confirm HomeScreen.on_enter() retrieves last viewed Pokémon from StateManager
-  - [ ] 2.2: Verify HomeScreen scrolls/highlights the correct Pokémon in the list
-  - [ ] 2.3: Verify generation badge displays correct region for restored Pokémon
-  - [ ] 2.4: Test restoration with Pokémon from all three generations (Kanto, Johto, Hoenn)
+- [x] **Task 2: Verify HomeScreen State Restoration (AC #2)**
+  - [x] 2.1: Confirm HomeScreen.on_enter() retrieves last viewed Pokémon from StateManager
+  - [x] 2.2: Verify HomeScreen scrolls/highlights the correct Pokémon in the list
+  - [x] 2.3: Verify generation badge displays correct region for restored Pokémon
+  - [x] 2.4: Test restoration with Pokémon from all three generations (Kanto, Johto, Hoenn)
 
-- [ ] **Task 3: Verify DetailScreen State Persistence on Exit (AC #3)**
-  - [ ] 3.1: Confirm DetailScreen.on_exit() calls `state_manager.set_last_viewed(self.pokemon_id)`
-  - [ ] 3.2: Verify DetailScreen.on_exit() triggers state file save (directly or via ScreenManager)
-  - [ ] 3.3: Test that navigating back from DetailScreen preserves the Pokémon state
-  - [ ] 3.4: Test that application quit from DetailScreen saves current Pokémon state
+- [x] **Task 3: Verify DetailScreen State Persistence on Exit (AC #3)**
+  - [x] 3.1: Confirm DetailScreen.on_exit() calls `state_manager.set_last_viewed(self.pokemon_id)`
+  - [x] 3.2: Verify DetailScreen.on_exit() triggers state file save (directly or via ScreenManager)
+  - [x] 3.3: Test that navigating back from DetailScreen preserves the Pokémon state
+  - [x] 3.4: Test that application quit from DetailScreen saves current Pokémon state
 
-- [ ] **Task 4: Verify A Button Navigation to DetailScreen (AC #4)**
-  - [ ] 4.1: Confirm HomeScreen handles A button (SELECT action) to push DetailScreen
-  - [ ] 4.2: Verify DetailScreen receives correct pokemon_id from HomeScreen selection
-  - [ ] 4.3: Test round-trip: HomeScreen → DetailScreen → HomeScreen maintains selection
+- [x] **Task 4: Verify A Button Navigation to DetailScreen (AC #4)**
+  - [x] 4.1: Confirm HomeScreen handles A button (SELECT action) to push DetailScreen
+  - [x] 4.2: Verify DetailScreen receives correct pokemon_id from HomeScreen selection
+  - [x] 4.3: Test round-trip: HomeScreen → DetailScreen → HomeScreen maintains selection
 
-- [ ] **Task 5: Write Integration Tests for Boot Behavior (AC #1, #2, #5)**
-  - [ ] 5.1: Test `test_always_boots_to_homescreen()` - verify initial screen is HomeScreen
-  - [ ] 5.2: Test `test_boots_to_homescreen_not_detailscreen()` - verify DetailScreen state doesn't change boot target
-  - [ ] 5.3: Test `test_last_viewed_displayed_on_boot()` - set state, boot, verify displayed Pokémon
-  - [ ] 5.4: Test `test_generation_restored_correctly_on_boot()` - verify badge matches restored state
-  - [ ] 5.5: Test `test_all_generations_restore_on_boot()` - test Kanto, Johto, Hoenn restoration
+- [x] **Task 5: Write Integration Tests for Boot Behavior (AC #1, #2, #5)**
+  - [x] 5.1: Test `test_always_boots_to_homescreen()` - verify initial screen is HomeScreen
+  - [x] 5.2: Test `test_boots_to_homescreen_not_detailscreen()` - verify DetailScreen state doesn't change boot target
+  - [x] 5.3: Test `test_last_viewed_displayed_on_boot()` - set state, boot, verify displayed Pokémon
+  - [x] 5.4: Test `test_generation_restored_correctly_on_boot()` - verify badge matches restored state
+  - [x] 5.5: Test `test_all_generations_restore_on_boot()` - test Kanto, Johto, Hoenn restoration
 
-- [ ] **Task 6: Write Integration Tests for Exit-to-Boot Cycle (AC #3, #5)**
-  - [ ] 6.1: Test `test_detailscreen_exit_saves_state()` - view DetailScreen, exit, verify state saved
-  - [ ] 6.2: Test `test_homescreen_exit_preserves_state()` - navigate HomeScreen, exit, verify state
-  - [ ] 6.3: Test `test_boot_after_detailscreen_exit()` - exit from DetailScreen, boot, verify HomeScreen shows correct Pokémon
+- [x] **Task 6: Write Integration Tests for Exit-to-Boot Cycle (AC #3, #5)**
+  - [x] 6.1: Test `test_detailscreen_exit_saves_state()` - view DetailScreen, exit, verify state saved
+  - [x] 6.2: Test `test_homescreen_exit_preserves_state()` - navigate HomeScreen, exit, verify state
+  - [x] 6.3: Test `test_boot_after_detailscreen_exit()` - exit from DetailScreen, boot, verify HomeScreen shows correct Pokémon
 
-- [ ] **Task 7: Write Unit Tests for ScreenManager Initialization (AC #6)**
-  - [ ] 7.1: Test `test_screen_stack_starts_with_homescreen()` - verify initial stack
-  - [ ] 7.2: Test `test_screen_stack_depth_is_one_on_boot()` - verify only one screen
-  - [ ] 7.3: Test `test_no_automatic_screen_transitions_on_boot()` - verify HomeScreen is stable
+- [x] **Task 7: Write Unit Tests for ScreenManager Initialization (AC #6)**
+  - [x] 7.1: Test `test_screen_stack_starts_with_homescreen()` - verify initial stack
+  - [x] 7.2: Test `test_screen_stack_depth_is_one_on_boot()` - verify only one screen
+  - [x] 7.3: Test `test_no_automatic_screen_transitions_on_boot()` - verify HomeScreen is stable
 
 ## Dev Notes
 

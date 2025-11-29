@@ -1528,3 +1528,251 @@ class TestHomeScreenStateIntegration(unittest.TestCase):
         self.assertGreater(self.mock_state_manager.set_last_viewed.call_count, 0)
 
 
+class TestBootToHomeScreenBehavior(unittest.TestCase):
+    """
+    Story 4.3: Boot to HomeScreen Behavior Tests (Tasks 5, 6)
+    
+    Verifies that application always boots to HomeScreen with last viewed Pokémon.
+    """
+    
+    def setUp(self):
+        """Set up test database and mock managers"""
+        # Create temporary database
+        self.temp_dir = tempfile.mkdtemp()
+        self.db_path = os.path.join(self.temp_dir, 'test.db')
+        self.db = Database(self.db_path)
+        
+        # Create schema and populate with test data
+        with self.db as db:
+            db.create_schema()
+            
+            # Insert Pokemon from all three generations
+            pokemon_data = []
+            
+            # Kanto: 1-151
+            for i in range(1, 152):
+                pokemon_data.append((i, f'Pokemon{i}', i, 10, 100, 100, 1, 1))
+            
+            # Johto: 152-251
+            for i in range(152, 252):
+                pokemon_data.append((i, f'Pokemon{i}', i, 10, 100, 100, 2, 1))
+            
+            # Hoenn: 252-386
+            for i in range(252, 387):
+                pokemon_data.append((i, f'Pokemon{i}', i, 10, 100, 100, 3, 1))
+            
+            db.executemany("""
+                INSERT INTO pokemon (id, name, species_id, height, weight, base_experience, generation, is_default)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, pokemon_data)
+            db.commit()
+        
+        # Initialize pygame font
+        import pygame
+        pygame.font.init()
+    
+    def tearDown(self):
+        """Clean up temporary database"""
+        import shutil
+        if os.path.exists(self.temp_dir):
+            shutil.rmtree(self.temp_dir)
+    
+    def test_last_viewed_kanto_displayed_on_boot(self):
+        """AC #2: Boot displays Kanto Pokémon (Pikachu #25) when last viewed"""
+        # Set up mock managers to return Pikachu
+        mock_screen_manager = Mock()
+        mock_screen_manager.width = 800
+        mock_screen_manager.height = 480
+        mock_screen_manager.database = self.db
+        mock_screen_manager.input_manager = Mock()
+        
+        mock_state_manager = Mock()
+        mock_state_manager.get_last_viewed_generation.return_value = 1
+        mock_state_manager.get_last_viewed_id.return_value = 25  # Pikachu
+        mock_screen_manager.state_manager = mock_state_manager
+        
+        # Create HomeScreen and boot
+        screen = HomeScreen(mock_screen_manager, self.db)
+        screen.on_enter()
+        
+        # Verify Pikachu is selected
+        selected_pokemon = screen.pokemon_list[screen.selected_index]
+        self.assertEqual(selected_pokemon['id'], 25, "Pikachu (#25) should be selected")
+        self.assertEqual(screen.current_generation, 1, "Should be Kanto generation")
+    
+    def test_last_viewed_johto_displayed_on_boot(self):
+        """AC #2, #4: Boot displays Johto Pokémon (Chikorita #152) when last viewed"""
+        mock_screen_manager = Mock()
+        mock_screen_manager.width = 800
+        mock_screen_manager.height = 480
+        mock_screen_manager.database = self.db
+        mock_screen_manager.input_manager = Mock()
+        
+        mock_state_manager = Mock()
+        mock_state_manager.get_last_viewed_generation.return_value = 2
+        mock_state_manager.get_last_viewed_id.return_value = 152  # Chikorita
+        mock_screen_manager.state_manager = mock_state_manager
+        
+        screen = HomeScreen(mock_screen_manager, self.db)
+        screen.on_enter()
+        
+        selected_pokemon = screen.pokemon_list[screen.selected_index]
+        self.assertEqual(selected_pokemon['id'], 152, "Chikorita (#152) should be selected")
+        self.assertEqual(screen.current_generation, 2, "Should be Johto generation")
+    
+    def test_last_viewed_hoenn_displayed_on_boot(self):
+        """AC #2, #5: Boot displays Hoenn Pokémon (Treecko #252) when last viewed"""
+        mock_screen_manager = Mock()
+        mock_screen_manager.width = 800
+        mock_screen_manager.height = 480
+        mock_screen_manager.database = self.db
+        mock_screen_manager.input_manager = Mock()
+        
+        mock_state_manager = Mock()
+        mock_state_manager.get_last_viewed_generation.return_value = 3
+        mock_state_manager.get_last_viewed_id.return_value = 252  # Treecko
+        mock_screen_manager.state_manager = mock_state_manager
+        
+        screen = HomeScreen(mock_screen_manager, self.db)
+        screen.on_enter()
+        
+        selected_pokemon = screen.pokemon_list[screen.selected_index]
+        self.assertEqual(selected_pokemon['id'], 252, "Treecko (#252) should be selected")
+        self.assertEqual(screen.current_generation, 3, "Should be Hoenn generation")
+    
+    def test_generation_badge_correct_on_boot(self):
+        """AC #2: Generation badge shows correct region for restored Pokémon"""
+        mock_screen_manager = Mock()
+        mock_screen_manager.width = 800
+        mock_screen_manager.height = 480
+        mock_screen_manager.database = self.db
+        mock_screen_manager.input_manager = Mock()
+        
+        mock_state_manager = Mock()
+        mock_state_manager.get_last_viewed_generation.return_value = 2
+        mock_state_manager.get_last_viewed_id.return_value = 200
+        mock_screen_manager.state_manager = mock_state_manager
+        
+        screen = HomeScreen(mock_screen_manager, self.db)
+        screen.on_enter()
+        
+        # Verify generation badge is set correctly
+        self.assertIsNotNone(screen.generation_badge)
+        self.assertEqual(screen.generation_badge.generation, 2, "Badge should show Johto")
+    
+    def test_homescreen_exit_preserves_state_for_next_boot(self):
+        """AC #5, Task 6.2: State preserved on HomeScreen exit for next boot"""
+        mock_screen_manager = Mock()
+        mock_screen_manager.width = 800
+        mock_screen_manager.height = 480
+        mock_screen_manager.database = self.db
+        mock_screen_manager.input_manager = Mock()
+        
+        mock_state_manager = Mock()
+        mock_state_manager.get_last_viewed_generation.return_value = 1
+        mock_state_manager.get_last_viewed_id.return_value = 1
+        mock_screen_manager.state_manager = mock_state_manager
+        
+        screen = HomeScreen(mock_screen_manager, self.db)
+        screen.on_enter()
+        
+        # Navigate to a different Pokémon
+        for _ in range(10):
+            screen._handle_selection_change(1)
+        
+        # Exit screen
+        screen.on_exit()
+        
+        # Verify state was saved
+        mock_state_manager.save_state.assert_called()
+        mock_state_manager.set_last_viewed.assert_called()
+
+
+class TestScreenManagerBootBehavior(unittest.TestCase):
+    """
+    Story 4.3: ScreenManager Initialization Tests (Task 7)
+    
+    Verifies screen stack state on boot.
+    """
+    
+    def setUp(self):
+        """Set up pygame for ScreenManager tests"""
+        import pygame
+        pygame.init()
+        self.display = pygame.display.set_mode((480, 320))
+    
+    def tearDown(self):
+        """Clean up pygame"""
+        import pygame
+        pygame.quit()
+    
+    def test_screen_stack_empty_on_init(self):
+        """AC #6, Task 7.1: ScreenManager starts with empty stack"""
+        from src.ui.screen_manager import ScreenManager
+        
+        screen_manager = ScreenManager(self.display)
+        
+        self.assertEqual(screen_manager.get_stack_depth(), 0, "Stack should be empty before push")
+    
+    def test_screen_stack_depth_is_one_after_push(self):
+        """AC #6, Task 7.2: Stack depth is 1 after pushing HomeScreen"""
+        from src.ui.screen_manager import ScreenManager
+        
+        screen_manager = ScreenManager(self.display)
+        
+        # Create mock HomeScreen
+        mock_screen = Mock()
+        mock_screen.on_enter = Mock()
+        mock_screen.on_exit = Mock()
+        
+        screen_manager.push(mock_screen)
+        
+        self.assertEqual(screen_manager.get_stack_depth(), 1, "Stack should have exactly 1 screen")
+    
+    def test_current_screen_is_pushed_screen(self):
+        """AC #6: Current screen is the HomeScreen that was pushed"""
+        from src.ui.screen_manager import ScreenManager
+        
+        screen_manager = ScreenManager(self.display)
+        
+        mock_screen = Mock()
+        mock_screen.on_enter = Mock()
+        mock_screen.on_exit = Mock()
+        
+        screen_manager.push(mock_screen)
+        
+        self.assertEqual(screen_manager.get_current(), mock_screen, "Current screen should be pushed screen")
+    
+    def test_on_enter_called_on_push(self):
+        """AC #6, Task 7.3: on_enter() is called when screen is pushed"""
+        from src.ui.screen_manager import ScreenManager
+        
+        screen_manager = ScreenManager(self.display)
+        
+        mock_screen = Mock()
+        mock_screen.on_enter = Mock()
+        
+        screen_manager.push(mock_screen)
+        
+        mock_screen.on_enter.assert_called_once()
+    
+    def test_no_automatic_transitions_after_push(self):
+        """AC #6, Task 7.3: No automatic screen transitions after initial push"""
+        from src.ui.screen_manager import ScreenManager
+        
+        screen_manager = ScreenManager(self.display)
+        
+        mock_screen = Mock()
+        mock_screen.on_enter = Mock()
+        mock_screen.on_exit = Mock()
+        
+        screen_manager.push(mock_screen)
+        
+        # Update a few times (simulating normal operation)
+        for _ in range(10):
+            screen_manager.update(0.016)
+        
+        # Stack should still be 1, no automatic transitions
+        self.assertEqual(screen_manager.get_stack_depth(), 1, "Stack depth should remain 1")
+        self.assertEqual(screen_manager.get_current(), mock_screen, "Same screen should be current")
+

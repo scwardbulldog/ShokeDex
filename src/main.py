@@ -5,6 +5,7 @@ Main entry point for ShokeDex application
 Initializes Pygame, sets up the display, and runs the main game loop.
 """
 
+import logging
 import pygame
 import sys
 import os
@@ -18,6 +19,9 @@ from src.ui import ScreenManager, HomeScreen
 from src.data.database import Database
 from src.state_manager import StateManager
 from src.audio_manager import AudioManager
+
+# Module logger
+logger = logging.getLogger(__name__)
 
 
 # Display configuration (optimized for 480x320 LCD, can be overridden by env vars)
@@ -86,9 +90,20 @@ class ShokeDexApp:
         self.database = self._init_database()
         self.screen_manager.database = self.database
         
-        # Set up initial screen
+        # Set up initial screen - ALWAYS HomeScreen (Story 4.3: AC #1, #6)
+        # Get last viewed state for boot logging
+        last_pokemon_id = self.state_manager.get_last_viewed_id()
+        last_generation = self.state_manager.get_last_viewed_generation()
+        logger.info(
+            f"Booting to HomeScreen with Pokémon #{last_pokemon_id} (Generation {last_generation})"
+        )
+        
         home_screen = HomeScreen(self.screen_manager, self.database)
         self.screen_manager.push(home_screen)
+        
+        # Verify boot state (Story 4.3: AC #6)
+        assert self.screen_manager.get_stack_depth() == 1, "Screen stack should have exactly 1 screen on boot"
+        logger.debug(f"Boot complete: screen stack depth = {self.screen_manager.get_stack_depth()}")
         
         # Application state
         self.running = True
