@@ -332,18 +332,23 @@ class HomeScreen(Screen):
         self.text_font = pygame.font.Font(None, 24)
         self.small_font = pygame.font.Font(None, 16)
         
-        # Load state from StateManager (Story 1.5: State Persistence)
+        # Load state from StateManager (Story 1.5: State Persistence, Story 4.2: AC #3)
         if hasattr(self.screen_manager, 'state_manager') and self.screen_manager.state_manager:
             self.current_generation = self.screen_manager.state_manager.get_last_viewed_generation()
             last_pokemon_id = self.screen_manager.state_manager.get_last_viewed_id()
+            # Story 4.2: Task 2.4 - Debug logging for state restoration
+            logger.debug(
+                f"State restored: pokemon_id={last_pokemon_id}, generation={self.current_generation}"
+            )
         else:
             # No state manager available (test environment) - use defaults
             last_pokemon_id = 1
+            logger.debug("No state manager available, using defaults")
         
         # Load Pokemon data for current generation
         self._load_pokemon_by_generation(self.current_generation)
         
-        # Find the last viewed Pokemon in the loaded list and set selected_index
+        # Find the last viewed Pokemon in the loaded list and set selected_index (Story 4.2: AC #3)
         if self.pokemon_list:
             found_index = None
             for i, pokemon in enumerate(self.pokemon_list):
@@ -355,10 +360,12 @@ class HomeScreen(Screen):
                 self.selected_index = found_index
                 # Calculate correct page for this selection
                 self.page = found_index // self.items_per_page
+                logger.debug(f"Restored position: index={found_index}, page={self.page}")
             else:
                 # Pokemon not in current generation - default to first
                 self.selected_index = 0
                 self.page = 0
+                logger.debug(f"Pokemon #{last_pokemon_id} not in generation {self.current_generation}, defaulting to first")
             
             first_pokemon_id = self.pokemon_list[self.selected_index]['id']
         else:
@@ -375,25 +382,29 @@ class HomeScreen(Screen):
             self.generation_badge.counter_font = self.badge_counter_font
     
     def on_exit(self):
-        """Called when screen becomes inactive - save state."""
+        """Called when screen becomes inactive - save state (Story 4.2: AC #1)."""
         super().on_exit()
         
-        # Save current state to StateManager (Story 1.5: State Persistence)
+        # Save current state to StateManager (Story 1.5: State Persistence, Story 4.2: AC #1)
         if hasattr(self.screen_manager, 'state_manager') and self.screen_manager.state_manager:
             # Get current Pokemon ID from selected index
             if self.pokemon_list and 0 <= self.selected_index < len(self.pokemon_list):
                 current_pokemon_id = self.pokemon_list[self.selected_index]['id']
                 
                 try:
-                    # Save last viewed Pokemon and generation
+                    # Save last viewed Pokemon and generation (Story 4.2: AC #1)
                     self.screen_manager.state_manager.set_last_viewed(
                         current_pokemon_id,
                         self.current_generation
                     )
                     self.screen_manager.state_manager.save_state()
+                    logger.debug(
+                        f"HomeScreen.on_exit(): saved pokemon_id={current_pokemon_id}, "
+                        f"generation={self.current_generation}"
+                    )
                 except Exception as e:
-                    # Don't crash on save failure - just log it
-                    print(f"Warning: Failed to save state: {e}")
+                    # Don't crash on save failure - just log it (Story 4.2: best-effort)
+                    logger.warning(f"Failed to save state on exit: {e}")
     
     def _load_pokemon_by_generation(self, generation: int):
         """

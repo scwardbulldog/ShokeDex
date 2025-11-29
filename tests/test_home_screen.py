@@ -1401,5 +1401,130 @@ class TestHomeScreenHolographicTheme(unittest.TestCase):
                            "HOLOGRAM_WHITE should differ from plain WHITE")
 
 
+class TestHomeScreenStateIntegration(unittest.TestCase):
+    """
+    Story 4.2: HomeScreen State Persistence Integration Tests (Task 6)
+    
+    Tests for screen lifecycle state management.
+    """
+    
+    def setUp(self):
+        """Set up test database and HomeScreen"""
+        # Create temporary database
+        self.temp_dir = tempfile.mkdtemp()
+        self.db_path = os.path.join(self.temp_dir, 'test.db')
+        self.db = Database(self.db_path)
+        
+        # Create schema and populate with test data
+        with self.db as db:
+            db.create_schema()
+            
+            # Insert Pokemon from all three generations
+            pokemon_data = []
+            
+            # Kanto: 1-151
+            for i in range(1, 152):
+                pokemon_data.append((i, f'Pokemon{i}', i, 10, 100, 100, 1, 1))
+            
+            # Johto: 152-251
+            for i in range(152, 252):
+                pokemon_data.append((i, f'Pokemon{i}', i, 10, 100, 100, 2, 1))
+            
+            # Hoenn: 252-386
+            for i in range(252, 387):
+                pokemon_data.append((i, f'Pokemon{i}', i, 10, 100, 100, 3, 1))
+            
+            db.executemany("""
+                INSERT INTO pokemon (id, name, species_id, height, weight, base_experience, generation, is_default)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, pokemon_data)
+            db.commit()
+        
+        # Create mock screen manager
+        self.mock_screen_manager = Mock()
+        self.mock_screen_manager.width = 800
+        self.mock_screen_manager.height = 480
+        self.mock_screen_manager.database = self.db
+        self.mock_screen_manager.input_manager = Mock()
+        
+        # Create mock state manager
+        self.mock_state_manager = Mock()
+        self.mock_state_manager.get_last_viewed_generation.return_value = 1
+        self.mock_state_manager.get_last_viewed_id.return_value = 1
+        self.mock_screen_manager.state_manager = self.mock_state_manager
+        
+        # Initialize pygame font
+        import pygame
+        pygame.font.init()
+        
+        # Create screen
+        self.screen = HomeScreen(self.mock_screen_manager, self.db)
+    
+    def tearDown(self):
+        """Clean up temporary database"""
+        if os.path.exists(self.db_path):
+            os.remove(self.db_path)
+        os.rmdir(self.temp_dir)
+    
+    def test_homescreen_saves_on_exit(self):
+        """Story 4.2 Task 6.1: HomeScreen.on_exit() calls save_state()"""
+        self.screen.on_enter()
+        self.screen.on_exit()
+        
+        # Verify save_state was called
+        self.mock_state_manager.save_state.assert_called()
+    
+    def test_navigation_updates_state(self):
+        """Story 4.2 Task 6.3: Up/Down navigation calls set_last_viewed()"""
+        self.screen.on_enter()
+        
+        # Clear previous calls from on_enter
+        self.mock_state_manager.set_last_viewed.reset_mock()
+        
+        # Navigate down to next Pokemon
+        self.screen._handle_selection_change(1)
+        
+        # Verify set_last_viewed was called
+        self.mock_state_manager.set_last_viewed.assert_called_once()
+        call_args = self.mock_state_manager.set_last_viewed.call_args
+        
+        # Should be Pokemon #2 (index 1)
+        self.assertEqual(call_args[1]['pokemon_id'], 2)
+        self.assertEqual(call_args[1]['generation'], 1)
+    
+    def test_generation_switch_updates_state(self):
+        """Story 4.2 Task 6.4: L/R generation switch calls set_last_viewed()"""
+        self.screen.on_enter()
+        
+        # Clear previous calls
+        self.mock_state_manager.set_last_viewed.reset_mock()
+        
+        # Switch to Johto (generation 2)
+        self.screen._switch_generation(1)
+        self.screen.update(0.2)  # Complete transition
+        
+        # Verify set_last_viewed was called with Johto data
+        self.mock_state_manager.set_last_viewed.assert_called()
+        
+        # Get the last call (from generation switch completion)
+        last_call = self.mock_state_manager.set_last_viewed.call_args_list[-1]
+        self.assertEqual(last_call[1]['generation'], 2, "Should save Johto generation")
+        self.assertEqual(last_call[1]['pokemon_id'], 152, "Should save first Johto Pokemon (Chikorita)")
+    
+    def test_rapid_navigation_no_crash(self):
+        """Story 4.2: Rapid navigation doesn't crash due to state operations"""
+        self.screen.on_enter()
+        
+        # Simulate rapid up/down navigation
+        for _ in range(50):
+            self.screen._handle_selection_change(1)  # Down
+        for _ in range(50):
+            self.screen._handle_selection_change(-1)  # Up
+        
+        # Should complete without crash
+        self.screen.on_exit()
+        
+        # Verify state operations occurred
+        self.assertGreater(self.mock_state_manager.set_last_viewed.call_count, 0)
 
 

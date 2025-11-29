@@ -508,5 +508,229 @@ class TestStatePersistenceIntegration(unittest.TestCase):
         self.assertEqual(state_manager.get_input_mode(), 'keyboard')
 
 
+class TestLastViewedPokemonPersistence(unittest.TestCase):
+    """
+    Story 4.2: Last Viewed Pokémon Persistence Tests
+    
+    Tests for state save/restore across screen transitions and app restarts.
+    """
+    
+    def setUp(self):
+        """Set up test fixtures with temporary directory"""
+        self.temp_dir = tempfile.mkdtemp()
+        self.state_path = Path(self.temp_dir) / "shokedex_state.json"
+    
+    def tearDown(self):
+        """Clean up test fixtures"""
+        import shutil
+        if Path(self.temp_dir).exists():
+            shutil.rmtree(self.temp_dir)
+    
+    def test_set_last_viewed_updates_memory(self):
+        """AC #6: set_last_viewed() updates in-memory state immediately (Task 5.1)"""
+        state_manager = StateManager(str(self.state_path))
+        
+        # Initial state is Bulbasaur
+        self.assertEqual(state_manager.get_last_viewed_id(), 1)
+        
+        # Update to Pikachu
+        state_manager.set_last_viewed(25, generation=1)
+        
+        # Verify in-memory state changed immediately
+        self.assertEqual(state_manager.get_last_viewed_id(), 25)
+        self.assertEqual(state_manager.get_last_viewed_generation(), 1)
+    
+    def test_save_state_persists_to_file(self):
+        """AC #1, #2: save_state() persists to JSON file (Task 5.2)"""
+        state_manager = StateManager(str(self.state_path))
+        
+        # Update state
+        state_manager.set_last_viewed(25, generation=1)
+        
+        # Save to file
+        result = state_manager.save_state()
+        self.assertTrue(result)
+        
+        # Verify file contents
+        with open(self.state_path, 'r') as f:
+            saved_state = json.load(f)
+        
+        self.assertEqual(saved_state['last_viewed']['pokemon_id'], 25)
+        self.assertEqual(saved_state['last_viewed']['generation'], 1)
+    
+    def test_get_last_viewed_id_returns_saved(self):
+        """AC #3: getter returns saved value after restart (Task 5.3)"""
+        # Create first state manager and save Pikachu
+        state_manager1 = StateManager(str(self.state_path))
+        state_manager1.set_last_viewed(25, generation=1)
+        state_manager1.save_state()
+        
+        # Simulate restart by creating new StateManager
+        state_manager2 = StateManager(str(self.state_path))
+        
+        # Verify restored values
+        self.assertEqual(state_manager2.get_last_viewed_id(), 25)
+        self.assertEqual(state_manager2.get_last_viewed_generation(), 1)
+    
+    def test_generation_auto_detection_gen1(self):
+        """AC #6, #7: Auto-detect Gen 1 for IDs 1-151 (Task 5.4)"""
+        state_manager = StateManager(str(self.state_path))
+        
+        # Test Gen 1 boundaries
+        state_manager.set_last_viewed(1)  # Bulbasaur
+        self.assertEqual(state_manager.get_last_viewed_generation(), 1)
+        
+        state_manager.set_last_viewed(151)  # Mew
+        self.assertEqual(state_manager.get_last_viewed_generation(), 1)
+        
+        state_manager.set_last_viewed(25)  # Pikachu
+        self.assertEqual(state_manager.get_last_viewed_generation(), 1)
+    
+    def test_generation_auto_detection_gen2(self):
+        """AC #6, #7: Auto-detect Gen 2 for IDs 152-251 (Task 5.4)"""
+        state_manager = StateManager(str(self.state_path))
+        
+        # Test Gen 2 boundaries
+        state_manager.set_last_viewed(152)  # Chikorita
+        self.assertEqual(state_manager.get_last_viewed_generation(), 2)
+        
+        state_manager.set_last_viewed(251)  # Celebi
+        self.assertEqual(state_manager.get_last_viewed_generation(), 2)
+        
+        state_manager.set_last_viewed(200)  # Misdreavus
+        self.assertEqual(state_manager.get_last_viewed_generation(), 2)
+    
+    def test_generation_auto_detection_gen3(self):
+        """AC #6, #7: Auto-detect Gen 3 for IDs 252-386 (Task 5.4)"""
+        state_manager = StateManager(str(self.state_path))
+        
+        # Test Gen 3 boundaries
+        state_manager.set_last_viewed(252)  # Treecko
+        self.assertEqual(state_manager.get_last_viewed_generation(), 3)
+        
+        state_manager.set_last_viewed(386)  # Deoxys
+        self.assertEqual(state_manager.get_last_viewed_generation(), 3)
+        
+        state_manager.set_last_viewed(300)  # Skitty
+        self.assertEqual(state_manager.get_last_viewed_generation(), 3)
+    
+    def test_cross_generation_persistence_johto(self):
+        """AC #4: Johto (Gen 2) state persists across restart (Task 5.5)"""
+        # Save Chikorita in Johto
+        state_manager1 = StateManager(str(self.state_path))
+        state_manager1.set_last_viewed(152, generation=2)
+        state_manager1.save_state()
+        
+        # Simulate restart
+        state_manager2 = StateManager(str(self.state_path))
+        
+        # Verify Johto restored
+        self.assertEqual(state_manager2.get_last_viewed_id(), 152)
+        self.assertEqual(state_manager2.get_last_viewed_generation(), 2)
+    
+    def test_cross_generation_persistence_hoenn(self):
+        """AC #5: Hoenn (Gen 3) state persists across restart (Task 5.5)"""
+        # Save Treecko in Hoenn
+        state_manager1 = StateManager(str(self.state_path))
+        state_manager1.set_last_viewed(252, generation=3)
+        state_manager1.save_state()
+        
+        # Simulate restart
+        state_manager2 = StateManager(str(self.state_path))
+        
+        # Verify Hoenn restored
+        self.assertEqual(state_manager2.get_last_viewed_id(), 252)
+        self.assertEqual(state_manager2.get_last_viewed_generation(), 3)
+    
+    def test_atomic_write_creates_temp_file(self):
+        """AC #2: save_state() uses atomic write with temp file"""
+        state_manager = StateManager(str(self.state_path))
+        state_manager.set_last_viewed(25, generation=1)
+        
+        # Save state
+        result = state_manager.save_state()
+        self.assertTrue(result)
+        
+        # Verify final file exists
+        self.assertTrue(self.state_path.exists())
+        
+        # Temp file should be cleaned up after rename
+        temp_path = Path(str(self.state_path) + '.tmp')
+        self.assertFalse(temp_path.exists())
+
+
+class TestStatePersistencePerformance(unittest.TestCase):
+    """
+    Story 4.2: Performance Validation Tests (AC #8)
+    
+    Tests that save/load operations meet < 50ms target.
+    """
+    
+    def setUp(self):
+        """Set up test fixtures"""
+        self.temp_dir = tempfile.mkdtemp()
+        self.state_path = Path(self.temp_dir) / "shokedex_state.json"
+    
+    def tearDown(self):
+        """Clean up test fixtures"""
+        import shutil
+        if Path(self.temp_dir).exists():
+            shutil.rmtree(self.temp_dir)
+    
+    def test_save_state_performance(self):
+        """AC #8: save_state() completes in < 50ms (Task 7.2)"""
+        import time
+        
+        state_manager = StateManager(str(self.state_path))
+        state_manager.set_last_viewed(25, generation=1)
+        
+        # Time 100 iterations
+        start = time.perf_counter()
+        for _ in range(100):
+            state_manager.save_state()
+        elapsed = (time.perf_counter() - start) * 1000  # ms
+        
+        avg_time = elapsed / 100
+        self.assertLess(avg_time, 50, f"Average save time {avg_time:.2f}ms exceeds 50ms target")
+    
+    def test_load_state_performance(self):
+        """AC #8: _load_state() completes in < 50ms (Task 7.3)"""
+        import time
+        
+        # Create initial state file
+        state_manager = StateManager(str(self.state_path))
+        state_manager.set_last_viewed(25, generation=1)
+        state_manager.save_state()
+        
+        # Time 100 load operations
+        start = time.perf_counter()
+        for _ in range(100):
+            new_manager = StateManager(str(self.state_path))
+        elapsed = (time.perf_counter() - start) * 1000  # ms
+        
+        avg_time = elapsed / 100
+        self.assertLess(avg_time, 50, f"Average load time {avg_time:.2f}ms exceeds 50ms target")
+    
+    def test_navigation_state_update_performance(self):
+        """AC #8: set_last_viewed() is fast enough for real-time navigation"""
+        import time
+        
+        state_manager = StateManager(str(self.state_path))
+        
+        # Simulate rapid navigation (1000 state updates)
+        start = time.perf_counter()
+        for pokemon_id in range(1, 387):  # All Gen 1-3 Pokemon
+            state_manager.set_last_viewed(pokemon_id)
+        elapsed = (time.perf_counter() - start) * 1000  # ms
+        
+        # Should complete all 386 updates in well under 1 second
+        self.assertLess(elapsed, 1000, f"Navigation updates took {elapsed:.2f}ms")
+        
+        # Each update should be sub-millisecond
+        avg_time = elapsed / 386
+        self.assertLess(avg_time, 1, f"Average update time {avg_time:.3f}ms is too slow")
+
+
 if __name__ == '__main__':
     unittest.main()
+

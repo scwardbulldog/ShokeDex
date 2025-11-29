@@ -81,7 +81,7 @@ development_status:
   # Note: Favorites/history descoped to Epic 9
   epic-4-state-persistence: contexted
   4-1-first-boot-state-initialization: done
-  4-2-last-viewed-pokemon-persistence: ready-for-dev
+  4-2-last-viewed-pokemon-persistence: done
   4-3-boot-to-homescreen-behavior: ready-for-dev
   4-4-volume-and-input-mode-preferences: backlog
   4-5-state-file-corruption-recovery: backlog

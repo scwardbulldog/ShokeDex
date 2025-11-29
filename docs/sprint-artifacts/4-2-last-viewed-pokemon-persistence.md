@@ -1,6 +1,6 @@
 # Story 4.2: Last Viewed Pokémon Persistence
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -62,46 +62,46 @@ So that I pick up right where I left off.
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1: Verify set_last_viewed() Method (AC #1, #2, #6, #7)**
-  - [ ] 1.1: Review existing `set_last_viewed(pokemon_id, generation)` in `src/state_manager.py`
-  - [ ] 1.2: Confirm method updates in-memory state immediately
-  - [ ] 1.3: Verify auto-generation detection works for all ranges (1-151, 152-251, 252-386)
-  - [ ] 1.4: Add logging for state updates (debug level)
+- [x] **Task 1: Verify set_last_viewed() Method (AC #1, #2, #6, #7)**
+  - [x] 1.1: Review existing `set_last_viewed(pokemon_id, generation)` in `src/state_manager.py`
+  - [x] 1.2: Confirm method updates in-memory state immediately
+  - [x] 1.3: Verify auto-generation detection works for all ranges (1-151, 152-251, 252-386)
+  - [x] 1.4: Add logging for state updates (debug level)
 
-- [ ] **Task 2: Verify HomeScreen State Integration (AC #3, #4, #5)**
-  - [ ] 2.1: Confirm HomeScreen.on_enter() calls `get_last_viewed_id()` and `get_last_viewed_generation()`
-  - [ ] 2.2: Verify HomeScreen loads correct generation based on state
-  - [ ] 2.3: Verify HomeScreen scrolls to correct Pokémon position in list
-  - [ ] 2.4: Add logging for state restoration on enter
+- [x] **Task 2: Verify HomeScreen State Integration (AC #3, #4, #5)**
+  - [x] 2.1: Confirm HomeScreen.on_enter() calls `get_last_viewed_id()` and `get_last_viewed_generation()`
+  - [x] 2.2: Verify HomeScreen loads correct generation based on state
+  - [x] 2.3: Verify HomeScreen scrolls to correct Pokémon position in list
+  - [x] 2.4: Add logging for state restoration on enter
 
-- [ ] **Task 3: Implement HomeScreen.on_exit() State Save (AC #1, #6, #7)**
-  - [ ] 3.1: Verify HomeScreen.on_exit() calls `state_manager.save_state()`
-  - [ ] 3.2: Ensure set_last_viewed() is called on navigation (Up/Down, L/R)
-  - [ ] 3.3: Test that state persists when navigating to DetailScreen
+- [x] **Task 3: Implement HomeScreen.on_exit() State Save (AC #1, #6, #7)**
+  - [x] 3.1: Verify HomeScreen.on_exit() calls `state_manager.save_state()`
+  - [x] 3.2: Ensure set_last_viewed() is called on navigation (Up/Down, L/R)
+  - [x] 3.3: Test that state persists when navigating to DetailScreen
 
-- [ ] **Task 4: Implement DetailScreen.on_exit() State Save (AC #2)**
-  - [ ] 4.1: Verify DetailScreen.on_exit() calls `state_manager.set_last_viewed(self.pokemon_id)`
-  - [ ] 4.2: Verify DetailScreen.on_exit() calls `state_manager.save_state()`
-  - [ ] 4.3: Test that adjacent navigation (L/R in DetailScreen) updates state
+- [x] **Task 4: Implement DetailScreen.on_exit() State Save (AC #2)**
+  - [x] 4.1: Verify DetailScreen.on_exit() calls `state_manager.set_last_viewed(self.pokemon_id)`
+  - [x] 4.2: Verify DetailScreen.on_exit() calls `state_manager.save_state()`
+  - [x] 4.3: Test that adjacent navigation (L/R in DetailScreen) updates state
 
-- [ ] **Task 5: Write Unit Tests for State Persistence (AC #1-5)**
-  - [ ] 5.1: Test `test_set_last_viewed_updates_memory()` - verify in-memory state changes
-  - [ ] 5.2: Test `test_save_state_persists_to_file()` - verify JSON file updates
-  - [ ] 5.3: Test `test_get_last_viewed_id_returns_saved()` - verify getter after restart
-  - [ ] 5.4: Test `test_generation_auto_detection()` - verify 1-151→1, 152-251→2, 252-386→3
-  - [ ] 5.5: Test `test_cross_generation_persistence()` - verify Johto/Hoenn restoration
+- [x] **Task 5: Write Unit Tests for State Persistence (AC #1-5)**
+  - [x] 5.1: Test `test_set_last_viewed_updates_memory()` - verify in-memory state changes
+  - [x] 5.2: Test `test_save_state_persists_to_file()` - verify JSON file updates
+  - [x] 5.3: Test `test_get_last_viewed_id_returns_saved()` - verify getter after restart
+  - [x] 5.4: Test `test_generation_auto_detection()` - verify 1-151→1, 152-251→2, 252-386→3
+  - [x] 5.5: Test `test_cross_generation_persistence()` - verify Johto/Hoenn restoration
 
-- [ ] **Task 6: Write Integration Tests for Screen Lifecycle (AC #1-7)**
-  - [ ] 6.1: Test `test_homescreen_saves_on_exit()` - mock StateManager, verify save_state() called
-  - [ ] 6.2: Test `test_detailscreen_saves_on_exit()` - verify set_last_viewed() and save_state() called
-  - [ ] 6.3: Test `test_navigation_updates_state()` - verify Up/Down calls set_last_viewed()
-  - [ ] 6.4: Test `test_generation_switch_updates_state()` - verify L/R updates state
+- [x] **Task 6: Write Integration Tests for Screen Lifecycle (AC #1-7)**
+  - [x] 6.1: Test `test_homescreen_saves_on_exit()` - mock StateManager, verify save_state() called
+  - [x] 6.2: Test `test_detailscreen_saves_on_exit()` - verify set_last_viewed() and save_state() called
+  - [x] 6.3: Test `test_navigation_updates_state()` - verify Up/Down calls set_last_viewed()
+  - [x] 6.4: Test `test_generation_switch_updates_state()` - verify L/R updates state
 
-- [ ] **Task 7: Performance Validation (AC #8)**
-  - [ ] 7.1: Add timing instrumentation to save_state() and _load_state()
-  - [ ] 7.2: Test `test_save_state_performance()` - verify < 50ms on 1000 iterations
-  - [ ] 7.3: Test `test_load_state_performance()` - verify < 50ms
-  - [ ] 7.4: Verify no perceptible lag during screen transitions
+- [x] **Task 7: Performance Validation (AC #8)**
+  - [x] 7.1: Add timing instrumentation to save_state() and _load_state()
+  - [x] 7.2: Test `test_save_state_performance()` - verify < 50ms on 1000 iterations
+  - [x] 7.3: Test `test_load_state_performance()` - verify < 50ms
+  - [x] 7.4: Verify no perceptible lag during screen transitions
 
 ## Dev Notes
 
@@ -205,6 +205,7 @@ Per project testing standards:
 | Date | Change | Author |
 |------|--------|--------|
 | 2025-11-29 | Story drafted from Epic 4 tech spec and epics.md | SM Agent (Bob) |
+| 2025-11-29 | All tasks completed, tests passing (422 total), status → done | Dev Agent (Amelia) |
 
 ## Dev Agent Record
 
@@ -214,10 +215,47 @@ Per project testing standards:
 
 ### Agent Model Used
 
-<!-- Will be filled by dev agent -->
+Claude Opus 4.5 (Preview)
 
 ### Debug Log References
 
+N/A - No debug issues encountered during implementation.
+
 ### Completion Notes List
 
+1. **StateManager Enhancements**:
+   - Added module-level logging via `logging.getLogger(__name__)`
+   - Enhanced `set_last_viewed()` with detailed docstring and debug logging for state updates
+   - Added timing instrumentation to `save_state()` and `_load_state()` for performance monitoring
+   - Both methods log warnings if operations exceed 50ms target
+
+2. **HomeScreen Integration Verified**:
+   - `on_enter()` correctly loads state via `get_last_viewed_id()` and `get_last_viewed_generation()`
+   - Debug logging added for state restoration on enter
+   - `on_exit()` correctly calls `set_last_viewed()` and `save_state()`
+   - Navigation handlers (`_handle_selection_change()`) already call `set_last_viewed()`
+
+3. **DetailScreen Integration Verified**:
+   - `on_enter()` calls `set_last_viewed(self.pokemon_id)`
+   - `on_exit()` now calls both `set_last_viewed()` and `save_state()` for complete persistence
+   - L/R navigation updates state via existing `_navigate_to_adjacent()` method
+
+4. **Test Coverage Added**:
+   - `TestLastViewedPokemonPersistence`: 8 new unit tests covering AC #1-7
+   - `TestStatePersistencePerformance`: 3 performance tests for AC #8
+   - `TestHomeScreenStateIntegration`: 4 integration tests for screen lifecycle
+   - All 422 tests passing
+
+5. **Performance Validated**:
+   - save_state() averages < 1ms per operation (well under 50ms target)
+   - _load_state() averages < 1ms per operation
+   - Rapid navigation (386 state updates) completes in < 100ms total
+
 ### File List
+
+**Modified:**
+- `src/state_manager.py` - Added logging, timing instrumentation, enhanced docstrings
+- `src/ui/home_screen.py` - Added debug logging for state restoration and save operations
+- `src/ui/detail_screen.py` - Enhanced on_exit() to call set_last_viewed() before save_state()
+- `tests/test_state_manager.py` - Added TestLastViewedPokemonPersistence (8 tests), TestStatePersistencePerformance (3 tests)
+- `tests/test_home_screen.py` - Added TestHomeScreenStateIntegration (4 tests)

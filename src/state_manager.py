@@ -11,8 +11,12 @@ Uses simple JSON file for storage.
 """
 
 import json
+import logging
 from pathlib import Path
 from typing import Dict, List, Optional, Any
+
+# Module logger
+logger = logging.getLogger(__name__)
 
 
 class StateManager:
@@ -91,20 +95,26 @@ class StateManager:
             
         except IOError as e:
             # Don't crash on first boot if we can't write - just log warning
-            print(f"Warning: Could not persist default state: {e}")
+            logger.warning(f"Could not persist default state: {e}")
             return False
     
     def _load_state(self) -> Dict[str, Any]:
         """
-        Load state from JSON file.
+        Load state from JSON file (Story 4.2: AC #3, #8).
+        
+        Target: < 50ms for load operation.
         
         Returns:
             State dictionary (default if file doesn't exist)
         """
+        import time
+        start_time = time.perf_counter()
+        
         if not self.state_file.exists():
             # First boot: create defaults and persist them (Story 4.1: AC #1)
             default_state = self._get_default_state()
             self._persist_default_state(default_state)
+            logger.debug("First boot: created default state file")
             return default_state
         
         try:
@@ -113,7 +123,7 @@ class StateManager:
                 
             # Validate version (simple check for now)
             if state.get('version') != self.STATE_VERSION:
-                print(f"Warning: State version mismatch. Expected {self.STATE_VERSION}, got {state.get('version')}")
+                logger.warning(f"State version mismatch. Expected {self.STATE_VERSION}, got {state.get('version')}")
                 # Could trigger migration here in the future
             
             # Validate and clamp values (Story 1.5: AC #6)
@@ -126,7 +136,7 @@ class StateManager:
                     original_id = state['last_viewed']['pokemon_id']
                     state['last_viewed']['pokemon_id'] = max(1, min(386, original_id))
                     if state['last_viewed']['pokemon_id'] != original_id:
-                        print(f"Warning: pokemon_id {original_id} out of range, clamped to {state['last_viewed']['pokemon_id']}")
+                        logger.warning(f"pokemon_id {original_id} out of range, clamped to {state['last_viewed']['pokemon_id']}")
                         needs_correction = True
                 
                 # Clamp generation to valid range (1-3)
@@ -134,7 +144,7 @@ class StateManager:
                     original_gen = state['last_viewed']['generation']
                     state['last_viewed']['generation'] = max(1, min(3, original_gen))
                     if state['last_viewed']['generation'] != original_gen:
-                        print(f"Warning: generation {original_gen} out of range, clamped to {state['last_viewed']['generation']}")
+                        logger.warning(f"generation {original_gen} out of range, clamped to {state['last_viewed']['generation']}")
                         needs_correction = True
             
             # Validate preferences section
@@ -144,13 +154,13 @@ class StateManager:
                     original_volume = state['preferences']['volume']
                     state['preferences']['volume'] = max(0.0, min(1.0, float(original_volume)))
                     if abs(state['preferences']['volume'] - original_volume) > 0.001:
-                        print(f"Warning: volume {original_volume} out of range, clamped to {state['preferences']['volume']}")
+                        logger.warning(f"volume {original_volume} out of range, clamped to {state['preferences']['volume']}")
                         needs_correction = True
                 
                 # Validate input_mode
                 if 'input_mode' in state['preferences']:
                     if state['preferences']['input_mode'] not in ('keyboard', 'gpio'):
-                        print(f"Warning: invalid input_mode '{state['preferences']['input_mode']}', defaulting to 'keyboard'")
+                        logger.warning(f"invalid input_mode '{state['preferences']['input_mode']}', defaulting to 'keyboard'")
                         state['preferences']['input_mode'] = 'keyboard'
                         needs_correction = True
             
@@ -159,14 +169,21 @@ class StateManager:
                 try:
                     with open(self.state_file, 'w', encoding='utf-8') as f:
                         json.dump(state, f, indent=2, ensure_ascii=False)
-                    print("Corrected state file saved")
+                    logger.info("Corrected state file saved")
                 except IOError:
                     pass  # Don't fail on save error during load
+            
+            # Performance logging (Story 4.2: Task 7.1)
+            elapsed_ms = (time.perf_counter() - start_time) * 1000
+            if elapsed_ms > 50:
+                logger.warning(f"_load_state() took {elapsed_ms:.2f}ms (target: <50ms)")
+            else:
+                logger.debug(f"_load_state() completed in {elapsed_ms:.2f}ms")
             
             return state
             
         except (json.JSONDecodeError, IOError) as e:
-            print(f"Warning: State file corrupted, resetting to defaults - {e}")
+            logger.warning(f"State file corrupted, resetting to defaults - {e}")
             # Overwrite corrupt file with defaults
             default_state = self._get_default_state()
             try:
@@ -179,11 +196,16 @@ class StateManager:
     
     def save_state(self) -> bool:
         """
-        Save current state to JSON file using atomic write pattern.
+        Save current state to JSON file using atomic write pattern (Story 4.2: AC #2, #8).
+        
+        Uses temp file + rename for atomicity. Target: < 50ms.
         
         Returns:
             True if successful, False otherwise
         """
+        import time
+        start_time = time.perf_counter()
+        
         try:
             # Ensure directory exists
             self.state_file.parent.mkdir(parents=True, exist_ok=True)
@@ -198,10 +220,17 @@ class StateManager:
             # Atomic rename (POSIX systems guarantee atomicity)
             temp_file.replace(self.state_file)
             
+            # Performance logging (Story 4.2: Task 7.1)
+            elapsed_ms = (time.perf_counter() - start_time) * 1000
+            if elapsed_ms > 50:
+                logger.warning(f"save_state() took {elapsed_ms:.2f}ms (target: <50ms)")
+            else:
+                logger.debug(f"save_state() completed in {elapsed_ms:.2f}ms")
+            
             return True
             
         except IOError as e:
-            print(f"Error saving state file: {e}")
+            logger.error(f"Error saving state file: {e}")
             return False
     
     # Last Viewed Methods
@@ -216,11 +245,17 @@ class StateManager:
     
     def set_last_viewed(self, pokemon_id: int, generation: Optional[int] = None):
         """
-        Set last viewed Pokémon.
+        Set last viewed Pokémon (Story 4.2: AC #1, #2, #6, #7).
+        
+        Updates in-memory state immediately. Does NOT persist to file automatically;
+        call save_state() to persist changes.
         
         Args:
-            pokemon_id: Pokémon national dex number
-            generation: Generation (auto-detected if None)
+            pokemon_id: Pokémon national dex number (1-386)
+            generation: Generation (1-3). Auto-detected if None based on ID ranges:
+                       1-151 → Gen 1 (Kanto)
+                       152-251 → Gen 2 (Johto)
+                       252-386 → Gen 3 (Hoenn)
         """
         # Auto-detect generation if not provided
         if generation is None:
@@ -232,9 +267,21 @@ class StateManager:
                 generation = 3
             else:
                 generation = 1  # Default fallback
+                logger.warning(f"Pokemon ID {pokemon_id} out of range, defaulting to generation 1")
         
+        # Store previous values for logging
+        prev_id = self.state['last_viewed']['pokemon_id']
+        prev_gen = self.state['last_viewed']['generation']
+        
+        # Update in-memory state immediately (Story 4.2: AC #6)
         self.state['last_viewed']['pokemon_id'] = pokemon_id
         self.state['last_viewed']['generation'] = generation
+        
+        # Debug logging for state updates (Story 4.2: Task 1.4)
+        logger.debug(
+            f"State updated: pokemon_id {prev_id} → {pokemon_id}, "
+            f"generation {prev_gen} → {generation}"
+        )
         
         # Update recents
         self._add_to_recent(pokemon_id)

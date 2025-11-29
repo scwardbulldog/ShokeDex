@@ -184,23 +184,27 @@ class DetailScreen(Screen):
                 logging.error(f"Error loading sprite for Pokemon #{self.pokemon_id}: {e}")
                 self.sprite = self._create_text_placeholder(self.pokemon_data.get('name', f'Pokemon #{self.pokemon_id}'))
         
-        # Update StateManager with last viewed Pokémon
+        # Update StateManager with last viewed Pokémon (Story 4.2: AC #2)
         if self.state_manager:
             try:
                 self.state_manager.set_last_viewed(self.pokemon_id)
+                logging.debug(f"DetailScreen.on_enter(): set_last_viewed({self.pokemon_id})")
             except Exception as e:
                 logging.warning(f"Failed to update last viewed: {e}")
     
     def on_exit(self):
         """
-        Called when screen becomes inactive - save state.
+        Called when screen becomes inactive - save state (Story 4.2: AC #2).
         
         Lifecycle hook from Screen base class. Persists last viewed Pokémon
-        to state file via StateManager.
+        to state file via StateManager using atomic write pattern.
         """
         if self.state_manager:
             try:
+                # Ensure current pokemon_id is saved before persisting (Story 4.2: AC #2)
+                self.state_manager.set_last_viewed(self.pokemon_id)
                 self.state_manager.save_state()
+                logging.debug(f"DetailScreen.on_exit(): saved pokemon_id={self.pokemon_id}")
             except Exception as e:
                 logging.warning(f"Failed to save state on exit: {e}")
         super().on_exit()
