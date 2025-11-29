@@ -233,10 +233,173 @@ class TestStateManager(unittest.TestCase):
         self.assertEqual(self.state_manager.get_favorites(), [])
 
 
-if __name__ == '__main__':
-    unittest.main()
+class TestFirstBootStateInitialization(unittest.TestCase):
+    """
+    Story 4.1: First Boot State Initialization Tests
     
-    # Story 1.5: State Persistence Integration Tests
+    Tests that verify state file creation and defaults on first boot.
+    """
+    
+    def setUp(self):
+        """Set up test fixtures with temporary directory for state file"""
+        # Create a temporary directory for testing
+        self.temp_dir = tempfile.mkdtemp()
+        self.state_path = Path(self.temp_dir) / "shokedex_state.json"
+    
+    def tearDown(self):
+        """Clean up test fixtures"""
+        # Remove state file and temp directory
+        if self.state_path.exists():
+            self.state_path.unlink()
+        # Remove temp directory
+        import shutil
+        if Path(self.temp_dir).exists():
+            shutil.rmtree(self.temp_dir)
+    
+    def test_init_creates_default_state_file(self):
+        """AC #1: State file created at data/shokedex_state.json on first boot"""
+        # Ensure file doesn't exist
+        self.assertFalse(self.state_path.exists())
+        
+        # Create StateManager - should create file on first boot
+        state_manager = StateManager(str(self.state_path))
+        
+        # Verify file was created
+        self.assertTrue(self.state_path.exists())
+        
+        # Verify file contains valid JSON
+        with open(self.state_path, 'r') as f:
+            state = json.load(f)
+        self.assertIsInstance(state, dict)
+    
+    def test_default_pokemon_id_is_bulbasaur(self):
+        """AC #2: pokemon_id defaults to 1 (Bulbasaur)"""
+        state_manager = StateManager(str(self.state_path))
+        
+        self.assertEqual(state_manager.get_last_viewed_id(), 1)
+    
+    def test_default_generation_is_kanto(self):
+        """AC #3: generation defaults to 1 (Kanto)"""
+        state_manager = StateManager(str(self.state_path))
+        
+        self.assertEqual(state_manager.get_last_viewed_generation(), 1)
+    
+    def test_default_input_mode_is_keyboard(self):
+        """AC #4: input_mode defaults to 'keyboard'"""
+        state_manager = StateManager(str(self.state_path))
+        
+        self.assertEqual(state_manager.get_input_mode(), 'keyboard')
+    
+    def test_default_volume_is_0_7(self):
+        """AC #5: volume defaults to 0.7 (70%)"""
+        state_manager = StateManager(str(self.state_path))
+        
+        self.assertAlmostEqual(state_manager.get_volume(), 0.7, places=2)
+    
+    def test_state_file_json_structure(self):
+        """AC #8: JSON structure contains all required fields"""
+        state_manager = StateManager(str(self.state_path))
+        
+        # Read the file and validate structure
+        with open(self.state_path, 'r') as f:
+            state = json.load(f)
+        
+        # Verify version field
+        self.assertEqual(state.get('version'), '1.0.0')
+        
+        # Verify last_viewed section
+        self.assertIn('last_viewed', state)
+        self.assertEqual(state['last_viewed'].get('pokemon_id'), 1)
+        self.assertEqual(state['last_viewed'].get('generation'), 1)
+        
+        # Verify preferences section
+        self.assertIn('preferences', state)
+        self.assertEqual(state['preferences'].get('input_mode'), 'keyboard')
+        self.assertAlmostEqual(state['preferences'].get('volume'), 0.7, places=2)
+    
+    def test_state_file_persisted_on_first_boot(self):
+        """AC #1: State file exists after StateManager init (not just in memory)"""
+        # Create StateManager
+        state_manager = StateManager(str(self.state_path))
+        
+        # Delete the state_manager object to ensure we're reading from disk
+        del state_manager
+        
+        # File should still exist
+        self.assertTrue(self.state_path.exists())
+        
+        # Create new StateManager - should load from file
+        new_state_manager = StateManager(str(self.state_path))
+        
+        # Verify values match defaults (loaded from persisted file)
+        self.assertEqual(new_state_manager.get_last_viewed_id(), 1)
+        self.assertEqual(new_state_manager.get_last_viewed_generation(), 1)
+
+
+class TestDirectoryCreation(unittest.TestCase):
+    """
+    Story 4.1: Task 7 - Directory Creation Tests
+    
+    Tests that verify data/ directory is created on first boot.
+    """
+    
+    def setUp(self):
+        """Set up test fixtures with nested directory path"""
+        self.temp_base = tempfile.mkdtemp()
+        # Create a nested path that doesn't exist yet
+        self.state_path = Path(self.temp_base) / "data" / "nested" / "shokedex_state.json"
+    
+    def tearDown(self):
+        """Clean up test fixtures"""
+        import shutil
+        if Path(self.temp_base).exists():
+            shutil.rmtree(self.temp_base)
+    
+    def test_creates_data_directory_if_missing(self):
+        """AC #7: data/ directory created automatically if missing"""
+        # Ensure directory doesn't exist
+        self.assertFalse(self.state_path.parent.exists())
+        
+        # Create StateManager - should create directory
+        state_manager = StateManager(str(self.state_path))
+        
+        # Verify directory was created
+        self.assertTrue(self.state_path.parent.exists())
+        
+        # Verify file was created
+        self.assertTrue(self.state_path.exists())
+    
+    def test_file_permissions_correct(self):
+        """AC #7: Verify file is readable and writable by user"""
+        # Create StateManager
+        state_manager = StateManager(str(self.state_path))
+        
+        # Verify file is readable
+        self.assertTrue(self.state_path.exists())
+        with open(self.state_path, 'r') as f:
+            content = f.read()
+        self.assertTrue(len(content) > 0)
+        
+        # Verify file is writable (save state should succeed)
+        self.assertTrue(state_manager.save_state())
+
+
+class TestStatePersistenceIntegration(unittest.TestCase):
+    """
+    Story 1.5/4.1: State Persistence Integration Tests
+    
+    Tests for corruption recovery and value validation.
+    """
+    
+    def setUp(self):
+        """Set up test fixtures"""
+        self.temp_file = tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.json')
+        self.temp_file.close()
+        self.state_path = self.temp_file.name
+    
+    def tearDown(self):
+        """Clean up test fixtures"""
+        Path(self.state_path).unlink(missing_ok=True)
     
     def test_first_boot_creates_state_file(self):
         """Test first boot creates state file with defaults (AC #1)"""
@@ -276,7 +439,8 @@ if __name__ == '__main__':
     def test_invalid_pokemon_id_clamped(self):
         """Test invalid pokemon_id is clamped to valid range (AC #6)"""
         # Manually write invalid pokemon_id to file
-        invalid_state = self.state_manager._get_default_state()
+        state_manager = StateManager(self.state_path)
+        invalid_state = state_manager._get_default_state()
         invalid_state['last_viewed']['pokemon_id'] = 999  # Out of range
         
         with open(self.state_path, 'w') as f:
@@ -291,7 +455,8 @@ if __name__ == '__main__':
     def test_invalid_generation_clamped(self):
         """Test invalid generation is clamped to valid range (AC #6)"""
         # Manually write invalid generation to file
-        invalid_state = self.state_manager._get_default_state()
+        state_manager = StateManager(self.state_path)
+        invalid_state = state_manager._get_default_state()
         invalid_state['last_viewed']['generation'] = 5  # Out of range
         
         with open(self.state_path, 'w') as f:
@@ -305,8 +470,10 @@ if __name__ == '__main__':
     
     def test_invalid_volume_clamped(self):
         """Test invalid volume is clamped to 0.0-1.0 range (AC #5, #6)"""
+        state_manager = StateManager(self.state_path)
+        
         # Test over max
-        invalid_state = self.state_manager._get_default_state()
+        invalid_state = state_manager._get_default_state()
         invalid_state['preferences']['volume'] = 1.5
         
         with open(self.state_path, 'w') as f:
@@ -326,8 +493,10 @@ if __name__ == '__main__':
     
     def test_invalid_input_mode_validation(self):
         """Test invalid input_mode defaults to keyboard (AC #5, #6)"""
+        state_manager = StateManager(self.state_path)
+        
         # Manually write invalid input_mode to file
-        invalid_state = self.state_manager._get_default_state()
+        invalid_state = state_manager._get_default_state()
         invalid_state['preferences']['input_mode'] = 'invalid_mode'
         
         with open(self.state_path, 'w') as f:
@@ -337,3 +506,7 @@ if __name__ == '__main__':
         state_manager = StateManager(self.state_path)
         
         self.assertEqual(state_manager.get_input_mode(), 'keyboard')
+
+
+if __name__ == '__main__':
+    unittest.main()

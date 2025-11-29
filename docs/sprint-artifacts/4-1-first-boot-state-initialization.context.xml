@@ -1,0 +1,238 @@
+<story-context id="4-1-first-boot-state-initialization" v="1.0">
+  <metadata>
+    <epicId>4</epicId>
+    <storyId>1</storyId>
+    <title>First Boot State Initialization</title>
+    <status>ready-for-dev</status>
+    <generatedAt>2025-11-29</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/4-1-first-boot-state-initialization.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>user</asA>
+    <iWant>the device to work perfectly on first boot without any setup</iWant>
+    <soThat>I can start using it immediately</soThat>
+    <tasks>
+      <task id="1">Verify StateManager Default State Logic (AC #1-5, #8)
+        <subtask id="1.1">Review existing _get_default_state() method in src/state_manager.py</subtask>
+        <subtask id="1.2">Confirm default values match AC requirements (pokemon_id=1, generation=1, input_mode="keyboard", volume=0.7)</subtask>
+        <subtask id="1.3">Verify JSON structure includes version field "1.0.0"</subtask>
+      </task>
+      <task id="2">Verify State File Creation on Init (AC #1, #7)
+        <subtask id="2.1">Confirm __init__() calls _load_state() which handles first boot</subtask>
+        <subtask id="2.2">Verify directory creation logic (state_file.parent.mkdir(parents=True, exist_ok=True))</subtask>
+        <subtask id="2.3">Verify state file is written via save_state() when not exists</subtask>
+      </task>
+      <task id="3">Add First Boot Detection and Save (AC #1)
+        <subtask id="3.1">Update _load_state() to call save_state() after creating defaults (if not already saving)</subtask>
+        <subtask id="3.2">Ensure atomic write pattern is used for first save</subtask>
+      </task>
+      <task id="4">Integrate StateManager with HomeScreen (AC #6)
+        <subtask id="4.1">Verify HomeScreen.on_enter() calls state_manager.get_last_viewed_id() and get_last_viewed_generation()</subtask>
+        <subtask id="4.2">Confirm HomeScreen displays correct Pokémon and generation from state</subtask>
+        <subtask id="4.3">Add logging for first boot detection (no warnings/errors for missing state)</subtask>
+      </task>
+      <task id="5">Write Unit Tests for First Boot Defaults (AC #1-5, #8)
+        <subtask id="5.1">Test test_init_creates_default_state() - delete state file, init StateManager, verify defaults</subtask>
+        <subtask id="5.2">Test test_default_pokemon_id_is_bulbasaur() - verify get_last_viewed_id() returns 1</subtask>
+        <subtask id="5.3">Test test_default_generation_is_kanto() - verify get_last_viewed_generation() returns 1</subtask>
+        <subtask id="5.4">Test test_default_input_mode_is_keyboard() - verify get_input_mode() returns "keyboard"</subtask>
+        <subtask id="5.5">Test test_default_volume_is_0_7() - verify get_volume() returns 0.7</subtask>
+        <subtask id="5.6">Test test_state_file_json_structure() - verify JSON structure matches schema</subtask>
+      </task>
+      <task id="6">Write Integration Test for First Boot HomeScreen (AC #6)
+        <subtask id="6.1">Test test_first_boot_shows_bulbasaur() - delete state file, start app, verify Bulbasaur displayed</subtask>
+        <subtask id="6.2">Test test_first_boot_shows_kanto_generation() - verify generation badge shows "KANTO"</subtask>
+        <subtask id="6.3">Test test_no_errors_on_first_boot() - verify no error logs for missing state</subtask>
+      </task>
+      <task id="7">Test Directory Creation (AC #7)
+        <subtask id="7.1">Test test_creates_data_directory_if_missing() - delete data/ dir, init StateManager, verify created</subtask>
+        <subtask id="7.2">Verify file permissions are correct (readable/writable by user)</subtask>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1" title="State File Creation on First Boot">
+      Given the application launches for the first time (no state file exists),
+      When StateManager initializes,
+      Then a state file is created at data/shokedex_state.json,
+      And the file contains valid JSON with the expected structure
+    </criterion>
+    <criterion id="AC2" title="Default Pokemon ID Value">
+      Given a new state file is being created,
+      When StateManager writes default values,
+      Then pokemon_id is set to 1 (Bulbasaur),
+      And the value is accessible via get_last_viewed_id()
+    </criterion>
+    <criterion id="AC3" title="Default Generation Value">
+      Given a new state file is being created,
+      When StateManager writes default values,
+      Then generation is set to 1 (Kanto),
+      And the value is accessible via get_last_viewed_generation()
+    </criterion>
+    <criterion id="AC4" title="Default Input Mode Value">
+      Given a new state file is being created,
+      When StateManager writes default values,
+      Then input_mode is set to "keyboard",
+      And the value is accessible via get_input_mode()
+    </criterion>
+    <criterion id="AC5" title="Default Volume Value">
+      Given a new state file is being created,
+      When StateManager writes default values,
+      Then volume is set to 0.7 (70%),
+      And the value is accessible via get_volume()
+    </criterion>
+    <criterion id="AC6" title="HomeScreen Displays Bulbasaur on First Boot">
+      Given no state file exists (first boot),
+      When HomeScreen.on_enter() executes,
+      Then HomeScreen displays Bulbasaur (#1),
+      And generation badge shows "KANTO",
+      And no errors or warnings logged for missing state
+    </criterion>
+    <criterion id="AC7" title="State File Directory Creation">
+      Given the data/ directory does not exist,
+      When StateManager initializes for first time,
+      Then the data/ directory is created automatically,
+      And state file is written successfully within the directory
+    </criterion>
+    <criterion id="AC8" title="JSON Structure Validity">
+      Given the state file is created,
+      When examining the JSON structure,
+      Then it contains required fields: version="1.0.0", last_viewed.pokemon_id=1, last_viewed.generation=1, preferences.input_mode="keyboard", preferences.volume=0.7,
+      And the JSON is valid and parseable
+    </criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-3-state-persistence.md" title="Epic 3 Tech Spec: State Persistence" section="Data Models and Contracts">
+        Defines JSON state file schema with version, last_viewed, preferences fields. Default values: pokemon_id=1, generation=1, input_mode="keyboard", volume=0.7.
+      </doc>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-3-state-persistence.md" title="Epic 3 Tech Spec: State Persistence" section="Workflows and Sequencing">
+        First boot workflow: StateManager init → check file exists → create with defaults → save → ready for use.
+      </doc>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-3-state-persistence.md" title="Epic 3 Tech Spec: State Persistence" section="APIs and Interfaces">
+        StateManager public interface including get_last_viewed_id(), get_last_viewed_generation(), get_volume(), get_input_mode(), save_state().
+      </doc>
+      <doc path="docs/architecture.md" title="ShokeDex Architecture" section="StateManager Integration">
+        StateManager uses JSON file persistence at data/shokedex_state.json. Screens access via screen_manager.state_manager. Save on screen exit and app shutdown.
+      </doc>
+      <doc path="docs/architecture.md" title="ShokeDex Architecture" section="State File Format">
+        JSON structure with version, last_viewed (pokemon_id, generation), favorites, recent, preferences (input_mode, volume), stats.
+      </doc>
+      <doc path="docs/architecture.md" title="ShokeDex Architecture" section="Manager Architecture Pattern">
+        StateManager instantiated once in main.py, passed to ScreenManager. Screens access via self.screen_manager.state_manager.
+      </doc>
+      <doc path="docs/epics.md" title="ShokeDex Epics" section="Epic 4: State Persistence">
+        Epic scope: last viewed Pokémon ID tracking, generation tracking, volume/input preferences, state file with JSON persistence, corruption handling.
+      </doc>
+      <doc path=".github/copilot-instructions.md" title="Copilot Instructions" section="Database Operations">
+        Always use parameterized queries. Use context managers for database connections. Handle exceptions gracefully.
+      </doc>
+      <doc path=".github/copilot-instructions.md" title="Copilot Instructions" section="Testing Requirements">
+        Use Python unittest. Use temporary files for testing. Clean up in tearDown(). Mock external dependencies.
+      </doc>
+    </docs>
+    <code>
+      <file path="src/state_manager.py" kind="manager" symbol="StateManager" lines="1-339" reason="Core implementation of state persistence. Contains _get_default_state(), _load_state(), save_state() methods. Gap: needs to save defaults on first boot.">
+        StateManager class with default state structure, JSON load/save, validation and clamping of values, atomic write pattern.
+      </file>
+      <file path="src/state_manager.py" kind="method" symbol="_get_default_state" lines="42-59" reason="Returns default state dict. Verify pokemon_id=1, generation=1, input_mode='keyboard', volume=0.7, version='1.0.0'.">
+        Default state: version 1.0.0, pokemon_id=1, generation=1, favorites=[], recent=[], input_mode=keyboard, volume=0.7.
+      </file>
+      <file path="src/state_manager.py" kind="method" symbol="_load_state" lines="61-136" reason="Handles state loading from file. Returns defaults if file doesn't exist. Validates and clamps loaded values. May need modification to persist defaults on first boot.">
+        Load logic: check file exists, parse JSON, validate version, clamp pokemon_id to 1-386, clamp generation to 1-3, clamp volume to 0.0-1.0.
+      </file>
+      <file path="src/state_manager.py" kind="method" symbol="save_state" lines="138-172" reason="Atomic write pattern implementation. Creates parent directories. Uses temp file rename for atomicity.">
+        Atomic save: mkdir parents, write to .tmp file, rename to target file.
+      </file>
+      <file path="src/ui/home_screen.py" kind="screen" symbol="HomeScreen.on_enter" lines="297-359" reason="Loads state from StateManager. Calls get_last_viewed_generation() and get_last_viewed_id(). Initializes to Bulbasaur if state not found.">
+        on_enter: loads fonts, gets generation/pokemon from state_manager, loads pokemon by generation, scrolls to last viewed.
+      </file>
+      <file path="src/ui/home_screen.py" kind="screen" symbol="HomeScreen.on_exit" lines="361-381" reason="Saves state to StateManager on screen exit. Calls set_last_viewed() and save_state().">
+        on_exit: saves current pokemon_id and generation to state_manager, calls save_state().
+      </file>
+      <file path="src/main.py" kind="entry" symbol="ShokeDexApp.__init__" lines="32-92" reason="Initializes StateManager before other managers. Attaches to screen_manager for screen access.">
+        App init: creates StateManager(), increments session, attaches to screen_manager.state_manager.
+      </file>
+      <file path="tests/test_state_manager.py" kind="test" symbol="TestStateManager" lines="1-340" reason="Existing tests for StateManager. Includes default state tests, save/load tests. Extend with first boot specific tests.">
+        Test patterns: tempfile for state path, setUp/tearDown cleanup, verify defaults, test validation clamping.
+      </file>
+      <file path="tests/test_home_screen.py" kind="test" symbol="TestHomeScreenGenerationFiltering" lines="1-100" reason="HomeScreen test patterns. Mock screen_manager with state_manager. Use temp database.">
+        Test setup: temp database, mock screen_manager, patch pygame.display and pygame.font.
+      </file>
+    </code>
+    <dependencies>
+      <python>
+        <package name="pygame" version=">=2.5.0" purpose="Graphics, display, fonts" />
+        <package name="Pillow" version=">=10.0.0" purpose="Image processing" />
+        <package name="pytest" version=">=7.4.0" purpose="Test framework" />
+        <package name="pytest-cov" version=">=4.1.0" purpose="Test coverage" />
+      </python>
+      <stdlib>
+        <module name="json" purpose="State file serialization" />
+        <module name="pathlib" purpose="Path handling for state file" />
+        <module name="tempfile" purpose="Temporary files in tests" />
+        <module name="unittest" purpose="Test framework" />
+        <module name="unittest.mock" purpose="Mocking in tests" />
+      </stdlib>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="pattern">Use singleton manager pattern - StateManager instantiated once in main.py</constraint>
+    <constraint type="pattern">Access StateManager via screen_manager.state_manager in screens</constraint>
+    <constraint type="pattern">Use atomic write pattern (write to temp file, then rename) for state persistence</constraint>
+    <constraint type="pattern">Use context managers for database connections</constraint>
+    <constraint type="safety">State file must be valid JSON - use json.dump/load, never string formatting</constraint>
+    <constraint type="safety">Handle file I/O errors gracefully - don't crash on write failure</constraint>
+    <constraint type="performance">State file < 1KB for fast I/O on Raspberry Pi SD card</constraint>
+    <constraint type="performance">Load time target: < 50ms for state initialization</constraint>
+    <constraint type="testing">Use temporary state file paths in tests, not production data/shokedex_state.json</constraint>
+    <constraint type="testing">Clean up state files in tearDown() methods</constraint>
+    <constraint type="validation">pokemon_id must be 1-386, clamp if out of range</constraint>
+    <constraint type="validation">generation must be 1-3, clamp if out of range</constraint>
+    <constraint type="validation">volume must be 0.0-1.0, clamp if out of range</constraint>
+    <constraint type="validation">input_mode must be "keyboard" or "gpio", default to "keyboard"</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface name="StateManager" kind="class" path="src/state_manager.py">
+      <method signature="__init__(self, state_file: Optional[str] = None)" description="Initialize and load state from file or create defaults" />
+      <method signature="get_last_viewed_id(self) -> int" description="Get last viewed Pokémon National Dex number (1-386)" />
+      <method signature="get_last_viewed_generation(self) -> int" description="Get last viewed generation (1=Kanto, 2=Johto, 3=Hoenn)" />
+      <method signature="get_input_mode(self) -> str" description="Get input mode preference ('keyboard' or 'gpio')" />
+      <method signature="get_volume(self) -> float" description="Get audio volume preference (0.0-1.0)" />
+      <method signature="save_state(self) -> bool" description="Persist state to JSON file using atomic write. Returns success status." />
+      <method signature="_get_default_state(self) -> Dict[str, Any]" description="Returns default state structure with version, last_viewed, preferences" />
+      <method signature="_load_state(self) -> Dict[str, Any]" description="Load state from file or return defaults if missing/corrupt" />
+    </interface>
+    <interface name="Screen Lifecycle" kind="pattern" path="src/ui/screen.py">
+      <method signature="on_enter(self)" description="Called when screen becomes active - load state here" />
+      <method signature="on_exit(self)" description="Called when screen becomes inactive - save state here" />
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Use pytest framework (pytest.ini configured). Tests in tests/ directory. Use temporary files for state testing - never write to production data/shokedex_state.json. Mock pygame display and fonts. Use unittest.mock for StateManager in HomeScreen tests. Follow existing patterns in test_state_manager.py and test_home_screen.py.
+    </standards>
+    <locations>
+      <location>tests/test_state_manager.py</location>
+      <location>tests/test_home_screen.py</location>
+    </locations>
+    <ideas>
+      <idea acRef="AC1,AC7">test_first_boot_creates_state_file_and_directory - Remove state file and data dir, init StateManager, verify both created</idea>
+      <idea acRef="AC2">test_default_pokemon_id_is_bulbasaur - Verify get_last_viewed_id() returns 1 on fresh StateManager</idea>
+      <idea acRef="AC3">test_default_generation_is_kanto - Verify get_last_viewed_generation() returns 1 on fresh StateManager</idea>
+      <idea acRef="AC4">test_default_input_mode_is_keyboard - Verify get_input_mode() returns "keyboard" on fresh StateManager</idea>
+      <idea acRef="AC5">test_default_volume_is_seventy_percent - Verify get_volume() returns 0.7 on fresh StateManager</idea>
+      <idea acRef="AC6">test_homescreen_shows_bulbasaur_on_first_boot - Mock StateManager with defaults, verify HomeScreen loads pokemon_id=1</idea>
+      <idea acRef="AC6">test_homescreen_shows_kanto_badge_on_first_boot - Verify generation badge displays "KANTO" with default state</idea>
+      <idea acRef="AC8">test_state_file_json_structure_valid - Parse created state file, verify all required fields present</idea>
+      <idea acRef="AC1">test_state_file_persisted_on_first_boot - Verify state file exists after StateManager init (not just in memory)</idea>
+    </ideas>
+  </tests>
+</story-context>

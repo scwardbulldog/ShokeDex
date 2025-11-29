@@ -62,6 +62,38 @@ class StateManager:
             }
         }
     
+    def _persist_default_state(self, default_state: Dict[str, Any]) -> bool:
+        """
+        Persist default state to file on first boot (Story 4.1: AC #1, #7).
+        
+        Uses atomic write pattern for safety.
+        
+        Args:
+            default_state: Default state dictionary to persist
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            # Ensure directory exists (Story 4.1: AC #7)
+            self.state_file.parent.mkdir(parents=True, exist_ok=True)
+            
+            # Atomic write pattern: write to temp file then rename
+            temp_file = Path(str(self.state_file) + '.tmp')
+            
+            with open(temp_file, 'w', encoding='utf-8') as f:
+                json.dump(default_state, f, indent=2, ensure_ascii=False)
+            
+            # Atomic rename (POSIX systems guarantee atomicity)
+            temp_file.replace(self.state_file)
+            
+            return True
+            
+        except IOError as e:
+            # Don't crash on first boot if we can't write - just log warning
+            print(f"Warning: Could not persist default state: {e}")
+            return False
+    
     def _load_state(self) -> Dict[str, Any]:
         """
         Load state from JSON file.
@@ -70,7 +102,10 @@ class StateManager:
             State dictionary (default if file doesn't exist)
         """
         if not self.state_file.exists():
-            return self._get_default_state()
+            # First boot: create defaults and persist them (Story 4.1: AC #1)
+            default_state = self._get_default_state()
+            self._persist_default_state(default_state)
+            return default_state
         
         try:
             with open(self.state_file, 'r', encoding='utf-8') as f:

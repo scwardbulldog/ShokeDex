@@ -80,7 +80,7 @@ development_status:
   # Tech Spec: tech-spec-epic-3-state-persistence.md
   # Note: Favorites/history descoped to Epic 9
   epic-4-state-persistence: contexted
-  4-1-first-boot-state-initialization: backlog
+  4-1-first-boot-state-initialization: done
   4-2-last-viewed-pokemon-persistence: backlog
   4-3-boot-to-homescreen-behavior: backlog
   4-4-volume-and-input-mode-preferences: backlog

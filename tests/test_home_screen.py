@@ -678,6 +678,139 @@ class TestHomeScreenStatePersistence(unittest.TestCase):
         self.assertEqual(last_call[1]['pokemon_id'], 152, "Should save first Johto Pokemon")
 
 
+class TestFirstBootHomeScreen(unittest.TestCase):
+    """
+    Story 4.1: First Boot HomeScreen Integration Tests
+    
+    Verifies that HomeScreen displays Bulbasaur and Kanto on first boot.
+    """
+    
+    def setUp(self):
+        """Set up test database and HomeScreen simulating first boot"""
+        # Create temporary database
+        self.temp_dir = tempfile.mkdtemp()
+        self.db_path = os.path.join(self.temp_dir, 'test.db')
+        self.db = Database(self.db_path)
+        
+        # Create schema and populate with test data
+        with self.db as db:
+            db.create_schema()
+            
+            # Insert Pokemon from all three generations
+            pokemon_data = []
+            
+            # Kanto: 1-151 (including Bulbasaur)
+            for i in range(1, 152):
+                pokemon_data.append((i, f'Pokemon{i}', i, 10, 100, 100, 1, 1))
+            
+            # Johto: 152-251
+            for i in range(152, 252):
+                pokemon_data.append((i, f'Pokemon{i}', i, 10, 100, 100, 2, 1))
+            
+            # Hoenn: 252-386
+            for i in range(252, 387):
+                pokemon_data.append((i, f'Pokemon{i}', i, 10, 100, 100, 3, 1))
+            
+            db.executemany("""
+                INSERT INTO pokemon (id, name, species_id, height, weight, base_experience, generation, is_default)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, pokemon_data)
+            db.commit()
+        
+        # Create mock screen manager with state_manager returning first boot defaults
+        self.mock_screen_manager = Mock()
+        self.mock_screen_manager.width = 800
+        self.mock_screen_manager.height = 480
+        self.mock_screen_manager.database = self.db
+        self.mock_screen_manager.input_manager = Mock()
+        
+        # Create mock state manager returning first boot defaults (Story 4.1)
+        self.mock_state_manager = Mock()
+        self.mock_state_manager.get_last_viewed_generation.return_value = 1  # Kanto default
+        self.mock_state_manager.get_last_viewed_id.return_value = 1  # Bulbasaur default
+        self.mock_screen_manager.state_manager = self.mock_state_manager
+        
+        # Initialize pygame font module for on_enter() calls
+        import pygame
+        pygame.font.init()
+        
+        # Create HomeScreen
+        self.screen = HomeScreen(self.mock_screen_manager, self.db)
+    
+    def tearDown(self):
+        """Clean up temporary database"""
+        if os.path.exists(self.db_path):
+            os.remove(self.db_path)
+        os.rmdir(self.temp_dir)
+    
+    def test_first_boot_shows_bulbasaur(self):
+        """AC #6: HomeScreen displays Bulbasaur (#1) on first boot"""
+        # Call on_enter (simulates first boot with default state)
+        self.screen.on_enter()
+        
+        # Verify Bulbasaur is selected (ID=1)
+        selected_pokemon = self.screen.pokemon_list[self.screen.selected_index]
+        self.assertEqual(selected_pokemon['id'], 1, "First boot should show Bulbasaur (#1)")
+    
+    def test_first_boot_shows_kanto_generation(self):
+        """AC #6: Generation badge shows 'KANTO' on first boot"""
+        # Call on_enter
+        self.screen.on_enter()
+        
+        # Verify generation is Kanto (1)
+        self.assertEqual(self.screen.current_generation, 1, "First boot should show Kanto generation")
+        
+        # Verify generation badge exists and is configured for Kanto
+        self.assertIsNotNone(self.screen.generation_badge, "Generation badge should exist")
+        self.assertEqual(self.screen.generation_badge.generation, 1, "Badge should show generation 1")
+    
+    def test_no_errors_on_first_boot_with_state_manager(self):
+        """AC #6: No errors or warnings logged for missing state on first boot"""
+        import io
+        import sys
+        
+        # Capture stdout/stderr
+        captured_output = io.StringIO()
+        captured_err = io.StringIO()
+        old_stdout = sys.stdout
+        old_stderr = sys.stderr
+        sys.stdout = captured_output
+        sys.stderr = captured_err
+        
+        try:
+            # Call on_enter
+            self.screen.on_enter()
+            
+            # Get output
+            output = captured_output.getvalue()
+            err_output = captured_err.getvalue()
+            
+            # Verify no state-related error/warning messages
+            # (Asset warnings are expected in test environment without assets)
+            state_error_keywords = ['state file', 'state manager', 'missing state', 'state error']
+            for keyword in state_error_keywords:
+                self.assertNotIn(keyword, output.lower(), f"Should not contain state error: {keyword}")
+                self.assertNotIn(keyword, err_output.lower(), f"Should not contain state error: {keyword}")
+        finally:
+            sys.stdout = old_stdout
+            sys.stderr = old_stderr
+    
+    def test_first_boot_without_state_manager(self):
+        """Test HomeScreen handles missing state_manager gracefully"""
+        # Remove state manager to simulate test environment
+        self.mock_screen_manager.state_manager = None
+        
+        # Recreate screen without state manager
+        screen = HomeScreen(self.mock_screen_manager, self.db)
+        
+        # Should not crash on on_enter
+        screen.on_enter()
+        
+        # Should default to Bulbasaur (ID=1) and Kanto (gen=1)
+        selected_pokemon = screen.pokemon_list[screen.selected_index]
+        self.assertEqual(selected_pokemon['id'], 1, "Should default to Bulbasaur without state manager")
+
+
 class TestUpDownScrollingNavigation(unittest.TestCase):
     """Test Up/Down button single-Pokemon scrolling navigation (Story 1.6)"""
     
