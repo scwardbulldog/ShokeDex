@@ -622,6 +622,37 @@ So that browsing details feels responsive and polished.
 
 ---
 
+### Story 3.8: Home Screen Holographic Theme Alignment
+
+As a user,
+I want the Home Screen to use the same holographic blue color scheme as the Detail Screen,
+So that the visual experience feels cohesive and polished across all screens.
+
+**Acceptance Criteria:**
+
+**Given** a user is on the Home Screen  
+**When** the screen renders  
+**Then** the background uses `DEEP_SPACE_BLACK` (#0a0e1a) instead of `DARK_GREEN`  
+**And** the grid cell borders use `ELECTRIC_BLUE` (#00d4ff) for consistency with Detail Screen panels  
+**And** selected Pokémon cell uses `DARK_BLUE` (#1a2f4a) background with `BRIGHT_CYAN` (#4df7ff) border  
+**And** the title "ShokeDex" uses `HOLOGRAM_WHITE` (#e8f4f8)  
+**And** secondary text (page indicator, view mode, help text) uses `ICE_BLUE` (#a8e6ff)  
+**And** the search/filter bar buttons use holographic styling matching the Detail Screen panels  
+**And** visual transition between Home Screen and Detail Screen feels seamless (no jarring color change)
+
+**Prerequisites:** Story 3.7 (Epic 3 Detail View complete)
+
+**Technical Notes:**
+- Update `HomeScreen.render()` to use `Colors.DEEP_SPACE_BLACK` instead of `Colors.BACKGROUND`
+- Update grid cell rendering (`_render_grid()`) to use holographic colors for borders and selection
+- Update search bar (`_render_search_bar()`) button styling to use holographic palette
+- The `GenerationBadge` class already uses holographic colors - no changes needed there
+- Consider adding `Colors.SELECTION_BG_HOLOGRAPHIC` alias for consistency
+- Verify all text remains readable against dark background
+- Screenshot comparison for visual regression testing
+
+---
+
 ## Epic 4: State Persistence
 
 **Epic Goal:** Device remembers last viewed Pokémon, generation, and user preferences across power cycles.

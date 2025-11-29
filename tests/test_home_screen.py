@@ -1015,4 +1015,258 @@ class TestUpDownScrollingNavigation(unittest.TestCase):
                         "Hold time should reset")
 
 
+class TestHomeScreenHolographicTheme(unittest.TestCase):
+    """Test holographic theme implementation for Story 3.8"""
+    
+    def setUp(self):
+        """Set up test database and HomeScreen"""
+        # Create temporary database
+        self.temp_dir = tempfile.mkdtemp()
+        self.db_path = os.path.join(self.temp_dir, 'test.db')
+        self.db = Database(self.db_path)
+        
+        # Create schema and populate with test data
+        with self.db as db:
+            db.create_schema()
+            
+            # Insert a few Kanto Pokemon for testing
+            pokemon_data = []
+            for i in range(1, 13):  # 12 Pokemon (1 page)
+                pokemon_data.append((i, f'Pokemon{i}', i, 10, 100, 100, 1, 1))
+            
+            db.executemany("""
+                INSERT INTO pokemon (id, name, species_id, height, weight, base_experience, generation, is_default)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, pokemon_data)
+            db.commit()
+        
+        # Create mock screen manager with proper state manager return values
+        self.mock_screen_manager = Mock()
+        self.mock_screen_manager.width = 480
+        self.mock_screen_manager.height = 320
+        self.mock_screen_manager.database = self.db
+        self.mock_screen_manager.state_manager = Mock()
+        self.mock_screen_manager.state_manager.get_last_viewed_generation.return_value = 1
+        self.mock_screen_manager.state_manager.get_last_viewed_id.return_value = 1
+        self.mock_screen_manager.input_manager = Mock()
+        
+        # Mock pygame
+        with patch('pygame.display.set_mode'), \
+             patch('pygame.font.Font'):
+            self.screen = HomeScreen(self.mock_screen_manager, database=self.db)
+            self.screen.on_enter()
+    
+    def tearDown(self):
+        """Clean up temporary database"""
+        if os.path.exists(self.db_path):
+            os.remove(self.db_path)
+        os.rmdir(self.temp_dir)
+    
+    def test_colors_import_holographic_palette(self):
+        """Test that holographic color constants are available (AC #1, #2, #3, #4, #5, #6)"""
+        from src.ui.colors import Colors
+        
+        # Verify all required holographic colors exist
+        self.assertEqual(Colors.DEEP_SPACE_BLACK, (10, 14, 26), 
+                        "DEEP_SPACE_BLACK should be #0a0e1a")
+        self.assertEqual(Colors.DARK_BLUE, (26, 47, 74), 
+                        "DARK_BLUE should be #1a2f4a")
+        self.assertEqual(Colors.ELECTRIC_BLUE, (0, 212, 255), 
+                        "ELECTRIC_BLUE should be #00d4ff")
+        self.assertEqual(Colors.BRIGHT_CYAN, (77, 247, 255), 
+                        "BRIGHT_CYAN should be #4df7ff")
+        self.assertEqual(Colors.ICE_BLUE, (168, 230, 255), 
+                        "ICE_BLUE should be #a8e6ff")
+        self.assertEqual(Colors.HOLOGRAM_WHITE, (232, 244, 248), 
+                        "HOLOGRAM_WHITE should be #e8f4f8")
+    
+    @patch('pygame.draw.rect')
+    def test_background_uses_deep_space_black(self, mock_draw_rect):
+        """Test render() fills background with DEEP_SPACE_BLACK (AC #1)"""
+        from src.ui.colors import Colors
+        
+        # Create a mock surface to capture fill color
+        mock_surface = MagicMock()
+        
+        # Mock font render to return mock surfaces
+        mock_text_surface = MagicMock()
+        mock_text_surface.get_rect.return_value = MagicMock()
+        
+        self.screen.title_font = MagicMock()
+        self.screen.title_font.render.return_value = mock_text_surface
+        self.screen.text_font = MagicMock()
+        self.screen.text_font.render.return_value = mock_text_surface
+        self.screen.small_font = MagicMock()
+        self.screen.small_font.render.return_value = mock_text_surface
+        
+        # Mock generation badge
+        self.screen.generation_badge = MagicMock()
+        
+        # Render
+        self.screen.render(mock_surface)
+        
+        # Verify fill was called with DEEP_SPACE_BLACK
+        mock_surface.fill.assert_called_with(Colors.DEEP_SPACE_BLACK)
+    
+    @patch('pygame.draw.rect')
+    def test_background_not_dark_green(self, mock_draw_rect):
+        """Test background does NOT use DARK_GREEN (AC #1)"""
+        from src.ui.colors import Colors
+        
+        mock_surface = MagicMock()
+        mock_text_surface = MagicMock()
+        mock_text_surface.get_rect.return_value = MagicMock()
+        
+        self.screen.title_font = MagicMock()
+        self.screen.title_font.render.return_value = mock_text_surface
+        self.screen.text_font = MagicMock()
+        self.screen.text_font.render.return_value = mock_text_surface
+        self.screen.small_font = MagicMock()
+        self.screen.small_font.render.return_value = mock_text_surface
+        self.screen.generation_badge = MagicMock()
+        
+        self.screen.render(mock_surface)
+        
+        # Verify fill was NOT called with DARK_GREEN
+        for call in mock_surface.fill.call_args_list:
+            self.assertNotEqual(call[0][0], Colors.DARK_GREEN, 
+                               "Background should NOT use DARK_GREEN")
+    
+    @patch('pygame.draw.rect')
+    def test_title_removed_from_homescreen(self, mock_draw_rect):
+        """Test that ShokeDex title was removed from Home Screen (title replaced by generation badge)"""
+        mock_surface = MagicMock()
+        mock_text_surface = MagicMock()
+        mock_text_surface.get_rect.return_value = MagicMock()
+        
+        self.screen.title_font = MagicMock()
+        self.screen.title_font.render.return_value = mock_text_surface
+        self.screen.text_font = MagicMock()
+        self.screen.text_font.render.return_value = mock_text_surface
+        self.screen.small_font = MagicMock()
+        self.screen.small_font.render.return_value = mock_text_surface
+        self.screen.generation_badge = MagicMock()
+        
+        self.screen.render(mock_surface)
+        
+        # Title should no longer be rendered (replaced by generation badge)
+        title_call = self.screen.title_font.render.call_args
+        self.assertIsNone(title_call, "Title should no longer be rendered on Home Screen")
+    
+    @patch('pygame.draw.rect')
+    def test_page_indicator_uses_ice_blue(self, mock_draw_rect):
+        """Test page indicator uses ICE_BLUE color (AC #5)"""
+        from src.ui.colors import Colors
+        
+        mock_surface = MagicMock()
+        mock_text_surface = MagicMock()
+        mock_text_surface.get_rect.return_value = MagicMock()
+        
+        self.screen.title_font = MagicMock()
+        self.screen.title_font.render.return_value = mock_text_surface
+        self.screen.text_font = MagicMock()
+        self.screen.text_font.render.return_value = mock_text_surface
+        self.screen.small_font = MagicMock()
+        self.screen.small_font.render.return_value = mock_text_surface
+        self.screen.generation_badge = MagicMock()
+        
+        self.screen.render(mock_surface)
+        
+        # Find calls with page indicator pattern
+        page_call_found = False
+        for call in self.screen.small_font.render.call_args_list:
+            if "Page" in str(call[0][0]):
+                page_call_found = True
+                self.assertEqual(call[0][2], Colors.ICE_BLUE, 
+                               "Page indicator should use ICE_BLUE")
+                break
+        
+        self.assertTrue(page_call_found, "Should render page indicator text")
+    
+    @patch('pygame.draw.rect')
+    def test_view_mode_uses_ice_blue(self, mock_draw_rect):
+        """Test view mode indicator uses ICE_BLUE color (AC #5)"""
+        from src.ui.colors import Colors
+        
+        mock_surface = MagicMock()
+        mock_text_surface = MagicMock()
+        mock_text_surface.get_rect.return_value = MagicMock()
+        
+        self.screen.title_font = MagicMock()
+        self.screen.title_font.render.return_value = mock_text_surface
+        self.screen.text_font = MagicMock()
+        self.screen.text_font.render.return_value = mock_text_surface
+        self.screen.small_font = MagicMock()
+        self.screen.small_font.render.return_value = mock_text_surface
+        self.screen.generation_badge = MagicMock()
+        
+        self.screen.render(mock_surface)
+        
+        # Find calls with view mode pattern
+        view_call_found = False
+        for call in self.screen.small_font.render.call_args_list:
+            if "View:" in str(call[0][0]):
+                view_call_found = True
+                self.assertEqual(call[0][2], Colors.ICE_BLUE, 
+                               "View mode should use ICE_BLUE")
+                break
+        
+        self.assertTrue(view_call_found, "Should render view mode text")
+    
+    @patch('pygame.draw.rect')
+    def test_help_text_uses_ice_blue(self, mock_draw_rect):
+        """Test help text uses ICE_BLUE color (AC #5)"""
+        from src.ui.colors import Colors
+        
+        mock_surface = MagicMock()
+        mock_text_surface = MagicMock()
+        mock_text_surface.get_rect.return_value = MagicMock()
+        
+        self.screen.title_font = MagicMock()
+        self.screen.title_font.render.return_value = mock_text_surface
+        self.screen.text_font = MagicMock()
+        self.screen.text_font.render.return_value = mock_text_surface
+        self.screen.small_font = MagicMock()
+        self.screen.small_font.render.return_value = mock_text_surface
+        self.screen.generation_badge = MagicMock()
+        
+        self.screen.render(mock_surface)
+        
+        # Find calls with help text pattern
+        help_call_found = False
+        for call in self.screen.small_font.render.call_args_list:
+            if "SELECT:" in str(call[0][0]) or "START:" in str(call[0][0]):
+                help_call_found = True
+                self.assertEqual(call[0][2], Colors.ICE_BLUE, 
+                               "Help text should use ICE_BLUE")
+                break
+        
+        self.assertTrue(help_call_found, "Should render help text")
+    
+    def test_generation_badge_still_renders(self):
+        """Test Generation Badge continues to render correctly (AC #8)"""
+        # Badge should be created and functional
+        self.assertIsNotNone(self.screen.generation_badge, 
+                            "Generation badge should exist")
+        self.assertEqual(self.screen.generation_badge.generation, 1, 
+                        "Badge should show current generation")
+    
+    def test_holographic_colors_different_from_old_palette(self):
+        """Test holographic colors are distinct from old Gameboy palette (AC #7)"""
+        from src.ui.colors import Colors
+        
+        # Verify DEEP_SPACE_BLACK is different from DARK_GREEN
+        self.assertNotEqual(Colors.DEEP_SPACE_BLACK, Colors.DARK_GREEN,
+                           "DEEP_SPACE_BLACK should differ from DARK_GREEN")
+        
+        # Verify ELECTRIC_BLUE is different from BORDER (GREEN)
+        self.assertNotEqual(Colors.ELECTRIC_BLUE, Colors.BORDER,
+                           "ELECTRIC_BLUE should differ from BORDER (GREEN)")
+        
+        # Verify HOLOGRAM_WHITE is different from TEXT_PRIMARY (WHITE)
+        self.assertNotEqual(Colors.HOLOGRAM_WHITE, Colors.TEXT_PRIMARY,
+                           "HOLOGRAM_WHITE should differ from plain WHITE")
+
+
+
 

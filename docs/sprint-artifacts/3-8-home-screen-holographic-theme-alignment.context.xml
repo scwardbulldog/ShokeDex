@@ -1,0 +1,271 @@
+<story-context id="bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>3</epicId>
+    <storyId>8</storyId>
+    <title>Home Screen Holographic Theme Alignment</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-29</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/3-8-home-screen-holographic-theme-alignment.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>user</asA>
+    <iWant>the Home Screen to use the same holographic blue color scheme as the Detail Screen</iWant>
+    <soThat>the visual experience feels cohesive and polished across all screens</soThat>
+    <tasks>
+      <task id="1" name="Update HomeScreen Background (AC #1)">
+        <subtask id="1.1">Modify HomeScreen.render() to use Colors.DEEP_SPACE_BLACK instead of Colors.BACKGROUND</subtask>
+        <subtask id="1.2">Verify background renders correctly on 480x320 display</subtask>
+      </task>
+      <task id="2" name="Update Grid Cell Styling (AC #2, #3)">
+        <subtask id="2.1">Update _render_grid() to use Colors.ELECTRIC_BLUE for cell borders</subtask>
+        <subtask id="2.2">Update selected cell to use Colors.DARK_BLUE background</subtask>
+        <subtask id="2.3">Update selected cell border to use Colors.BRIGHT_CYAN</subtask>
+        <subtask id="2.4">Verify grid cells render correctly with new colors</subtask>
+      </task>
+      <task id="3" name="Update Text Colors (AC #4, #5)">
+        <subtask id="3.1">Update title rendering to use Colors.HOLOGRAM_WHITE</subtask>
+        <subtask id="3.2">Update page indicator text to use Colors.ICE_BLUE</subtask>
+        <subtask id="3.3">Update view mode text to use Colors.ICE_BLUE</subtask>
+        <subtask id="3.4">Update help text to use Colors.ICE_BLUE</subtask>
+      </task>
+      <task id="4" name="Update Search/Filter Bar (AC #6)">
+        <subtask id="4.1">Update _render_search_bar() button backgrounds to use holographic colors</subtask>
+        <subtask id="4.2">Update button borders to use Colors.ELECTRIC_BLUE</subtask>
+        <subtask id="4.3">Update active/inactive button text colors</subtask>
+      </task>
+      <task id="5" name="Verify Visual Consistency (AC #7, #8)">
+        <subtask id="5.1">Test transition between Home Screen and Detail Screen</subtask>
+        <subtask id="5.2">Verify Generation Badge renders correctly against new background</subtask>
+        <subtask id="5.3">Capture before/after screenshots for visual comparison</subtask>
+        <subtask id="5.4">Test on target display resolution (480x320)</subtask>
+      </task>
+      <task id="6" name="Update Color Constants (Optional Enhancement)">
+        <subtask id="6.1">Consider adding Colors.SELECTION_BG_HOLOGRAPHIC alias if useful for consistency</subtask>
+        <subtask id="6.2">Document any new color constant additions</subtask>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="1" name="Background Color Update">
+      <given>a user is on the Home Screen</given>
+      <when>the screen renders</when>
+      <then>the background uses DEEP_SPACE_BLACK (#0a0e1a)</then>
+      <and>the background does NOT use DARK_GREEN (#0f380f)</and>
+      <and>the dark background provides sufficient contrast for all UI elements</and>
+    </criterion>
+    <criterion id="2" name="Grid Cell Border Styling">
+      <given>the Home Screen displays the Pokémon grid</given>
+      <when>grid cells render</when>
+      <then>cell borders use ELECTRIC_BLUE (#00d4ff) for consistency with Detail Screen panels</then>
+      <and>border width matches Detail Screen panel styling (2px)</and>
+      <and>borders are clearly visible against the dark background</and>
+    </criterion>
+    <criterion id="3" name="Selected Cell Highlighting">
+      <given>a user is navigating the Pokémon grid</given>
+      <when>a cell is selected/highlighted</when>
+      <then>the selected cell uses DARK_BLUE (#1a2f4a) background</then>
+      <and>the selected cell has BRIGHT_CYAN (#4df7ff) border</and>
+      <and>the selection is clearly distinguishable from non-selected cells</and>
+      <and>the glow effect (if present) uses holographic colors</and>
+    </criterion>
+    <criterion id="4" name="Title Text Styling">
+      <given>the Home Screen renders the title</given>
+      <when>"ShokeDex" title displays</when>
+      <then>title uses HOLOGRAM_WHITE (#e8f4f8) color</then>
+      <and>title remains readable and prominent against dark background</and>
+    </criterion>
+    <criterion id="5" name="Secondary Text Styling">
+      <given>the Home Screen displays secondary information</given>
+      <when>page indicator, view mode, and help text render</when>
+      <then>secondary text uses ICE_BLUE (#a8e6ff) color</then>
+      <and>text includes: page indicator ("Page X/Y"), view mode ("View: All"), help text ("SELECT: View | START: Settings")</and>
+      <and>all secondary text is readable against dark background</and>
+    </criterion>
+    <criterion id="6" name="Search/Filter Bar Styling">
+      <given>the Home Screen displays the search/filter bar</given>
+      <when>the bar and buttons render</when>
+      <then>buttons use holographic styling matching Detail Screen panels</then>
+      <and>active button has DARK_BLUE (#1a2f4a) background with visible selection</and>
+      <and>button borders use ELECTRIC_BLUE (#00d4ff)</and>
+      <and>button text uses appropriate holographic colors (white for active, ice blue for inactive)</and>
+    </criterion>
+    <criterion id="7" name="Visual Transition Consistency">
+      <given>a user navigates between Home Screen and Detail Screen</given>
+      <when>transitioning between screens</when>
+      <then>no jarring color change occurs</then>
+      <and>both screens share the same dark background (#0a0e1a)</and>
+      <and>the holographic aesthetic is consistent across transitions</and>
+    </criterion>
+    <criterion id="8" name="Generation Badge Preservation">
+      <given>the Generation Badge component already uses holographic colors</given>
+      <when>the Home Screen theme is updated</when>
+      <then>the Generation Badge continues to render correctly</then>
+      <and>no regression in badge styling (border, glow, text colors)</and>
+      <and>badge remains visually integrated with new background</and>
+    </criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/ux-design-specification.md</path>
+        <title>ShokeDex UX Design Specification</title>
+        <section>2.2 Color System - Holographic Blue Palette</section>
+        <snippet>Defines the holographic blue color system with DEEP_SPACE_BLACK (#0a0e1a) for background, ELECTRIC_BLUE (#00d4ff) for borders, BRIGHT_CYAN (#4df7ff) for highlights, ICE_BLUE (#a8e6ff) for secondary text, and HOLOGRAM_WHITE (#e8f4f8) for primary text.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-2-detail-view-with-audio.md</path>
+        <title>Epic Technical Specification: Detail View Implementation</title>
+        <section>Detailed Design - Stat Bar Color Coding</section>
+        <snippet>Documents the holographic blue styling patterns used in DetailScreen that should be applied to HomeScreen for visual consistency. Panel styling uses 2px borders with ELECTRIC_BLUE, backgrounds with DARK_BLUE transparency.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/3-7-detail-view-performance-and-visual-polish.md</path>
+        <title>Story 3.7: Detail View Performance and Visual Polish</title>
+        <section>Learnings</section>
+        <snippet>Holographic styling successfully implemented on Detail Screen. All color constants available in colors.py and working. Pattern established: 2px borders with ELECTRIC_BLUE, backgrounds with DARK_BLUE, text hierarchy with white primary and ice blue secondary.</snippet>
+      </doc>
+      <doc>
+        <path>docs/epics.md</path>
+        <title>ShokeDex Epic Definitions</title>
+        <section>Epic 3: Detail View Implementation</section>
+        <snippet>Story 3.8 defined as alignment of Home Screen visual theme with Detail Screen holographic palette for cohesive user experience across all screens.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <file>
+        <path>src/ui/home_screen.py</path>
+        <kind>screen</kind>
+        <symbol>HomeScreen</symbol>
+        <lines>1-1043</lines>
+        <reason>Primary file to modify. Contains render(), _render_grid(), _render_cell(), _render_search_bar() methods that need color updates from old palette to holographic palette.</reason>
+      </file>
+      <file>
+        <path>src/ui/home_screen.py</path>
+        <kind>screen</kind>
+        <symbol>HomeScreen.render</symbol>
+        <lines>810-870</lines>
+        <reason>Main render method - line 812 uses Colors.BACKGROUND (needs DEEP_SPACE_BLACK), title text uses TEXT_PRIMARY (needs HOLOGRAM_WHITE), secondary text uses TEXT_SECONDARY (needs ICE_BLUE).</reason>
+      </file>
+      <file>
+        <path>src/ui/home_screen.py</path>
+        <kind>screen</kind>
+        <symbol>HomeScreen._render_cell</symbol>
+        <lines>960-1043</lines>
+        <reason>Grid cell rendering - uses Colors.SELECTION_BG (needs DARK_BLUE), Colors.BORDER (needs ELECTRIC_BLUE for normal, BRIGHT_CYAN for selected).</reason>
+      </file>
+      <file>
+        <path>src/ui/home_screen.py</path>
+        <kind>screen</kind>
+        <symbol>HomeScreen._render_search_bar</symbol>
+        <lines>895-930</lines>
+        <reason>Search/filter bar - button backgrounds use SELECTION_BG (needs DARK_BLUE), borders use BORDER (needs ELECTRIC_BLUE).</reason>
+      </file>
+      <file>
+        <path>src/ui/home_screen.py</path>
+        <kind>component</kind>
+        <symbol>GenerationBadge</symbol>
+        <lines>36-218</lines>
+        <reason>Already uses holographic colors (DARK_BLUE, ELECTRIC_BLUE, BRIGHT_CYAN). Reference implementation and should remain unchanged. Verify no regression after HomeScreen changes.</reason>
+      </file>
+      <file>
+        <path>src/ui/colors.py</path>
+        <kind>constants</kind>
+        <symbol>Colors</symbol>
+        <lines>1-117</lines>
+        <reason>Color constant definitions. Holographic colors already defined at lines 51-57: DEEP_SPACE_BLACK, DARK_BLUE, ELECTRIC_BLUE, BRIGHT_CYAN, ICE_BLUE, HOLOGRAM_WHITE. No changes needed here.</reason>
+      </file>
+      <file>
+        <path>src/ui/detail_screen.py</path>
+        <kind>screen</kind>
+        <symbol>DetailScreen.render</symbol>
+        <lines>540-620</lines>
+        <reason>Reference implementation of holographic styling. Line 577 uses Colors.DEEP_SPACE_BLACK for background. Use as pattern to follow in HomeScreen.</reason>
+      </file>
+    </code>
+    <dependencies>
+      <python>
+        <package name="pygame" version=">=2.5.0">Graphics rendering and display management</package>
+        <package name="pillow" version=">=10.0.0">Image processing for sprites</package>
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint>All changes confined to src/ui/home_screen.py - no new files required</constraint>
+    <constraint>No database or state changes - purely visual update</constraint>
+    <constraint>Must maintain 30+ FPS performance target on Raspberry Pi 3B+</constraint>
+    <constraint>Colors already defined in src/ui/colors.py - use existing constants</constraint>
+    <constraint>GenerationBadge component must continue working without modification</constraint>
+    <constraint>Target display resolution: 480x320</constraint>
+    <constraint>Follow established holographic styling pattern from DetailScreen (2px borders, transparency layers)</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>Colors.DEEP_SPACE_BLACK</name>
+      <kind>constant</kind>
+      <signature>(10, 14, 26)  # #0a0e1a - Main background</signature>
+      <path>src/ui/colors.py</path>
+    </interface>
+    <interface>
+      <name>Colors.DARK_BLUE</name>
+      <kind>constant</kind>
+      <signature>(26, 47, 74)  # #1a2f4a - Panel backgrounds, selection backgrounds</signature>
+      <path>src/ui/colors.py</path>
+    </interface>
+    <interface>
+      <name>Colors.ELECTRIC_BLUE</name>
+      <kind>constant</kind>
+      <signature>(0, 212, 255)  # #00d4ff - Primary UI borders, accents</signature>
+      <path>src/ui/colors.py</path>
+    </interface>
+    <interface>
+      <name>Colors.BRIGHT_CYAN</name>
+      <kind>constant</kind>
+      <signature>(77, 247, 255)  # #4df7ff - Highlights, active selections, glow effects</signature>
+      <path>src/ui/colors.py</path>
+    </interface>
+    <interface>
+      <name>Colors.ICE_BLUE</name>
+      <kind>constant</kind>
+      <signature>(168, 230, 255)  # #a8e6ff - Secondary text</signature>
+      <path>src/ui/colors.py</path>
+    </interface>
+    <interface>
+      <name>Colors.HOLOGRAM_WHITE</name>
+      <kind>constant</kind>
+      <signature>(232, 244, 248)  # #e8f4f8 - Primary text</signature>
+      <path>src/ui/colors.py</path>
+    </interface>
+    <interface>
+      <name>Colors.BACKGROUND</name>
+      <kind>constant</kind>
+      <signature>Colors.DARK_GREEN = (15, 56, 15)  # #0f380f - OLD value to be replaced</signature>
+      <path>src/ui/colors.py</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>pytest framework with pygame mocking. Tests use temporary surfaces and verify color values at specific pixel coordinates. Performance tests measure frame times. Visual tests verify contrast and readability.</standards>
+    <locations>
+      <location>tests/test_home_screen.py</location>
+      <location>tests/test_generation_badge.py</location>
+      <location>tests/test_detail_screen.py</location>
+    </locations>
+    <ideas>
+      <idea acRef="1">Test that HomeScreen.render() fills surface with DEEP_SPACE_BLACK (10, 14, 26) at background pixels</idea>
+      <idea acRef="2">Test that _render_cell() draws borders with ELECTRIC_BLUE (0, 212, 255) for non-selected cells</idea>
+      <idea acRef="3">Test that selected cell uses DARK_BLUE background (26, 47, 74) and BRIGHT_CYAN border (77, 247, 255)</idea>
+      <idea acRef="4">Test that title "ShokeDex" renders with HOLOGRAM_WHITE color (232, 244, 248)</idea>
+      <idea acRef="5">Test that page indicator, view mode, and help text use ICE_BLUE color (168, 230, 255)</idea>
+      <idea acRef="6">Test that search bar buttons use holographic styling - active: DARK_BLUE bg, ELECTRIC_BLUE border</idea>
+      <idea acRef="7">Visual regression test comparing Home Screen and Detail Screen background colors (should match)</idea>
+      <idea acRef="8">Test that GenerationBadge still renders correctly with holographic colors after changes</idea>
+      <idea acRef="all">Performance test ensuring render() maintains sub-33ms execution for 30+ FPS</idea>
+    </ideas>
+  </tests>
+</story-context>

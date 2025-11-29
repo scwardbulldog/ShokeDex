@@ -294,8 +294,8 @@ class HomeScreen(Screen):
         
         # Layout dimensions (for 480x320 display)
         self.cell_width = 120
-        self.cell_height = 90
-        self.grid_start_y = 60  # Increased to accommodate search bar
+        self.cell_height = 75  # Reduced from 90 to prevent overlap with bottom status bar
+        self.grid_start_y = 70  # Buffer below badge/search bar (was 60)
         
         # Performance monitoring (Story 1.7)
         self.performance_monitor = PerformanceMonitor(history_size=100)
@@ -831,13 +831,8 @@ class HomeScreen(Screen):
     
     def render(self, surface: pygame.Surface):
         """Render the screen."""
-        # Clear background
-        surface.fill(Colors.BACKGROUND)
-        
-        # Draw title
-        title_text = self.title_font.render("ShokeDex", True, Colors.TEXT_PRIMARY)
-        title_rect = title_text.get_rect(center=(240, 15))
-        surface.blit(title_text, title_rect)
+        # Clear background (holographic theme - AC #1)
+        surface.fill(Colors.DEEP_SPACE_BLACK)
         
         # Draw generation badge (top-left position)
         if self.generation_badge:
@@ -862,33 +857,35 @@ class HomeScreen(Screen):
             # Normal rendering without alpha
             self._render_grid(surface)
         
-        # Draw page indicator and view mode
+        # Draw page indicator and view mode (holographic ice blue - AC #5)
+        # Status bar at bottom of screen (y=305 leaves room below 285px grid)
+        status_y = 305
         total_pages = max(1, (self.total_pokemon + self.items_per_page - 1) // self.items_per_page)
         page_text = self.small_font.render(
             f"Page {self.page + 1}/{total_pages}",
             True,
-            Colors.TEXT_SECONDARY
+            Colors.ICE_BLUE
         )
-        surface.blit(page_text, (10, 300))
+        surface.blit(page_text, (10, status_y))
         
-        # Draw view mode indicator
+        # Draw view mode indicator (holographic ice blue - AC #5)
         view_mode_text = f"View: {self.view_mode.capitalize()}"
         if self.search_query:
             view_mode_text += f" (Search: {self.search_query})"
         mode_render = self.small_font.render(
             view_mode_text,
             True,
-            Colors.TEXT_SECONDARY
+            Colors.ICE_BLUE
         )
-        surface.blit(mode_render, (140, 300))
+        surface.blit(mode_render, (140, status_y))
         
-        # Draw help text
+        # Draw help text (holographic ice blue - AC #5)
         help_text = self.small_font.render(
             "SELECT: View | START: Settings",
             True,
-            Colors.TEXT_SECONDARY
+            Colors.ICE_BLUE
         )
-        help_rect = help_text.get_rect(right=470, bottom=315)
+        help_rect = help_text.get_rect(right=470, top=status_y)
         surface.blit(help_text, help_rect)
     
     def _render_search_bar(self, surface: pygame.Surface):
@@ -897,15 +894,16 @@ class HomeScreen(Screen):
         bar_height = 18
         
         # Draw search indicator
+        # Search icon with holographic styling (AC #6)
         search_icon = "🔍" if self.search_query or self.search_active else "⊡"
         search_text = self.small_font.render(
             f"{search_icon} {self.search_query}",
             True,
-            Colors.TEXT_PRIMARY if self.search_active else Colors.TEXT_SECONDARY
+            Colors.HOLOGRAM_WHITE if self.search_active else Colors.ICE_BLUE
         )
         surface.blit(search_text, (10, bar_y))
         
-        # Draw view mode buttons (favorites, recent, all)
+        # Draw view mode buttons with holographic styling (AC #6)
         button_x = 280
         button_width = 60
         for mode in ["all", "recent", "fav"]:
@@ -914,13 +912,13 @@ class HomeScreen(Screen):
             
             btn_rect = pygame.Rect(button_x, bar_y - 2, button_width, bar_height)
             
-            # Draw button background
+            # Draw button background (holographic - AC #6)
             if is_active:
-                pygame.draw.rect(surface, Colors.SELECTION_BG, btn_rect)
-            pygame.draw.rect(surface, Colors.BORDER, btn_rect, 1)
+                pygame.draw.rect(surface, Colors.DARK_BLUE, btn_rect)
+            pygame.draw.rect(surface, Colors.ELECTRIC_BLUE, btn_rect, 2)
             
-            # Draw button text
-            btn_color = Colors.BLACK if is_active else Colors.TEXT_SECONDARY
+            # Draw button text (holographic - white active, ice blue inactive)
+            btn_color = Colors.HOLOGRAM_WHITE if is_active else Colors.ICE_BLUE
             mode_name = "Fav" if mode == "fav" else mode.capitalize()
             btn_text = self.small_font.render(mode_name, True, btn_color)
             btn_text_rect = btn_text.get_rect(center=btn_rect.center)
@@ -931,11 +929,11 @@ class HomeScreen(Screen):
     def _render_grid(self, surface: pygame.Surface):
         """Render the Pokemon grid."""
         if self.total_pokemon == 0:
-            # Show "no results" message
+            # Show "no results" message (holographic ice blue)
             no_results = self.text_font.render(
                 "No Pokémon found",
                 True,
-                Colors.TEXT_SECONDARY
+                Colors.ICE_BLUE
             )
             no_results_rect = no_results.get_rect(center=(240, 160))
             surface.blit(no_results, no_results_rect)
@@ -976,12 +974,19 @@ class HomeScreen(Screen):
         is_favorite: bool = False,
         is_recent: bool = False
     ):
-        """Render a single grid cell."""
-        # Draw selection background
+        """Render a single grid cell with holographic styling."""
+        rect = pygame.Rect(x + 2, y + 2, self.cell_width - 4, self.cell_height - 4)
+        
+        # Draw cell border (AC #2) - ELECTRIC_BLUE for all cells
+        pygame.draw.rect(surface, Colors.ELECTRIC_BLUE, rect, 2)
+        
+        # Draw selection background and highlight border (AC #3)
         if is_selected:
-            rect = pygame.Rect(x + 2, y + 2, self.cell_width - 4, self.cell_height - 4)
-            pygame.draw.rect(surface, Colors.SELECTION_BG, rect)
-            pygame.draw.rect(surface, Colors.BORDER, rect, 2)
+            # Fill with DARK_BLUE background for selection
+            inner_rect = pygame.Rect(x + 4, y + 4, self.cell_width - 8, self.cell_height - 8)
+            pygame.draw.rect(surface, Colors.DARK_BLUE, inner_rect)
+            # Bright cyan border for selected cell
+            pygame.draw.rect(surface, Colors.BRIGHT_CYAN, rect, 2)
         
         # Draw favorite/recent indicator
         if is_favorite:
@@ -997,9 +1002,9 @@ class HomeScreen(Screen):
         sprite_y = y + 10
         sprite_rect = pygame.Rect(sprite_x, sprite_y, sprite_size, sprite_size)
         
-        # Draw sprite border
-        color = Colors.SELECTION_TEXT if is_selected else Colors.BORDER
-        pygame.draw.rect(surface, color, sprite_rect, 1)
+        # Draw sprite border (holographic styling)
+        border_color = Colors.BRIGHT_CYAN if is_selected else Colors.ELECTRIC_BLUE
+        pygame.draw.rect(surface, border_color, sprite_rect, 1)
 
         # Attempt to load and draw thumbnail
         try:
@@ -1017,7 +1022,7 @@ class HomeScreen(Screen):
                 id_text = self.small_font.render(
                     f"#{pokemon['id']:03d}",
                     True,
-                    color
+                    Colors.ICE_BLUE
                 )
                 id_rect = id_text.get_rect(center=sprite_rect.center)
                 surface.blit(id_text, id_rect)
@@ -1026,17 +1031,16 @@ class HomeScreen(Screen):
             id_text = self.small_font.render(
                 f"#{pokemon['id']:03d}",
                 True,
-                color
+                Colors.ICE_BLUE
             )
             id_rect = id_text.get_rect(center=sprite_rect.center)
             surface.blit(id_text, id_rect)
         
-        # Draw Pokemon name
-        name_color = Colors.SELECTION_TEXT if is_selected else Colors.TEXT_PRIMARY
+        # Draw Pokemon name (holographic white for all - readable against DARK_BLUE selection)
         name_text = self.small_font.render(
             pokemon['name'].capitalize(),
             True,
-            name_color
+            Colors.HOLOGRAM_WHITE
         )
-        name_rect = name_text.get_rect(centerx=x + self.cell_width // 2, top=y + 65)
+        name_rect = name_text.get_rect(centerx=x + self.cell_width // 2, top=y + 58)
         surface.blit(name_text, name_rect)

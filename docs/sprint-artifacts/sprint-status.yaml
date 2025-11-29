@@ -72,6 +72,7 @@ development_status:
   3-5-pokedex-description-text-display: done
   3-6-adjacent-pokemon-navigation-in-detail-view: done
   3-7-detail-view-performance-and-visual-polish: done
+  3-8-home-screen-holographic-theme-alignment: review
   epic-3-retrospective: optional
 
   # Epic 4: State Persistence
