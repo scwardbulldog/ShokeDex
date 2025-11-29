@@ -1,0 +1,297 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<story-context id="story-4.4-volume-and-input-mode-preferences" v="1.0">
+  <metadata>
+    <epicId>4</epicId>
+    <storyId>4</storyId>
+    <title>Volume and Input Mode Preferences</title>
+    <status>ready-for-dev</status>
+    <generatedAt>2025-11-29</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/4-4-volume-and-input-mode-preferences.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>user</asA>
+    <iWant>my volume and input preferences saved</iWant>
+    <soThat>they persist across sessions</soThat>
+    <tasks>
+      <task id="1" acs="1,2,5">Verify StateManager Volume Methods Exist and Work
+        <subtask id="1.1">Verify get_volume() returns float from preferences.volume</subtask>
+        <subtask id="1.2">Verify set_volume() updates preferences.volume in memory</subtask>
+        <subtask id="1.3">Verify set_volume() clamps values to 0.0-1.0 range</subtask>
+        <subtask id="1.4">Verify volume persists through save_state() and reload cycle</subtask>
+      </task>
+      <task id="2" acs="3,4,6">Verify StateManager Input Mode Methods Exist and Work
+        <subtask id="2.1">Verify get_input_mode() returns string from preferences.input_mode</subtask>
+        <subtask id="2.2">Verify set_input_mode() updates preferences.input_mode in memory</subtask>
+        <subtask id="2.3">Verify set_input_mode() only accepts "keyboard" or "gpio"</subtask>
+        <subtask id="2.4">Verify invalid mode values are silently ignored (no exception)</subtask>
+        <subtask id="2.5">Verify input_mode persists through save_state() and reload cycle</subtask>
+      </task>
+      <task id="3" acs="5,6,7">Verify Load-Time Validation
+        <subtask id="3.1">Review _load_state() validation logic for volume clamping</subtask>
+        <subtask id="3.2">Review _load_state() validation logic for input_mode validation</subtask>
+        <subtask id="3.3">Verify invalid values trigger warning logs</subtask>
+        <subtask id="3.4">Verify corrected values are written back to state file on load</subtask>
+      </task>
+      <task id="4" acs="1,2,5,7">Write Unit Tests for Volume Preference
+        <subtask id="4.1">Test test_set_and_get_volume()</subtask>
+        <subtask id="4.2">Test test_volume_clamping_low() - set -0.5, verify 0.0</subtask>
+        <subtask id="4.3">Test test_volume_clamping_high() - set 1.5, verify 1.0</subtask>
+        <subtask id="4.4">Test test_volume_persists_through_save_reload()</subtask>
+        <subtask id="4.5">Test test_volume_validation_on_load()</subtask>
+        <subtask id="4.6">Test test_volume_default_value() - verify 0.7</subtask>
+      </task>
+      <task id="5" acs="3,4,6">Write Unit Tests for Input Mode Preference
+        <subtask id="5.1">Test test_set_and_get_input_mode_keyboard()</subtask>
+        <subtask id="5.2">Test test_set_and_get_input_mode_gpio()</subtask>
+        <subtask id="5.3">Test test_input_mode_invalid_ignored()</subtask>
+        <subtask id="5.4">Test test_input_mode_persists_through_save_reload()</subtask>
+        <subtask id="5.5">Test test_input_mode_validation_on_load()</subtask>
+        <subtask id="5.6">Test test_input_mode_default_value() - verify "keyboard"</subtask>
+      </task>
+      <task id="6" acs="8">Write Integration Test for Power Cycle Simulation
+        <subtask id="6.1">Test test_preferences_survive_power_cycle()</subtask>
+      </task>
+      <task id="7" acs="6,7">Verify Logging for Validation Warnings
+        <subtask id="7.1">Test invalid volume logs warning with clamped values</subtask>
+        <subtask id="7.2">Test invalid input_mode logs warning about default reset</subtask>
+        <subtask id="7.3">Use caplog pytest fixture for log assertions</subtask>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="1" title="Volume Preference Persistence">
+      <given>a user sets volume to 0.5 (50%)</given>
+      <when>the user exits the application</when>
+      <then>StateManager saves volume=0.5 to state file in preferences.volume field using atomic write pattern</then>
+    </criterion>
+    <criterion id="2" title="Volume Preference Restoration on Boot">
+      <given>the application restarts with volume=0.5 in state file</given>
+      <when>StateManager loads state</when>
+      <then>StateManager.get_volume() returns 0.5 immediately after initialization</then>
+    </criterion>
+    <criterion id="3" title="Input Mode Preference Persistence">
+      <given>a user's input mode is set to "gpio"</given>
+      <when>the application exits</when>
+      <then>StateManager saves input_mode="gpio" to state file in preferences.input_mode field</then>
+    </criterion>
+    <criterion id="4" title="Input Mode Preference Restoration on Boot">
+      <given>the application restarts with input_mode="gpio" in state file</given>
+      <when>StateManager loads state</when>
+      <then>StateManager.get_input_mode() returns "gpio"</then>
+    </criterion>
+    <criterion id="5" title="Volume Validation and Clamping">
+      <given>a volume value outside valid range (e.g., -0.5 or 1.5)</given>
+      <when>StateManager.set_volume() is called</when>
+      <then>value is clamped to 0.0-1.0 range with no exception raised</then>
+    </criterion>
+    <criterion id="6" title="Input Mode Validation">
+      <given>an invalid input_mode value (e.g., "touchscreen")</given>
+      <when>StateManager loads state or set_input_mode() is called</when>
+      <then>invalid values are rejected/reset to "keyboard" with warning logged</then>
+    </criterion>
+    <criterion id="7" title="Volume Validation on Load">
+      <given>a state file with volume=2.5 (invalid)</given>
+      <when>StateManager loads the state file</when>
+      <then>volume is clamped to 1.0, warning logged, corrected value written back</then>
+    </criterion>
+    <criterion id="8" title="Preferences Survive Power Cycle">
+      <given>user sets volume=0.3 and input_mode="gpio"</given>
+      <when>application saves state and restarts</when>
+      <then>both preferences are restored correctly</then>
+    </criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-3-state-persistence.md</path>
+        <title>Epic Technical Specification: State Persistence</title>
+        <section>Data Models and Contracts</section>
+        <snippet>State file JSON schema defines preferences.volume (0.0-1.0) and preferences.input_mode ("keyboard" or "gpio"). Validation rules specify clamping and reset behavior.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture.md</path>
+        <title>ShokeDex Architecture</title>
+        <section>StateManager Integration</section>
+        <snippet>StateManager tracks user preferences (volume, input mode). Provides get_volume(), set_volume(), get_input_mode(), set_input_mode() methods.</snippet>
+      </doc>
+      <doc>
+        <path>docs/epics.md</path>
+        <title>ShokeDex Epic Breakdown</title>
+        <section>Story 4.4</section>
+        <snippet>Volume clamping: max(0.0, min(1.0, volume)). Input mode validation: mode in ["keyboard", "gpio"] else "keyboard".</snippet>
+      </doc>
+      <doc>
+        <path>TESTING.md</path>
+        <title>Test Framework Quick Reference</title>
+        <section>Writing Tests</section>
+        <snippet>Use pytest with fixtures. temp_state_manager fixture provides temporary state file. Use @pytest.mark.unit for unit tests, @pytest.mark.parametrize for edge cases.</snippet>
+      </doc>
+    </docs>
+
+    <code>
+      <file>
+        <path>src/state_manager.py</path>
+        <kind>manager</kind>
+        <symbol>StateManager</symbol>
+        <lines>1-421</lines>
+        <reason>Core class under test - contains get_volume(), set_volume(), get_input_mode(), set_input_mode() methods (lines 360-378) and _load_state() validation logic (lines 130-175)</reason>
+      </file>
+      <file>
+        <path>src/state_manager.py</path>
+        <kind>manager</kind>
+        <symbol>get_volume</symbol>
+        <lines>360-363</lines>
+        <reason>Returns audio volume (0.0 to 1.0) from preferences with 0.7 default</reason>
+      </file>
+      <file>
+        <path>src/state_manager.py</path>
+        <kind>manager</kind>
+        <symbol>set_volume</symbol>
+        <lines>365-368</lines>
+        <reason>Sets volume with clamping: max(0.0, min(1.0, volume))</reason>
+      </file>
+      <file>
+        <path>src/state_manager.py</path>
+        <kind>manager</kind>
+        <symbol>get_input_mode</symbol>
+        <lines>370-372</lines>
+        <reason>Returns input mode ("keyboard" or "gpio") from preferences</reason>
+      </file>
+      <file>
+        <path>src/state_manager.py</path>
+        <kind>manager</kind>
+        <symbol>set_input_mode</symbol>
+        <lines>374-377</lines>
+        <reason>Sets input mode only if valid ("keyboard" or "gpio"), else ignored</reason>
+      </file>
+      <file>
+        <path>src/state_manager.py</path>
+        <kind>manager</kind>
+        <symbol>_load_state</symbol>
+        <lines>102-197</lines>
+        <reason>Contains load-time validation logic for volume clamping and input_mode validation with warning logging</reason>
+      </file>
+      <file>
+        <path>tests/test_state_manager.py</path>
+        <kind>test</kind>
+        <symbol>TestStateManager</symbol>
+        <lines>1-200</lines>
+        <reason>Existing test class with test_volume() and test_input_mode() tests to extend</reason>
+      </file>
+      <file>
+        <path>tests/test_state_manager.py</path>
+        <kind>test</kind>
+        <symbol>test_volume</symbol>
+        <lines>133-144</lines>
+        <reason>Existing volume tests covering set/get and clamping - verify coverage and extend</reason>
+      </file>
+      <file>
+        <path>tests/test_state_manager.py</path>
+        <kind>test</kind>
+        <symbol>test_input_mode</symbol>
+        <lines>146-157</lines>
+        <reason>Existing input mode tests covering valid modes and invalid rejection</reason>
+      </file>
+      <file>
+        <path>tests/conftest.py</path>
+        <kind>fixture</kind>
+        <symbol>temp_state_manager</symbol>
+        <lines>82-95</lines>
+        <reason>Pytest fixture providing StateManager with temporary state file for isolated tests</reason>
+      </file>
+    </code>
+
+    <dependencies>
+      <python>
+        <package name="pytest" version=">=7.4.0">Testing framework</package>
+        <package name="pytest-cov" version=">=4.1.0">Coverage reporting</package>
+      </python>
+      <stdlib>
+        <module name="json">State file serialization</module>
+        <module name="tempfile">Temporary file/directory creation for tests</module>
+        <module name="pathlib">Path operations</module>
+        <module name="logging">Warning log capture in tests</module>
+      </stdlib>
+    </dependencies>
+  </artifacts>
+
+  <interfaces>
+    <interface>
+      <name>StateManager.get_volume</name>
+      <kind>method</kind>
+      <signature>def get_volume(self) -> float</signature>
+      <path>src/state_manager.py</path>
+      <description>Returns audio volume (0.0 to 1.0), defaults to 0.7</description>
+    </interface>
+    <interface>
+      <name>StateManager.set_volume</name>
+      <kind>method</kind>
+      <signature>def set_volume(self, volume: float) -> None</signature>
+      <path>src/state_manager.py</path>
+      <description>Sets volume with clamping to 0.0-1.0 range</description>
+    </interface>
+    <interface>
+      <name>StateManager.get_input_mode</name>
+      <kind>method</kind>
+      <signature>def get_input_mode(self) -> str</signature>
+      <path>src/state_manager.py</path>
+      <description>Returns input mode ("keyboard" or "gpio"), defaults to "keyboard"</description>
+    </interface>
+    <interface>
+      <name>StateManager.set_input_mode</name>
+      <kind>method</kind>
+      <signature>def set_input_mode(self, mode: str) -> None</signature>
+      <path>src/state_manager.py</path>
+      <description>Sets input mode only if valid, silently ignores invalid values</description>
+    </interface>
+    <interface>
+      <name>StateManager.save_state</name>
+      <kind>method</kind>
+      <signature>def save_state(self) -> bool</signature>
+      <path>src/state_manager.py</path>
+      <description>Persists state to JSON file using atomic write pattern</description>
+    </interface>
+  </interfaces>
+
+  <constraints>
+    <constraint source="architecture.md">State file uses JSON format for portability and debugging</constraint>
+    <constraint source="architecture.md">Manager singleton pattern - StateManager instantiated once at startup</constraint>
+    <constraint source="tech-spec">Volume validated to 0.0-1.0 range on set and on load</constraint>
+    <constraint source="tech-spec">Input mode must be "keyboard" or "gpio", invalid values reset to "keyboard"</constraint>
+    <constraint source="tech-spec">Warning logged for any validation corrections</constraint>
+    <constraint source="tech-spec">Corrected values written back to state file on load</constraint>
+    <constraint source="tech-spec">Atomic write pattern: write temp file, then rename</constraint>
+    <constraint source="TESTING.md">Use pytest with fixtures, @pytest.mark.unit marker for unit tests</constraint>
+    <constraint source="TESTING.md">Use caplog fixture for log message verification</constraint>
+    <constraint source="story">This is a verification/testing story - implementation exists, focus on comprehensive tests</constraint>
+  </constraints>
+
+  <tests>
+    <standards>
+      Use pytest as the testing framework with pytest-cov for coverage. Tests should use the temp_state_manager fixture from conftest.py for isolated state file testing. Unit tests should be marked with @pytest.mark.unit. Use @pytest.mark.parametrize for testing edge cases (boundary values, invalid inputs). Use the caplog fixture to verify warning log messages. Follow existing patterns in TestStateManager class. Tests should clean up temporary files automatically via fixtures.
+    </standards>
+    <locations>
+      <location>tests/test_state_manager.py</location>
+      <location>tests/conftest.py (fixtures)</location>
+    </locations>
+    <ideas>
+      <idea ac="1,2">test_volume_persists_through_save_reload - set 0.5, save, new StateManager, verify 0.5</idea>
+      <idea ac="3,4">test_input_mode_persists_through_save_reload - set "gpio", save, reload, verify "gpio"</idea>
+      <idea ac="5">test_volume_clamping_low - set_volume(-0.5), verify get_volume() returns 0.0</idea>
+      <idea ac="5">test_volume_clamping_high - set_volume(1.5), verify get_volume() returns 1.0</idea>
+      <idea ac="5">test_volume_boundary_values - 0.0, 1.0, 0.5 all preserved unchanged</idea>
+      <idea ac="6">test_input_mode_invalid_ignored - set "touchscreen", verify previous mode retained</idea>
+      <idea ac="6">test_input_mode_case_sensitive - "GPIO" uppercase should be rejected</idea>
+      <idea ac="7">test_volume_validation_on_load - write 2.5 to file, load, verify clamped to 1.0</idea>
+      <idea ac="7">test_volume_validation_logs_warning - use caplog, verify warning message format</idea>
+      <idea ac="6">test_input_mode_validation_on_load - write "invalid" to file, load, verify "keyboard"</idea>
+      <idea ac="8">test_preferences_survive_power_cycle - set both, save, new instance, verify both</idea>
+      <idea ac="1">test_volume_default_value - new state file has volume=0.7</idea>
+      <idea ac="3">test_input_mode_default_value - new state file has input_mode="keyboard"</idea>
+    </ideas>
+  </tests>
+</story-context>

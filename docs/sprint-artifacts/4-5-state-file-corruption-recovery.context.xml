@@ -1,0 +1,339 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<story-context id="story-4.5-state-file-corruption-recovery" v="1.0">
+  <metadata>
+    <epicId>4</epicId>
+    <storyId>5</storyId>
+    <title>State File Corruption Recovery</title>
+    <status>ready-for-dev</status>
+    <generatedAt>2025-11-29</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/4-5-state-file-corruption-recovery.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>user</asA>
+    <iWant>the device to recover gracefully if the state file is corrupted</iWant>
+    <soThat>the device always works even if something goes wrong</soThat>
+    <tasks>
+      <task id="1" acs="1,2,3,4">Verify JSON Parse Error Handling
+        <subtask id="1.1">Review _load_state() try/except catches json.JSONDecodeError</subtask>
+        <subtask id="1.2">Review _load_state() try/except catches IOError</subtask>
+        <subtask id="1.3">Verify default state is returned on exception</subtask>
+        <subtask id="1.4">Verify corrupt file is overwritten with valid defaults</subtask>
+        <subtask id="1.5">Verify warning log message format matches AC #4</subtask>
+      </task>
+      <task id="2" acs="5,6,7,8,9">Verify Field Validation Logic
+        <subtask id="2.1">Review pokemon_id validation: max(1, min(386, original_id))</subtask>
+        <subtask id="2.2">Review generation validation: max(1, min(3, original_gen))</subtask>
+        <subtask id="2.3">Review volume validation: max(0.0, min(1.0, float(original_volume)))</subtask>
+        <subtask id="2.4">Review input_mode validation: check against ('keyboard', 'gpio')</subtask>
+        <subtask id="2.5">Verify needs_correction flag triggers file save with corrected values</subtask>
+      </task>
+      <task id="3" acs="1,2,3,4">Write Unit Tests for Corrupt JSON Handling
+        <subtask id="3.1">Test test_corrupt_json_does_not_crash()</subtask>
+        <subtask id="3.2">Test test_corrupt_json_returns_defaults()</subtask>
+        <subtask id="3.3">Test test_corrupt_json_overwrites_file()</subtask>
+        <subtask id="3.4">Test test_corrupt_json_logs_warning() using caplog</subtask>
+        <subtask id="3.5">Test test_truncated_json_handled()</subtask>
+        <subtask id="3.6">Test test_empty_file_handled()</subtask>
+      </task>
+      <task id="4" acs="5,9">Write Unit Tests for pokemon_id Validation
+        <subtask id="4.1">Test test_pokemon_id_above_max_clamped() - id=999 → 386</subtask>
+        <subtask id="4.2">Test test_pokemon_id_below_min_clamped() - id=-5 → 1</subtask>
+        <subtask id="4.3">Test test_pokemon_id_zero_clamped() - id=0 → 1</subtask>
+        <subtask id="4.4">Test test_pokemon_id_valid_unchanged() - id=25 → 25</subtask>
+        <subtask id="4.5">Test test_pokemon_id_boundary_values() - id=1, id=386 unchanged</subtask>
+      </task>
+      <task id="5" acs="6,9">Write Unit Tests for Generation Validation
+        <subtask id="5.1">Test test_generation_above_max_clamped() - gen=5 → 3</subtask>
+        <subtask id="5.2">Test test_generation_below_min_clamped() - gen=-1 → 1</subtask>
+        <subtask id="5.3">Test test_generation_zero_clamped() - gen=0 → 1</subtask>
+        <subtask id="5.4">Test test_generation_valid_unchanged() - gen=2 → 2</subtask>
+        <subtask id="5.5">Test test_generation_boundary_values() - gen=1, gen=3 unchanged</subtask>
+      </task>
+      <task id="6" acs="7,9">Write Unit Tests for Volume Validation
+        <subtask id="6.1">Test test_volume_above_max_clamped() - vol=2.5 → 1.0</subtask>
+        <subtask id="6.2">Test test_volume_below_min_clamped() - vol=-0.5 → 0.0</subtask>
+        <subtask id="6.3">Test test_volume_valid_unchanged() - vol=0.5 → 0.5</subtask>
+        <subtask id="6.4">Test test_volume_boundary_values() - vol=0.0, vol=1.0 unchanged</subtask>
+        <subtask id="6.5">Test test_volume_string_coerced() - vol="0.5" → float 0.5</subtask>
+      </task>
+      <task id="7" acs="8">Write Unit Tests for Input Mode Validation
+        <subtask id="7.1">Test test_input_mode_invalid_reset_to_keyboard() - "touchscreen" → "keyboard"</subtask>
+        <subtask id="7.2">Test test_input_mode_empty_string_reset() - "" → "keyboard"</subtask>
+        <subtask id="7.3">Test test_input_mode_case_sensitive() - "GPIO" → "keyboard"</subtask>
+        <subtask id="7.4">Test test_input_mode_valid_keyboard_unchanged()</subtask>
+        <subtask id="7.5">Test test_input_mode_valid_gpio_unchanged()</subtask>
+      </task>
+      <task id="8" acs="4,5,6,7,8">Write Unit Tests for Logging Verification
+        <subtask id="8.1">Test test_corrupt_json_warning_logged() using caplog</subtask>
+        <subtask id="8.2">Test test_pokemon_id_clamping_warning_logged()</subtask>
+        <subtask id="8.3">Test test_generation_clamping_warning_logged()</subtask>
+        <subtask id="8.4">Test test_volume_clamping_warning_logged()</subtask>
+        <subtask id="8.5">Test test_input_mode_reset_warning_logged()</subtask>
+      </task>
+      <task id="9" acs="10">Write Integration Test for Full Recovery Flow
+        <subtask id="9.1">Test test_recovery_allows_normal_operation()</subtask>
+        <subtask id="9.2">Test test_recovery_file_usable_after_overwrite()</subtask>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="1" title="Application Does Not Crash on Corrupted JSON">
+      <given>the state file contains invalid JSON</given>
+      <when>the application starts and StateManager initializes</when>
+      <then>the application does not crash, no unhandled exceptions, continues to boot normally</then>
+    </criterion>
+    <criterion id="2" title="Default Values Loaded on Corruption">
+      <given>the state file is corrupted (invalid JSON)</given>
+      <when>StateManager._load_state() executes</when>
+      <then>StateManager loads defaults: pokemon_id=1, generation=1, input_mode="keyboard", volume=0.7</then>
+    </criterion>
+    <criterion id="3" title="Corrupt File Overwritten with Valid Defaults">
+      <given>the state file contains invalid JSON</given>
+      <when>StateManager initializes and recovers</when>
+      <then>corrupt file is overwritten with valid JSON defaults</then>
+    </criterion>
+    <criterion id="4" title="Warning Logged for Corruption">
+      <given>the state file is corrupted</given>
+      <when>StateManager._load_state() catches the parse error</when>
+      <then>warning logged: "State file corrupted, resetting to defaults - {error}"</then>
+    </criterion>
+    <criterion id="5" title="Invalid pokemon_id Clamped to Valid Range">
+      <given>a state file with pokemon_id=999</given>
+      <when>StateManager loads state</when>
+      <then>pokemon_id clamped to 386, warning logged, corrected value written back</then>
+    </criterion>
+    <criterion id="6" title="Invalid Generation Clamped to Valid Range">
+      <given>a state file with generation=5</given>
+      <when>StateManager loads state</when>
+      <then>generation clamped to 3, warning logged, corrected value written back</then>
+    </criterion>
+    <criterion id="7" title="Invalid Volume Clamped to Valid Range">
+      <given>a state file with volume=2.5</given>
+      <when>StateManager loads state</when>
+      <then>volume clamped to 1.0, warning logged, corrected value written back</then>
+    </criterion>
+    <criterion id="8" title="Invalid Input Mode Reset to Default">
+      <given>a state file with input_mode="touchscreen"</given>
+      <when>StateManager loads state</when>
+      <then>input_mode reset to "keyboard", warning logged, corrected value written back</then>
+    </criterion>
+    <criterion id="9" title="Negative Values Clamped Correctly">
+      <given>a state file with pokemon_id=-5 or volume=-0.5</given>
+      <when>StateManager loads state</when>
+      <then>pokemon_id clamped to 1, volume clamped to 0.0, warnings logged</then>
+    </criterion>
+    <criterion id="10" title="Application Continues After Recovery">
+      <given>any corruption recovery scenario</given>
+      <when>recovery completes</when>
+      <then>application continues normally, navigation works, new state saves correctly</then>
+    </criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-3-state-persistence.md</path>
+        <title>Epic Technical Specification: State Persistence</title>
+        <section>Reliability/Availability - Corruption Recovery</section>
+        <snippet>JSON parse errors handled gracefully. Corrupt state file overwritten with defaults. Application continues operation (no crash). User sees default state on recovery.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-3-state-persistence.md</path>
+        <title>Epic Technical Specification: State Persistence</title>
+        <section>Corrupted State File Workflow</section>
+        <snippet>StateManager catches JSONDecodeError, logs warning, loads DEFAULT_STATE in memory, overwrites corrupt file, app continues normally.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture.md</path>
+        <title>ShokeDex Architecture</title>
+        <section>StateManager Integration</section>
+        <snippet>Graceful degradation: corrupted state file resets to defaults. StateManager validates all loaded values and clamps to valid ranges.</snippet>
+      </doc>
+      <doc>
+        <path>docs/epics.md</path>
+        <title>ShokeDex Epic Breakdown</title>
+        <section>Story 4.5</section>
+        <snippet>Wrap JSON parsing in try/except block. Catch json.JSONDecodeError and reset to defaults. Validation functions for each field with clamping logic.</snippet>
+      </doc>
+      <doc>
+        <path>TESTING.md</path>
+        <title>Test Framework Quick Reference</title>
+        <section>Writing Tests</section>
+        <snippet>Use pytest with fixtures. Use caplog fixture to verify warning log messages. Use tmp_path for isolated temp directories.</snippet>
+      </doc>
+    </docs>
+
+    <code>
+      <file>
+        <path>src/state_manager.py</path>
+        <kind>manager</kind>
+        <symbol>StateManager</symbol>
+        <lines>1-421</lines>
+        <reason>Core class under test - contains _load_state() with corruption handling (lines 102-197)</reason>
+      </file>
+      <file>
+        <path>src/state_manager.py</path>
+        <kind>manager</kind>
+        <symbol>_load_state</symbol>
+        <lines>102-197</lines>
+        <reason>Main corruption recovery logic - try/except for JSONDecodeError/IOError, field validation, clamping, warning logging</reason>
+      </file>
+      <file>
+        <path>src/state_manager.py</path>
+        <kind>manager</kind>
+        <symbol>_get_default_state</symbol>
+        <lines>47-65</lines>
+        <reason>Returns default state structure used when recovering from corruption</reason>
+      </file>
+      <file>
+        <path>src/state_manager.py</path>
+        <kind>manager</kind>
+        <symbol>_persist_default_state</symbol>
+        <lines>67-99</lines>
+        <reason>Atomic write pattern for overwriting corrupt files with defaults</reason>
+      </file>
+      <file>
+        <path>tests/test_state_manager.py</path>
+        <kind>test</kind>
+        <symbol>TestStatePersistenceIntegration</symbol>
+        <lines>393-480</lines>
+        <reason>Existing test class with corruption recovery tests - extend with comprehensive scenarios</reason>
+      </file>
+      <file>
+        <path>tests/test_state_manager.py</path>
+        <kind>test</kind>
+        <symbol>test_state_corruption_recovery</symbol>
+        <lines>419-434</lines>
+        <reason>Existing test for corrupt JSON handling - verify and extend coverage</reason>
+      </file>
+      <file>
+        <path>tests/test_state_manager.py</path>
+        <kind>test</kind>
+        <symbol>test_invalid_pokemon_id_clamped</symbol>
+        <lines>436-451</lines>
+        <reason>Existing test for pokemon_id clamping - verify boundary coverage</reason>
+      </file>
+      <file>
+        <path>tests/test_state_manager.py</path>
+        <kind>test</kind>
+        <symbol>test_invalid_generation_clamped</symbol>
+        <lines>453-468</lines>
+        <reason>Existing test for generation clamping - verify boundary coverage</reason>
+      </file>
+      <file>
+        <path>tests/test_state_manager.py</path>
+        <kind>test</kind>
+        <symbol>test_invalid_volume_clamped</symbol>
+        <lines>470-493</lines>
+        <reason>Existing test for volume clamping - verify over/under max/min</reason>
+      </file>
+      <file>
+        <path>tests/test_state_manager.py</path>
+        <kind>test</kind>
+        <symbol>test_invalid_input_mode_validation</symbol>
+        <lines>495-511</lines>
+        <reason>Existing test for input_mode validation - extend with more invalid values</reason>
+      </file>
+      <file>
+        <path>tests/conftest.py</path>
+        <kind>fixture</kind>
+        <symbol>temp_state_manager</symbol>
+        <lines>82-95</lines>
+        <reason>Pytest fixture providing StateManager with temporary state file</reason>
+      </file>
+    </code>
+
+    <dependencies>
+      <python>
+        <package name="pytest" version=">=7.4.0">Testing framework</package>
+        <package name="pytest-cov" version=">=4.1.0">Coverage reporting</package>
+      </python>
+      <stdlib>
+        <module name="json">JSON parsing and JSONDecodeError exception</module>
+        <module name="tempfile">Temporary file/directory creation for tests</module>
+        <module name="pathlib">Path operations</module>
+        <module name="logging">Warning log capture in tests via caplog</module>
+      </stdlib>
+    </dependencies>
+  </artifacts>
+
+  <interfaces>
+    <interface>
+      <name>StateManager._load_state</name>
+      <kind>method</kind>
+      <signature>def _load_state(self) -> Dict[str, Any]</signature>
+      <path>src/state_manager.py</path>
+      <description>Loads state from JSON file with corruption recovery. Catches JSONDecodeError and IOError, returns defaults on failure, validates and clamps all fields.</description>
+    </interface>
+    <interface>
+      <name>StateManager._get_default_state</name>
+      <kind>method</kind>
+      <signature>def _get_default_state(self) -> Dict[str, Any]</signature>
+      <path>src/state_manager.py</path>
+      <description>Returns default state structure with pokemon_id=1, generation=1, input_mode="keyboard", volume=0.7</description>
+    </interface>
+    <interface>
+      <name>StateManager._persist_default_state</name>
+      <kind>method</kind>
+      <signature>def _persist_default_state(self, default_state: Dict[str, Any]) -> bool</signature>
+      <path>src/state_manager.py</path>
+      <description>Writes default state to file using atomic write pattern (temp file + rename)</description>
+    </interface>
+    <interface>
+      <name>StateManager.save_state</name>
+      <kind>method</kind>
+      <signature>def save_state(self) -> bool</signature>
+      <path>src/state_manager.py</path>
+      <description>Persists current state to JSON file using atomic write pattern</description>
+    </interface>
+  </interfaces>
+
+  <constraints>
+    <constraint source="tech-spec">JSON parse errors caught via try/except for JSONDecodeError and IOError</constraint>
+    <constraint source="tech-spec">Corrupt file overwritten with valid defaults after recovery</constraint>
+    <constraint source="tech-spec">Warning logged at WARNING level (not ERROR) since recovery is successful</constraint>
+    <constraint source="tech-spec">pokemon_id clamped to range 1-386 using max(1, min(386, value))</constraint>
+    <constraint source="tech-spec">generation clamped to range 1-3 using max(1, min(3, value))</constraint>
+    <constraint source="tech-spec">volume clamped to range 0.0-1.0 using max(0.0, min(1.0, float(value)))</constraint>
+    <constraint source="tech-spec">input_mode must be in ('keyboard', 'gpio'), invalid values reset to 'keyboard'</constraint>
+    <constraint source="tech-spec">needs_correction flag triggers save of corrected values back to file</constraint>
+    <constraint source="architecture">Application never crashes from malformed state file</constraint>
+    <constraint source="TESTING.md">Use caplog fixture for log message verification</constraint>
+    <constraint source="story">This is a verification/testing story - implementation exists, focus on comprehensive tests</constraint>
+  </constraints>
+
+  <tests>
+    <standards>
+      Use pytest as the testing framework with pytest-cov for coverage. Create a TestCorruptionRecovery class in tests/test_state_manager.py. Use tmp_path fixture for isolated temp directories. Use caplog fixture to verify warning log messages. Follow existing patterns in TestStatePersistenceIntegration class. Tests should create corrupt files directly in setup, verify recovery behavior, then verify file is usable afterward.
+    </standards>
+    <locations>
+      <location>tests/test_state_manager.py</location>
+      <location>tests/conftest.py (fixtures)</location>
+    </locations>
+    <ideas>
+      <idea ac="1,2">test_corrupt_json_does_not_crash - write "{invalid", init StateManager, no exception</idea>
+      <idea ac="2">test_corrupt_json_returns_defaults - verify pokemon_id=1, generation=1, volume=0.7</idea>
+      <idea ac="3">test_corrupt_json_overwrites_file - after recovery, file contains valid JSON</idea>
+      <idea ac="4">test_corrupt_json_logs_warning - caplog contains "State file corrupted"</idea>
+      <idea ac="1">test_truncated_json_handled - write '{"version": "1', verify recovery</idea>
+      <idea ac="1">test_empty_file_handled - 0-byte file, verify recovery</idea>
+      <idea ac="1">test_binary_garbage_handled - random bytes, verify recovery</idea>
+      <idea ac="5">test_pokemon_id_999_clamped_to_386</idea>
+      <idea ac="9">test_pokemon_id_negative_clamped_to_1</idea>
+      <idea ac="5">test_pokemon_id_zero_clamped_to_1</idea>
+      <idea ac="6">test_generation_5_clamped_to_3</idea>
+      <idea ac="9">test_generation_negative_clamped_to_1</idea>
+      <idea ac="7">test_volume_2_5_clamped_to_1_0</idea>
+      <idea ac="9">test_volume_negative_clamped_to_0</idea>
+      <idea ac="8">test_input_mode_touchscreen_reset_to_keyboard</idea>
+      <idea ac="8">test_input_mode_empty_string_reset_to_keyboard</idea>
+      <idea ac="8">test_input_mode_uppercase_GPIO_reset_to_keyboard</idea>
+      <idea ac="5,6,7,8">test_clamping_warnings_logged - verify warning format for each field</idea>
+      <idea ac="10">test_recovery_then_normal_operation - recover, set_last_viewed, save, reload</idea>
+      <idea ac="3">test_recovery_file_valid_json_after_overwrite - parse recovered file</idea>
+    </ideas>
+  </tests>
+</story-context>

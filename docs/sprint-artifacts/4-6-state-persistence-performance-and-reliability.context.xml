@@ -1,0 +1,308 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>4</epicId>
+    <storyId>6</storyId>
+    <title>State Persistence Performance and Reliability</title>
+    <status>ready-for-dev</status>
+    <generatedAt>2025-11-29</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/4-6-state-persistence-performance-and-reliability.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>user</asA>
+    <iWant>state saving to be fast and reliable</iWant>
+    <soThat>it doesn't slow down navigation or cause data loss</soThat>
+    <tasks>
+      <task id="1" title="Verify Save Operation Performance (AC #1, #9)">
+        <subtask>1.1: Review save_state() timing code (lines 200-230 in state_manager.py)</subtask>
+        <subtask>1.2: Verify time.perf_counter() is used for accurate measurement</subtask>
+        <subtask>1.3: Verify DEBUG log for successful saves, WARNING log if > 50ms</subtask>
+        <subtask>1.4: Profile save_state() on Raspberry Pi SD card</subtask>
+      </task>
+      <task id="2" title="Verify Load Operation Performance (AC #2, #9)">
+        <subtask>2.1: Review _load_state() timing code (lines 102-197 in state_manager.py)</subtask>
+        <subtask>2.2: Verify timing measurement wraps entire load operation</subtask>
+        <subtask>2.3: Verify WARNING log if load exceeds 50ms target</subtask>
+        <subtask>2.4: Profile _load_state() on Raspberry Pi SD card</subtask>
+      </task>
+      <task id="3" title="Verify Atomic Write Pattern (AC #4)">
+        <subtask>3.1: Review save_state() writes to temp file first</subtask>
+        <subtask>3.2: Verify Path.replace() is used for atomic rename</subtask>
+        <subtask>3.3: Test interrupted write scenario (simulate power loss)</subtask>
+        <subtask>3.4: Verify original file intact if write fails mid-operation</subtask>
+      </task>
+      <task id="4" title="Verify Shutdown Save Flow (AC #5)">
+        <subtask>4.1: Review main.py cleanup() calls state_manager.save_state()</subtask>
+        <subtask>4.2: Verify cleanup() is in finally block (runs even on exception)</subtask>
+        <subtask>4.3: Verify "State saved successfully" message appears on exit</subtask>
+        <subtask>4.4: Test shutdown saves with various exit scenarios</subtask>
+      </task>
+      <task id="5" title="Verify Screen Transition Saves (AC #6)">
+        <subtask>5.1: Review HomeScreen.on_exit() saves state</subtask>
+        <subtask>5.2: Review DetailScreen.on_exit() saves state</subtask>
+        <subtask>5.3: Verify state updates are saved before screen transitions</subtask>
+        <subtask>5.4: Test rapid screen transitions maintain state</subtask>
+      </task>
+      <task id="6" title="Verify Save Failure Handling (AC #7)">
+        <subtask>6.1: Review save_state() exception handling</subtask>
+        <subtask>6.2: Verify IOError is caught and logged</subtask>
+        <subtask>6.3: Verify function returns False on failure</subtask>
+        <subtask>6.4: Verify app continues running after save failure</subtask>
+      </task>
+      <task id="7" title="Write Performance Tests (AC #1, #2, #3, #10)">
+        <subtask>7.1: Test test_save_state_under_50ms() - measure and assert timing</subtask>
+        <subtask>7.2: Test test_load_state_under_50ms() - measure and assert timing</subtask>
+        <subtask>7.3: Test test_rapid_saves_maintain_fps() - simulate navigation</subtask>
+        <subtask>7.4: Test test_startup_time_under_5_seconds() - full boot measurement</subtask>
+      </task>
+      <task id="8" title="Write Atomic Write Tests (AC #4)">
+        <subtask>8.1: Test test_temp_file_created_during_save() - check .tmp file exists</subtask>
+        <subtask>8.2: Test test_temp_file_renamed_to_final() - verify atomic rename</subtask>
+        <subtask>8.3: Test test_original_intact_on_write_failure() - simulate failure</subtask>
+        <subtask>8.4: Test test_no_partial_writes() - verify all-or-nothing</subtask>
+      </task>
+      <task id="9" title="Write Memory Stability Tests (AC #8)">
+        <subtask>9.1: Test test_repeated_saves_no_memory_leak() - 100+ save cycles</subtask>
+        <subtask>9.2: Test test_state_file_size_stable() - verify less than 1KB</subtask>
+        <subtask>9.3: Test test_in_memory_footprint_stable() - verify less than 10KB</subtask>
+        <subtask>9.4: Use psutil to track memory before/after save cycles</subtask>
+      </task>
+      <task id="10" title="Write Integration Tests (AC #5, #6)">
+        <subtask>10.1: Test test_shutdown_saves_state() - exit app, verify file updated</subtask>
+        <subtask>10.2: Test test_screen_transition_saves_state() - navigate, check file</subtask>
+        <subtask>10.3: Test test_save_failure_continues_operation() - simulate failure</subtask>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="1" title="Save Operation Performance">
+      <given>the application is running</given>
+      <when>StateManager.save_state() is called</when>
+      <then>save operation completes in less than 50ms</then>
+      <and>no perceptible delay in screen transitions</and>
+      <and>performance timing is logged at DEBUG level</and>
+    </criterion>
+    <criterion id="2" title="Load Operation Performance">
+      <given>the application starts</given>
+      <when>StateManager._load_state() executes</when>
+      <then>load operation completes in less than 50ms</then>
+      <and>performance timing is logged if exceeding target</and>
+      <and>application boots to HomeScreen in less than 5 seconds total</and>
+    </criterion>
+    <criterion id="3" title="Frame Rate Maintained During Navigation">
+      <given>rapid navigation through screens</given>
+      <when>screens call on_exit() triggering saves</when>
+      <then>frame rate remains 30+ FPS</then>
+      <and>save operations don't cause stuttering or visual glitches</and>
+      <and>user experience remains smooth</and>
+    </criterion>
+    <criterion id="4" title="Atomic Write Pattern for Data Integrity">
+      <given>a save operation is in progress</given>
+      <when>StateManager.save_state() executes</when>
+      <then>state is written to data/shokedex_state.json.tmp first</then>
+      <and>temp file is renamed to final path atomically</and>
+      <and>no partial writes corrupt the state file</and>
+      <and>interrupted writes leave the previous valid state intact</and>
+    </criterion>
+    <criterion id="5" title="Final State Save on Application Shutdown">
+      <given>the application is running</given>
+      <when>the user exits (clean shutdown via ESC or BACK on HomeScreen)</when>
+      <then>cleanup() in main.py calls state_manager.save_state()</then>
+      <and>final state is written to file before exit</and>
+      <and>"State saved successfully" message is logged/printed</and>
+    </criterion>
+    <criterion id="6" title="State Save on Screen Transitions">
+      <given>a user is on HomeScreen</given>
+      <when>the user navigates to DetailScreen (or vice versa)</when>
+      <then>the exiting screen's on_exit() triggers state save</then>
+      <and>current pokemon_id and generation are persisted</and>
+      <and>user can quit anytime with minimal data loss</and>
+    </criterion>
+    <criterion id="7" title="Graceful Handling of Save Failures">
+      <given>a save operation fails (disk full, permissions, I/O error)</given>
+      <when>StateManager.save_state() catches the exception</when>
+      <then>an error is logged: "Error saving state file: {error}"</then>
+      <and>the application continues running without crash</and>
+      <and>in-memory state remains valid for future save attempts</and>
+    </criterion>
+    <criterion id="8" title="Memory Stability During Repeated Saves">
+      <given>the application runs for an extended session</given>
+      <when>save_state() is called repeatedly (100+ times)</when>
+      <then>no memory leaks occur from save operations</then>
+      <and>StateManager in-memory footprint remains less than 10KB</and>
+      <and>JSON file size remains stable (less than 1KB for typical use)</and>
+    </criterion>
+    <criterion id="9" title="Performance Logging for Monitoring">
+      <given>performance monitoring is enabled</given>
+      <when>save/load operations execute</when>
+      <then>operations exceeding 50ms log a WARNING with timing</then>
+      <and>successful fast operations log at DEBUG level</and>
+      <and>timing format: "{operation}() took {ms:.2f}ms (target: less than 50ms)"</and>
+    </criterion>
+    <criterion id="10" title="Startup Performance Validation">
+      <given>the application starts from cold boot</given>
+      <when>StateManager and screens initialize</when>
+      <then>total startup time to HomeScreen is less than 5 seconds</then>
+      <and>state loading contributes less than 50ms to startup time</and>
+      <and>startup is tested on actual Raspberry Pi hardware</and>
+    </criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-3-state-persistence.md</path>
+        <title>Epic Technical Specification: State Persistence</title>
+        <section>Performance Section</section>
+        <snippet>Save operations must complete in less than 50ms. Atomic write pattern using temp file + rename for data integrity. State file kept minimal (less than 1KB) for fast reads.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture.md</path>
+        <title>ShokeDex Architecture</title>
+        <section>StateManager Integration</section>
+        <snippet>StateManager follows singleton pattern. Screens access via screen_manager.state_manager. Uses JSON file (data/shokedex_state.json) for persistence.</snippet>
+      </doc>
+      <doc>
+        <path>docs/pi_optimization_guide.md</path>
+        <title>Raspberry Pi Optimization Guide</title>
+        <section>Performance Considerations</section>
+        <snippet>SD card I/O is slower than SSD. Validate 50ms targets on actual hardware. Run performance tests multiple times to account for I/O variance.</snippet>
+      </doc>
+      <doc>
+        <path>TESTING.md</path>
+        <title>Test Framework Quick Reference</title>
+        <section>Performance Tests</section>
+        <snippet>Use @pytest.mark.performance for performance tests. psutil for memory tracking. time.perf_counter() for high-precision timing.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <file>
+        <path>src/state_manager.py</path>
+        <kind>service</kind>
+        <symbol>StateManager</symbol>
+        <lines>1-421</lines>
+        <reason>Core implementation of state persistence. Contains save_state() at lines 200-230 with timing, _load_state() at lines 102-197 with timing. Uses atomic write pattern (temp file + Path.replace()). Already implements AC #1, #2, #4, #7, #9.</reason>
+      </file>
+      <file>
+        <path>src/main.py</path>
+        <kind>entry-point</kind>
+        <symbol>ShokeDexApp.cleanup()</symbol>
+        <lines>270-290</lines>
+        <reason>Shutdown save flow. cleanup() is in finally block and calls state_manager.save_state(). Prints "State saved successfully". Implements AC #5.</reason>
+      </file>
+      <file>
+        <path>src/ui/home_screen.py</path>
+        <kind>screen</kind>
+        <symbol>HomeScreen.on_exit()</symbol>
+        <lines>384-410</lines>
+        <reason>Screen transition save. Calls state_manager.set_last_viewed() and save_state() on exit. Implements AC #6.</reason>
+      </file>
+      <file>
+        <path>src/ui/detail_screen.py</path>
+        <kind>screen</kind>
+        <symbol>DetailScreen.on_exit()</symbol>
+        <lines>195-210</lines>
+        <reason>Screen transition save. Calls state_manager.set_last_viewed() and save_state() on exit. Implements AC #6.</reason>
+      </file>
+      <file>
+        <path>tests/test_state_manager.py</path>
+        <kind>test</kind>
+        <symbol>TestStateManager</symbol>
+        <lines>1-300</lines>
+        <reason>Existing StateManager tests. Reference for test patterns. Need to add TestPerformance class with timing and memory tests.</reason>
+      </file>
+      <file>
+        <path>tests/test_performance_monitor.py</path>
+        <kind>test</kind>
+        <symbol>TestPerformanceMonitor</symbol>
+        <lines>1-100</lines>
+        <reason>Reference for performance testing patterns including time.perf_counter() usage and psutil integration.</reason>
+      </file>
+    </code>
+    <dependencies>
+      <python>
+        <package name="pytest" version=">=7.4.0">Testing framework</package>
+        <package name="pytest-cov" version=">=4.1.0">Coverage reporting</package>
+        <package name="psutil" version=">=5.9.0">Memory and resource monitoring for stability tests (AC #8)</package>
+        <package name="pygame" version=">=2.5.0">Graphics rendering - FPS testing (AC #3)</package>
+      </python>
+      <stdlib>
+        <module name="time">perf_counter() for high-precision timing</module>
+        <module name="json">JSON file persistence</module>
+        <module name="pathlib">Path operations and atomic rename</module>
+        <module name="logging">Performance logging (DEBUG/WARNING levels)</module>
+        <module name="tempfile">Temp files for testing</module>
+      </stdlib>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="performance">Save and load operations must complete in less than 50ms on Raspberry Pi SD card I/O</constraint>
+    <constraint type="performance">Frame rate must remain 30+ FPS during screen transitions with saves</constraint>
+    <constraint type="performance">Total startup time to HomeScreen must be less than 5 seconds</constraint>
+    <constraint type="memory">StateManager in-memory footprint must remain less than 10KB</constraint>
+    <constraint type="memory">JSON state file size must remain less than 1KB for typical use</constraint>
+    <constraint type="reliability">Atomic write pattern required: temp file + Path.replace()</constraint>
+    <constraint type="reliability">Save failures must not crash application - log error and continue</constraint>
+    <constraint type="testing">Performance tests must use time.perf_counter() for accuracy</constraint>
+    <constraint type="testing">Memory tests must use psutil to track allocation</constraint>
+    <constraint type="platform">Must validate on actual Raspberry Pi 3B+ or 4B hardware</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>StateManager.save_state()</name>
+      <kind>method</kind>
+      <signature>def save_state(self) -> bool</signature>
+      <path>src/state_manager.py</path>
+      <notes>Returns True on success, False on failure. Uses atomic write pattern. Logs timing at DEBUG (success) or WARNING (over 50ms).</notes>
+    </interface>
+    <interface>
+      <name>StateManager._load_state()</name>
+      <kind>method</kind>
+      <signature>def _load_state(self) -> Dict[str, Any]</signature>
+      <path>src/state_manager.py</path>
+      <notes>Private method called on init. Logs timing. Returns default state on corrupt file.</notes>
+    </interface>
+    <interface>
+      <name>Screen.on_exit()</name>
+      <kind>lifecycle-hook</kind>
+      <signature>def on_exit(self)</signature>
+      <path>src/ui/screen.py</path>
+      <notes>Called when screen becomes inactive. HomeScreen and DetailScreen override to call save_state().</notes>
+    </interface>
+    <interface>
+      <name>ShokeDexApp.cleanup()</name>
+      <kind>method</kind>
+      <signature>def cleanup(self)</signature>
+      <path>src/main.py</path>
+      <notes>Called in finally block on app exit. Calls state_manager.save_state() and prints confirmation.</notes>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Use pytest with @pytest.mark.performance marker for performance tests. Use time.perf_counter() for high-precision timing measurements. Use psutil.Process().memory_info() for memory tracking. Create temporary state files using tempfile module. Clean up temp files in tearDown/fixture cleanup. Run performance tests on actual Raspberry Pi hardware for realistic I/O timing validation.
+    </standards>
+    <locations>
+      <location>tests/test_state_manager.py - Add TestPerformance class</location>
+      <location>tests/test_performance_monitor.py - Reference for patterns</location>
+    </locations>
+    <ideas>
+      <idea acId="1,2">test_save_state_under_50ms - Call save_state() 10 times, assert each call completes in less than 50ms using time.perf_counter()</idea>
+      <idea acId="1,2">test_load_state_under_50ms - Create StateManager 10 times with existing file, assert each load completes in less than 50ms</idea>
+      <idea acId="3">test_rapid_saves_maintain_fps - Simulate 30 screen transitions per second while calling save_state(), verify no operation exceeds 33ms (30 FPS budget)</idea>
+      <idea acId="4">test_atomic_write_uses_temp_file - Mock Path.replace() to verify it's called, verify .tmp file is created first</idea>
+      <idea acId="4">test_interrupted_write_preserves_original - Create valid state file, simulate IOError during write, verify original file still valid</idea>
+      <idea acId="5">test_cleanup_saves_state - Mock save_state(), call cleanup(), assert save_state() was called</idea>
+      <idea acId="6">test_screen_on_exit_saves_state - Create HomeScreen with mock state_manager, call on_exit(), assert save_state() was called</idea>
+      <idea acId="7">test_save_failure_logs_error_and_continues - Make state_file path unwritable, call save_state(), verify returns False and no exception raised</idea>
+      <idea acId="8">test_repeated_saves_no_memory_leak - Use psutil to measure memory before/after 100 save_state() calls, assert memory growth less than 1MB</idea>
+      <idea acId="8">test_state_file_size_under_1kb - Create state with typical data, save, assert file size less than 1024 bytes</idea>
+      <idea acId="9">test_performance_logging_format - Capture log output, verify timing format matches "{operation}() took {ms:.2f}ms (target: less than 50ms)"</idea>
+      <idea acId="10">test_startup_time_under_5_seconds - Measure time from ShokeDexApp() construction to first frame render, assert less than 5 seconds</idea>
+    </ideas>
+  </tests>
+</story-context>
