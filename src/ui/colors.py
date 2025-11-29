@@ -21,8 +21,8 @@ class Colors:
     LIGHT_GREEN = (139, 172, 15)
     PALE_GREEN = (155, 188, 15)
     
-    # Blues
-    DARK_BLUE = (33, 78, 120)
+    # Blues (Gameboy palette)
+    GAMEBOY_DARK_BLUE = (33, 78, 120)  # Original Gameboy-style blue
     BLUE = (68, 137, 192)
     LIGHT_BLUE = (153, 219, 255)
     

@@ -2,15 +2,20 @@
 Home Screen for ShokeDex - Grid view of Pokémon
 """
 
-import pygame
+import logging
 import os
 from typing import List, Optional, Tuple
+
+import pygame
+
 from .screen import Screen
 from .colors import Colors
 from ..input_manager import InputAction
 from .sprite_loader import load_thumb
 from ..performance_monitor import PerformanceMonitor
 
+# Module logger
+logger = logging.getLogger(__name__)
 
 # Generation constants
 GENERATION_NAMES = {
@@ -197,7 +202,7 @@ class GenerationBadge:
                 )
                 badge_surface.blit(name_text, (content_x, 8))
             except Exception as e:
-                print(f"Warning: Could not render generation name: {e}")
+                logger.warning("Could not render generation name: %s", e)
         
         # Draw position counter
         if self.counter_font:
@@ -212,7 +217,7 @@ class GenerationBadge:
                 )
                 badge_surface.blit(counter_text, (content_x, 28))
             except Exception as e:
-                print(f"Warning: Could not render position counter: {e}")
+                logger.warning("Could not render position counter: %s", e)
         
         # Blit badge to main surface
         surface.blit(badge_surface, (x, y))
