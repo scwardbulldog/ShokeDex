@@ -641,8 +641,12 @@ class DetailScreen(Screen):
         # Story 3.7: Adaptive sprite positioning for 480x320
         is_small_screen = screen_width <= 480
         
-        # Position sprite in left area - adjusted for small screens
-        sprite_x = (screen_width // 4 - self.sprite.get_width() // 2) if not is_small_screen else 20
+        # Calculate left zone width (area before stats panel)
+        # Stats panel starts at screen_width // 2 + offset
+        left_zone_width = screen_width // 2 + (10 if is_small_screen else 20)
+        
+        # Center sprite horizontally within left zone
+        sprite_x = (left_zone_width - self.sprite.get_width()) // 2
         
         # Vertical positioning - keep sprite higher to leave room below
         # For small screen: position higher to leave room for badges + measurements
@@ -657,6 +661,7 @@ class DetailScreen(Screen):
         self._sprite_width = self.sprite.get_width()
         self._sprite_height = self.sprite.get_height()
         self._sprite_bottom_y = sprite_y + self.sprite.get_height()
+        self._left_zone_width = left_zone_width  # Store for centering other elements
         
         # Draw holographic border around sprite (AC #5: electric blue)
         border_rect = pygame.Rect(
@@ -901,8 +906,7 @@ class DetailScreen(Screen):
         # Story 3.7 AC #8: Position badges 8px below sprite bottom edge
         # Use sprite bounds stored by _render_sprite()
         sprite_bottom = getattr(self, '_sprite_bottom_y', 180)
-        sprite_x = getattr(self, '_sprite_x', 20 if is_small_screen else 72)
-        sprite_width = getattr(self, '_sprite_width', 128)
+        left_zone_width = getattr(self, '_left_zone_width', screen_width // 2 + 10)
         
         BADGE_SPACING = 8  # AC #2: 8px spacing between dual-type badges
         BADGE_MARGIN_TOP = 8  # Story 3.7: 8px margin below sprite
@@ -918,8 +922,8 @@ class DetailScreen(Screen):
         
         total_badges_width = sum(badge_widths) + (BADGE_SPACING * (len(badge_widths) - 1)) if badge_widths else 0
         
-        # Center badges relative to sprite
-        badges_start_x = sprite_x + (sprite_width - total_badges_width) // 2
+        # Center badges within left zone
+        badges_start_x = (left_zone_width - total_badges_width) // 2
         TYPES_Y = sprite_bottom + BADGE_MARGIN_TOP
         
         # Store badge bottom for physical measurements positioning
@@ -972,7 +976,7 @@ class DetailScreen(Screen):
         # Story 3.7 AC #6: Position in LEFT ZONE below type badges
         # Use badge bottom stored by _render_type_badges(), or calculate fallback
         badges_bottom = getattr(self, '_badges_bottom_y', 220)
-        sprite_x = getattr(self, '_sprite_x', 20 if is_small_screen else 72)
+        left_zone_width = getattr(self, '_left_zone_width', screen_width // 2 + 10)
         
         # Calculate description panel top to avoid overlap
         desc_panel_top = screen_height - (100 if is_small_screen else 140)
@@ -994,7 +998,6 @@ class DetailScreen(Screen):
         max_measurements_y = desc_panel_top - required_height - 4  # 4px safety margin
         
         PHYSICAL_DATA_Y = min(badges_bottom + MARGIN_BELOW_BADGE, max_measurements_y)
-        PHYSICAL_DATA_X = sprite_x
         
         # Format values with placeholders for invalid data (AC #6, #7, #8)
         height_str = f"{self.height:.1f}m" if self.height > 0 else "???"
@@ -1004,8 +1007,12 @@ class DetailScreen(Screen):
         height_label = self.body_font.render("Height: ", True, Colors.ICE_BLUE)
         height_value = self.body_font.render(height_str, True, Colors.HOLOGRAM_WHITE)
         
-        surface.blit(height_label, (PHYSICAL_DATA_X, PHYSICAL_DATA_Y))
-        surface.blit(height_value, (PHYSICAL_DATA_X + height_label.get_width(), PHYSICAL_DATA_Y))
+        # Calculate total width and center within left zone
+        height_total_width = height_label.get_width() + height_value.get_width()
+        height_x = (left_zone_width - height_total_width) // 2
+        
+        surface.blit(height_label, (height_x, PHYSICAL_DATA_Y))
+        surface.blit(height_value, (height_x + height_label.get_width(), PHYSICAL_DATA_Y))
         
         # Story 3.7 AC #6: Weight line - below height with spacing
         weight_y = PHYSICAL_DATA_Y + font_height + LINE_SPACING
@@ -1013,8 +1020,12 @@ class DetailScreen(Screen):
         weight_label = self.body_font.render("Weight: ", True, Colors.ICE_BLUE)
         weight_value = self.body_font.render(weight_str, True, Colors.HOLOGRAM_WHITE)
         
-        surface.blit(weight_label, (PHYSICAL_DATA_X, weight_y))
-        surface.blit(weight_value, (PHYSICAL_DATA_X + weight_label.get_width(), weight_y))
+        # Center weight line within left zone
+        weight_total_width = weight_label.get_width() + weight_value.get_width()
+        weight_x = (left_zone_width - weight_total_width) // 2
+        
+        surface.blit(weight_label, (weight_x, weight_y))
+        surface.blit(weight_value, (weight_x + weight_label.get_width(), weight_y))
         
         # Performance logging (AC #10: < 2ms target)
         render_time = (time.perf_counter() - start_time) * 1000

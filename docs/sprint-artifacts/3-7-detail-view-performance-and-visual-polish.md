@@ -1,6 +1,6 @@
 # Story 3.7: Detail View Performance and Visual Polish
 
-Status: review
+Status: done
 
 ## Story
 
@@ -451,6 +451,11 @@ Claude Opus 4.5 (Preview)
 - Task 7: Added performance timing, verified render under 33ms
 - Task 8: Verified LRU sprite cache with max 50 entries
 - Task 9-10: Added 31 new tests covering all ACs, ran full regression (378 tests passing)
+
+### Completion Notes
+
+**Completed:** 2025-11-29
+**Definition of Done:** All acceptance criteria met, code reviewed, tests passing, visual verification complete
 
 ### Completion Notes List
 
