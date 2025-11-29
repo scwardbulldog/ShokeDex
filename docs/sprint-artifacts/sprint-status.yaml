@@ -65,11 +65,11 @@ development_status:
   # Tech Spec: tech-spec-epic-2-detail-view-with-audio.md
   # Note: Audio cry playback descoped to Epic 8
   epic-3-detail-view: contexted
-  3-1-detail-screen-layout-and-sprite-display: review
+  3-1-detail-screen-layout-and-sprite-display: done
   3-2-six-base-stats-with-visual-progress-bars: done
-  3-3-type-badge-display-on-detail-view: review
-  3-4-physical-measurements-display: review
-  3-5-pokedex-description-text-display: review
+  3-3-type-badge-display-on-detail-view: done
+  3-4-physical-measurements-display: done
+  3-5-pokedex-description-text-display: done
   3-6-adjacent-pokemon-navigation-in-detail-view: done
   3-7-detail-view-performance-and-visual-polish: backlog
   epic-3-retrospective: optional
