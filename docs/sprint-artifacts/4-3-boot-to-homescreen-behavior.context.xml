@@ -1,0 +1,263 @@
+<story-context id="4-3-boot-to-homescreen-behavior" v="1.0">
+  <metadata>
+    <epicId>4</epicId>
+    <storyId>3</storyId>
+    <title>Boot to HomeScreen Behavior</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-29</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/4-3-boot-to-homescreen-behavior.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>user</asA>
+    <iWant>the device to always boot to the browse screen</iWant>
+    <soThat>I have a consistent starting point</soThat>
+    <tasks>
+      <task id="1" acs="1,6">
+        <name>Verify main.py Boot Sequence</name>
+        <subtasks>
+          <subtask id="1.1">Review src/main.py startup logic to confirm HomeScreen is always the first screen</subtask>
+          <subtask id="1.2">Verify ScreenManager.push() is called with HomeScreen class only at startup</subtask>
+          <subtask id="1.3">Confirm no conditional logic that could push DetailScreen on boot</subtask>
+          <subtask id="1.4">Add debug logging for boot sequence ("Booting to HomeScreen with Pokémon #{pokemon_id}")</subtask>
+        </subtasks>
+      </task>
+      <task id="2" acs="2">
+        <name>Verify HomeScreen State Restoration</name>
+        <subtasks>
+          <subtask id="2.1">Confirm HomeScreen.on_enter() retrieves last viewed Pokémon from StateManager</subtask>
+          <subtask id="2.2">Verify HomeScreen scrolls/highlights the correct Pokémon in the list</subtask>
+          <subtask id="2.3">Verify generation badge displays correct region for restored Pokémon</subtask>
+          <subtask id="2.4">Test restoration with Pokémon from all three generations (Kanto, Johto, Hoenn)</subtask>
+        </subtasks>
+      </task>
+      <task id="3" acs="3">
+        <name>Verify DetailScreen State Persistence on Exit</name>
+        <subtasks>
+          <subtask id="3.1">Confirm DetailScreen.on_exit() calls state_manager.set_last_viewed(self.pokemon_id)</subtask>
+          <subtask id="3.2">Verify DetailScreen.on_exit() triggers state file save (directly or via ScreenManager)</subtask>
+          <subtask id="3.3">Test that navigating back from DetailScreen preserves the Pokémon state</subtask>
+          <subtask id="3.4">Test that application quit from DetailScreen saves current Pokémon state</subtask>
+        </subtasks>
+      </task>
+      <task id="4" acs="4">
+        <name>Verify A Button Navigation to DetailScreen</name>
+        <subtasks>
+          <subtask id="4.1">Confirm HomeScreen handles A button (SELECT action) to push DetailScreen</subtask>
+          <subtask id="4.2">Verify DetailScreen receives correct pokemon_id from HomeScreen selection</subtask>
+          <subtask id="4.3">Test round-trip: HomeScreen → DetailScreen → HomeScreen maintains selection</subtask>
+        </subtasks>
+      </task>
+      <task id="5" acs="1,2,5">
+        <name>Write Integration Tests for Boot Behavior</name>
+        <subtasks>
+          <subtask id="5.1">Test test_always_boots_to_homescreen() - verify initial screen is HomeScreen</subtask>
+          <subtask id="5.2">Test test_boots_to_homescreen_not_detailscreen() - verify DetailScreen state doesn't change boot target</subtask>
+          <subtask id="5.3">Test test_last_viewed_displayed_on_boot() - set state, boot, verify displayed Pokémon</subtask>
+          <subtask id="5.4">Test test_generation_restored_correctly_on_boot() - verify badge matches restored state</subtask>
+          <subtask id="5.5">Test test_all_generations_restore_on_boot() - test Kanto, Johto, Hoenn restoration</subtask>
+        </subtasks>
+      </task>
+      <task id="6" acs="3,5">
+        <name>Write Integration Tests for Exit-to-Boot Cycle</name>
+        <subtasks>
+          <subtask id="6.1">Test test_detailscreen_exit_saves_state() - view DetailScreen, exit, verify state saved</subtask>
+          <subtask id="6.2">Test test_homescreen_exit_preserves_state() - navigate HomeScreen, exit, verify state</subtask>
+          <subtask id="6.3">Test test_boot_after_detailscreen_exit() - exit from DetailScreen, boot, verify HomeScreen shows correct Pokémon</subtask>
+        </subtasks>
+      </task>
+      <task id="7" acs="6">
+        <name>Write Unit Tests for ScreenManager Initialization</name>
+        <subtasks>
+          <subtask id="7.1">Test test_screen_stack_starts_with_homescreen() - verify initial stack</subtask>
+          <subtask id="7.2">Test test_screen_stack_depth_is_one_on_boot() - verify only one screen</subtask>
+          <subtask id="7.3">Test test_no_automatic_screen_transitions_on_boot() - verify HomeScreen is stable</subtask>
+        </subtasks>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="1" name="Boot Destination is Always HomeScreen">
+      <given>the application starts up (fresh boot or restart)</given>
+      <when>the screen stack initializes</when>
+      <then>the application boots to HomeScreen (not DetailScreen or any other screen)</then>
+      <and>HomeScreen is the first and only screen on the screen stack</and>
+    </criterion>
+    <criterion id="2" name="Last Viewed Pokemon Displayed on Boot">
+      <given>a user was viewing Raichu (#26) on DetailScreen before powering off</given>
+      <when>the application restarts</when>
+      <then>HomeScreen shows Raichu (#26) as the selected/highlighted Pokémon</then>
+      <and>the Pokémon sprite and info for Raichu are visible</and>
+      <and>the generation badge shows the correct generation (Kanto for #26)</and>
+    </criterion>
+    <criterion id="3" name="State Preserved When Exiting DetailScreen">
+      <given>a user is viewing DetailScreen showing Treecko (#252)</given>
+      <when>the user powers off the device (or quits app)</when>
+      <then>StateManager saves pokemon_id=252 and generation=3 to state file</then>
+      <and>the next boot displays Treecko (#252) on HomeScreen</and>
+    </criterion>
+    <criterion id="4" name="User Can Navigate Back to DetailScreen">
+      <given>the application has booted to HomeScreen with last viewed Pokémon selected</given>
+      <when>the user presses the A button</when>
+      <then>DetailScreen opens for the selected Pokémon</then>
+      <and>the transition is seamless (no additional button presses needed)</and>
+    </criterion>
+    <criterion id="5" name="Consistent Boot Behavior Regardless of Exit Point">
+      <given>various exit scenarios: User exits from HomeScreen, User exits from DetailScreen, Application crashes unexpectedly, Power loss during operation</given>
+      <when>the application restarts</when>
+      <then>the device always boots to HomeScreen</then>
+      <and>the last successfully saved Pokémon is displayed</and>
+    </criterion>
+    <criterion id="6" name="ScreenManager Initialization Verification">
+      <given>the main.py application entry point executes</given>
+      <when>ScreenManager is initialized</when>
+      <then>HomeScreen is pushed as the initial screen</then>
+      <and>no other screens are pre-loaded or pushed automatically</and>
+      <and>the screen stack depth is exactly 1</and>
+    </criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-3-state-persistence.md" title="Epic Tech Spec: State Persistence" section="Workflows-and-Sequencing">
+        Defines first boot and subsequent boot workflows. Always boot to HomeScreen with last viewed Pokémon displayed within 5 seconds.
+      </doc>
+      <doc path="docs/architecture.md" title="ShokeDex Architecture" section="Manager-Architecture-Pattern">
+        Defines singleton manager pattern: StateManager instantiated once in main.py, passed to ScreenManager which provides access to all screens.
+      </doc>
+      <doc path="docs/epics.md" title="Epic Breakdown" section="Story-4.3">
+        Original story definition: device always boots to browse screen for consistent starting point regardless of exit location.
+      </doc>
+      <doc path="docs/sprint-artifacts/4-1-first-boot-state-initialization.md" title="Story 4.1 (DONE)" section="Dev-Agent-Record">
+        Previous story learnings: _persist_default_state() method, HomeScreen.on_enter() state restoration at lines 335-339, test patterns with tempfile.mkdtemp().
+      </doc>
+      <doc path="docs/sprint-artifacts/4-2-last-viewed-pokemon-persistence.md" title="Story 4.2 (ready-for-dev)" section="Tasks">
+        Related story context: state update points at HomeScreen.on_exit(), DetailScreen.on_exit(), navigation handlers.
+      </doc>
+      <doc path="docs/PRD.md" title="Product Requirements Document" section="FR5-State-Persistence">
+        Requirements for session state and user preferences persistence across power cycles.
+      </doc>
+    </docs>
+    <code>
+      <file path="src/main.py" kind="entry-point" symbol="ShokeDexApp.__init__" lines="33-89" reason="Boot sequence initialization: creates managers, pushes HomeScreen at line 88">
+        Key code: home_screen = HomeScreen(self.screen_manager, self.database); self.screen_manager.push(home_screen)
+      </file>
+      <file path="src/main.py" kind="entry-point" symbol="ShokeDexApp.cleanup" lines="256-271" reason="Shutdown sequence: saves state before exit via state_manager.save_state()">
+        Ensures state is persisted on normal shutdown via cleanup() method.
+      </file>
+      <file path="src/ui/screen_manager.py" kind="manager" symbol="ScreenManager" lines="1-151" reason="Screen stack management: push(), pop(), get_stack_depth() for verifying boot behavior">
+        Core methods: push() calls on_enter(), pop() calls on_exit(), get_stack_depth() returns stack size.
+      </file>
+      <file path="src/ui/home_screen.py" kind="screen" symbol="HomeScreen.on_enter" lines="307-378" reason="State restoration on boot: loads last viewed Pokémon from StateManager at lines 335-339">
+        Key code: self.current_generation = state_manager.get_last_viewed_generation(); last_pokemon_id = state_manager.get_last_viewed_id()
+      </file>
+      <file path="src/ui/home_screen.py" kind="screen" symbol="HomeScreen.on_exit" lines="380-398" reason="State persistence on exit: saves current pokemon_id and generation">
+        Calls state_manager.set_last_viewed() and state_manager.save_state() on screen exit.
+      </file>
+      <file path="src/ui/detail_screen.py" kind="screen" symbol="DetailScreen.on_enter" lines="128-193" reason="Updates StateManager with current pokemon_id on enter at line 189-191">
+        Calls state_manager.set_last_viewed(self.pokemon_id) when screen becomes active.
+      </file>
+      <file path="src/ui/detail_screen.py" kind="screen" symbol="DetailScreen.on_exit" lines="194-206" reason="Saves state via state_manager.save_state() on exit">
+        Persists last viewed Pokémon when navigating away from DetailScreen.
+      </file>
+      <file path="src/state_manager.py" kind="manager" symbol="StateManager" lines="1-100" reason="State persistence API: get_last_viewed_id(), get_last_viewed_generation(), set_last_viewed(), save_state()">
+        Core state management with JSON file persistence, atomic writes, and validation.
+      </file>
+      <file path="tests/test_home_screen.py" kind="test" symbol="TestFirstBootHomeScreen" lines="746-811" reason="Existing test patterns for HomeScreen state restoration from Story 4.1">
+        Follow this pattern for boot behavior tests using temporary directories and mocked StateManager.
+      </file>
+      <file path="tests/test_state_manager.py" kind="test" symbol="TestFirstBootStateInitialization" lines="236-327" reason="Existing test patterns for StateManager initialization from Story 4.1">
+        Reference for state manager test setup with tempfile.mkdtemp() isolation.
+      </file>
+    </code>
+    <dependencies>
+      <ecosystem name="python">
+        <package name="pygame" version=">=2.5.0" purpose="Graphics, display, event loop"/>
+        <package name="Pillow" version=">=10.0.0" purpose="Image processing for sprites"/>
+        <package name="pytest" version=">=7.4.0" purpose="Testing framework"/>
+        <package name="pytest-cov" version=">=4.1.0" purpose="Coverage reporting"/>
+      </ecosystem>
+      <stdlib>
+        <package name="sqlite3" purpose="Database operations"/>
+        <package name="json" purpose="State file serialization"/>
+        <package name="pathlib" purpose="Path handling"/>
+        <package name="tempfile" purpose="Test isolation"/>
+      </stdlib>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="architectural">Always boot to HomeScreen regardless of previous exit location - never boot to DetailScreen</constraint>
+    <constraint type="pattern">Manager singleton pattern: StateManager created once in main.py, accessed via screen_manager.state_manager</constraint>
+    <constraint type="pattern">Screen lifecycle: on_enter() loads state, on_exit() saves state</constraint>
+    <constraint type="performance">Boot time target: less than 5 seconds from power-on to HomeScreen displayed</constraint>
+    <constraint type="performance">State load/save: less than 50ms each operation</constraint>
+    <constraint type="testing">Use temporary directories (tempfile.mkdtemp()) for state file isolation in tests</constraint>
+    <constraint type="testing">Mock pygame where needed for screen tests (pygame.display.set_mode, pygame.font.Font)</constraint>
+    <constraint type="coding">Use atomic write pattern for state persistence (temp file + rename)</constraint>
+    <constraint type="coding">Validate pokemon_id range (1-386) and generation range (1-3)</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface name="StateManager.get_last_viewed_id" kind="method" path="src/state_manager.py">
+      <signature>def get_last_viewed_id(self) -> int</signature>
+      <description>Returns last viewed Pokémon National Dex number (1-386), defaults to 1</description>
+    </interface>
+    <interface name="StateManager.get_last_viewed_generation" kind="method" path="src/state_manager.py">
+      <signature>def get_last_viewed_generation(self) -> int</signature>
+      <description>Returns last viewed generation (1=Kanto, 2=Johto, 3=Hoenn), defaults to 1</description>
+    </interface>
+    <interface name="StateManager.set_last_viewed" kind="method" path="src/state_manager.py">
+      <signature>def set_last_viewed(self, pokemon_id: int, generation: int = None) -> None</signature>
+      <description>Updates in-memory state with last viewed Pokémon. Auto-detects generation if not provided.</description>
+    </interface>
+    <interface name="StateManager.save_state" kind="method" path="src/state_manager.py">
+      <signature>def save_state(self) -> bool</signature>
+      <description>Persists current state to JSON file using atomic write. Returns True on success.</description>
+    </interface>
+    <interface name="ScreenManager.push" kind="method" path="src/ui/screen_manager.py">
+      <signature>def push(self, screen: Screen) -> None</signature>
+      <description>Pushes screen onto stack, calls on_exit() on current and on_enter() on new screen.</description>
+    </interface>
+    <interface name="ScreenManager.get_stack_depth" kind="method" path="src/ui/screen_manager.py">
+      <signature>def get_stack_depth(self) -> int</signature>
+      <description>Returns number of screens in stack. Should be 1 on boot (HomeScreen only).</description>
+    </interface>
+    <interface name="Screen.on_enter" kind="lifecycle" path="src/ui/screen.py">
+      <signature>def on_enter(self) -> None</signature>
+      <description>Called when screen becomes active. Load state, initialize resources.</description>
+    </interface>
+    <interface name="Screen.on_exit" kind="lifecycle" path="src/ui/screen.py">
+      <signature>def on_exit(self) -> None</signature>
+      <description>Called when screen becomes inactive. Save state, cleanup resources.</description>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Tests use pytest framework with pytest-cov for coverage. Test files follow pattern test_*.py in tests/ directory.
+      Use temporary directories (tempfile.mkdtemp()) for state file isolation. Mock pygame components where needed.
+      Follow existing patterns in TestFirstBootHomeScreen and TestFirstBootStateInitialization classes.
+      Clean up resources in tearDown() with shutil.rmtree() for temp directories.
+    </standards>
+    <locations>
+      <location>tests/test_home_screen.py</location>
+      <location>tests/test_state_manager.py</location>
+      <location>tests/test_detail_screen.py</location>
+    </locations>
+    <ideas>
+      <idea ac="1">test_always_boots_to_homescreen - verify ShokeDexApp.__init__ pushes HomeScreen as initial screen</idea>
+      <idea ac="1">test_screen_stack_depth_is_one_on_boot - verify get_stack_depth() returns 1 after initialization</idea>
+      <idea ac="2">test_last_viewed_displayed_on_boot - set state to Raichu #26, boot, verify HomeScreen shows #26</idea>
+      <idea ac="2">test_all_generations_restore_on_boot - test boot with Kanto (#25), Johto (#152), Hoenn (#252)</idea>
+      <idea ac="3">test_detailscreen_exit_saves_state - view Treecko #252 on DetailScreen, exit, verify state saved</idea>
+      <idea ac="3">test_boot_after_detailscreen_exit - exit from DetailScreen, boot, verify HomeScreen shows correct Pokémon</idea>
+      <idea ac="4">test_a_button_opens_detailscreen - boot, press A, verify DetailScreen opened for selected Pokémon</idea>
+      <idea ac="5">test_consistent_boot_after_homescreen_exit - exit from HomeScreen, boot, verify HomeScreen</idea>
+      <idea ac="5">test_consistent_boot_after_detailscreen_exit - exit from DetailScreen, boot, verify HomeScreen</idea>
+      <idea ac="6">test_no_automatic_screen_transitions_on_boot - verify screen stack remains stable after init</idea>
+    </ideas>
+  </tests>
+</story-context>

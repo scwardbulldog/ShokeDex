@@ -1,0 +1,296 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<story-context id="4.2-last-viewed-pokemon-persistence" v="1.0">
+  <metadata>
+    <epicId>4</epicId>
+    <storyId>2</storyId>
+    <title>Last Viewed Pokémon Persistence</title>
+    <status>ready-for-dev</status>
+    <generatedAt>2025-11-29</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/4-2-last-viewed-pokemon-persistence.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>user</asA>
+    <iWant>the device to remember which Pokémon I was viewing</iWant>
+    <soThat>I pick up right where I left off</soThat>
+    <tasks>
+      <task id="1" title="Verify set_last_viewed() Method" ac="1,2,6,7">
+        <subtask>1.1: Review existing set_last_viewed(pokemon_id, generation) in src/state_manager.py</subtask>
+        <subtask>1.2: Confirm method updates in-memory state immediately</subtask>
+        <subtask>1.3: Verify auto-generation detection works for all ranges (1-151, 152-251, 252-386)</subtask>
+        <subtask>1.4: Add logging for state updates (debug level)</subtask>
+      </task>
+      <task id="2" title="Verify HomeScreen State Integration" ac="3,4,5">
+        <subtask>2.1: Confirm HomeScreen.on_enter() calls get_last_viewed_id() and get_last_viewed_generation()</subtask>
+        <subtask>2.2: Verify HomeScreen loads correct generation based on state</subtask>
+        <subtask>2.3: Verify HomeScreen scrolls to correct Pokémon position in list</subtask>
+        <subtask>2.4: Add logging for state restoration on enter</subtask>
+      </task>
+      <task id="3" title="Implement HomeScreen.on_exit() State Save" ac="1,6,7">
+        <subtask>3.1: Verify HomeScreen.on_exit() calls state_manager.save_state()</subtask>
+        <subtask>3.2: Ensure set_last_viewed() is called on navigation (Up/Down, L/R)</subtask>
+        <subtask>3.3: Test that state persists when navigating to DetailScreen</subtask>
+      </task>
+      <task id="4" title="Implement DetailScreen.on_exit() State Save" ac="2">
+        <subtask>4.1: Verify DetailScreen.on_exit() calls state_manager.set_last_viewed(self.pokemon_id)</subtask>
+        <subtask>4.2: Verify DetailScreen.on_exit() calls state_manager.save_state()</subtask>
+        <subtask>4.3: Test that adjacent navigation (L/R in DetailScreen) updates state</subtask>
+      </task>
+      <task id="5" title="Write Unit Tests for State Persistence" ac="1,2,3,4,5">
+        <subtask>5.1: Test test_set_last_viewed_updates_memory() - verify in-memory state changes</subtask>
+        <subtask>5.2: Test test_save_state_persists_to_file() - verify JSON file updates</subtask>
+        <subtask>5.3: Test test_get_last_viewed_id_returns_saved() - verify getter after restart</subtask>
+        <subtask>5.4: Test test_generation_auto_detection() - verify 1-151→1, 152-251→2, 252-386→3</subtask>
+        <subtask>5.5: Test test_cross_generation_persistence() - verify Johto/Hoenn restoration</subtask>
+      </task>
+      <task id="6" title="Write Integration Tests for Screen Lifecycle" ac="1,2,3,4,5,6,7">
+        <subtask>6.1: Test test_homescreen_saves_on_exit() - mock StateManager, verify save_state() called</subtask>
+        <subtask>6.2: Test test_detailscreen_saves_on_exit() - verify set_last_viewed() and save_state() called</subtask>
+        <subtask>6.3: Test test_navigation_updates_state() - verify Up/Down calls set_last_viewed()</subtask>
+        <subtask>6.4: Test test_generation_switch_updates_state() - verify L/R updates state</subtask>
+      </task>
+      <task id="7" title="Performance Validation" ac="8">
+        <subtask>7.1: Add timing instrumentation to save_state() and _load_state()</subtask>
+        <subtask>7.2: Test test_save_state_performance() - verify less than 50ms on 1000 iterations</subtask>
+        <subtask>7.3: Test test_load_state_performance() - verify less than 50ms</subtask>
+        <subtask>7.4: Verify no perceptible lag during screen transitions</subtask>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="1" description="State Save on HomeScreen Exit">
+      Given a user views Pikachu (#25) in Kanto generation on HomeScreen,
+      When the user exits HomeScreen (transitions to DetailScreen or quits app),
+      Then StateManager saves pokemon_id=25 and generation=1 to state file,
+      And save operation completes in less than 50ms (non-blocking).
+    </criterion>
+    <criterion id="2" description="State Save on DetailScreen Exit">
+      Given a user is viewing DetailScreen for Chikorita (#152),
+      When the user exits DetailScreen (B button returns to HomeScreen or app quits),
+      Then StateManager saves pokemon_id=152 and generation=2 to state file,
+      And the save uses atomic write pattern (temp file + rename).
+    </criterion>
+    <criterion id="3" description="State Restoration on HomeScreen Enter">
+      Given the application restarts,
+      When HomeScreen.on_enter() executes,
+      Then StateManager.get_last_viewed_id() returns the saved pokemon_id,
+      And StateManager.get_last_viewed_generation() returns the saved generation,
+      And HomeScreen displays the correct Pokémon at the saved position.
+    </criterion>
+    <criterion id="4" description="Cross-Generation State Persistence (Johto)">
+      Given a user views Chikorita (#152) in Johto, then exits,
+      When the application restarts,
+      Then HomeScreen displays Chikorita (#152) in Johto generation,
+      And generation badge shows "JOHTO".
+    </criterion>
+    <criterion id="5" description="Hoenn Generation State Persistence">
+      Given a user views Treecko (#252) in Hoenn, then exits,
+      When the application restarts,
+      Then HomeScreen displays Treecko (#252) in Hoenn generation,
+      And generation badge shows "HOENN".
+    </criterion>
+    <criterion id="6" description="State Update on Navigation">
+      Given a user navigates from Pikachu (#25) to Raichu (#26) using Up/Down,
+      When the selection changes,
+      Then StateManager.set_last_viewed() is called with the new pokemon_id,
+      And in-memory state is updated immediately.
+    </criterion>
+    <criterion id="7" description="State Update on Generation Switch">
+      Given a user switches from Kanto to Johto using L/R buttons,
+      When the generation changes,
+      Then StateManager.set_last_viewed() is called with first Pokémon of new generation,
+      And generation field updated to 2 (Johto).
+    </criterion>
+    <criterion id="8" description="Performance Target">
+      Given rapid navigation through screens,
+      When state saves occur on screen transitions,
+      Then load operation in StateManager completes in less than 50ms,
+      And save operation completes in less than 50ms,
+      And frame rate remains 30+ FPS during transitions.
+    </criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-3-state-persistence.md</path>
+        <title>Epic Technical Specification: State Persistence</title>
+        <section>APIs and Interfaces, Workflows and Sequencing, Non-Functional Requirements</section>
+        <snippet>StateManager public interface with set_last_viewed(), get_last_viewed_id(), get_last_viewed_generation(), save_state(). Save operations must complete in less than 50ms. Atomic write pattern with temp file + rename.</snippet>
+      </doc>
+      <doc>
+        <path>docs/epics.md</path>
+        <title>ShokeDex Epic Breakdown</title>
+        <section>Story 4.2: Last Viewed Pokémon Persistence</section>
+        <snippet>As a user, I want the device to remember which Pokémon I was viewing, so that I pick up right where I left off. Includes save on screen exit, restore on startup, cross-generation persistence.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture.md</path>
+        <title>ShokeDex Architecture</title>
+        <section>Manager Architecture Pattern, StateManager Integration</section>
+        <snippet>StateManager singleton pattern. Screens access via screen_manager.state_manager. Use on_enter() to load state, on_exit() to save state. State file at data/shokedex_state.json.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/4-1-first-boot-state-initialization.md</path>
+        <title>Story 4.1: First Boot State Initialization</title>
+        <section>Dev Agent Record, Completion Notes List</section>
+        <snippet>Previous story established _persist_default_state() method with atomic write pattern, updated _load_state() to persist defaults on first boot, validated HomeScreen integration with get_last_viewed_*() methods.</snippet>
+      </doc>
+    </docs>
+    
+    <code>
+      <file>
+        <path>src/state_manager.py</path>
+        <kind>service</kind>
+        <symbol>StateManager</symbol>
+        <lines>1-374</lines>
+        <reason>Core state persistence class. Contains set_last_viewed(), get_last_viewed_id(), get_last_viewed_generation(), save_state(), _load_state(). Implementation target for this story.</reason>
+      </file>
+      <file>
+        <path>src/ui/home_screen.py</path>
+        <kind>screen</kind>
+        <symbol>HomeScreen</symbol>
+        <lines>335-400</lines>
+        <reason>on_enter() loads state (lines 335-370), on_exit() saves state (lines 377-397). Integration point for state persistence.</reason>
+      </file>
+      <file>
+        <path>src/ui/detail_screen.py</path>
+        <kind>screen</kind>
+        <symbol>DetailScreen</symbol>
+        <lines>140-210</lines>
+        <reason>on_enter() calls set_last_viewed() (lines 185-191), on_exit() calls save_state() (lines 194-206). Integration point for state persistence.</reason>
+      </file>
+      <file>
+        <path>src/main.py</path>
+        <kind>application</kind>
+        <symbol>ShokeDexApp</symbol>
+        <lines>240-260</lines>
+        <reason>cleanup() method calls state_manager.save_state() on shutdown (line 252). Final save on application exit.</reason>
+      </file>
+      <file>
+        <path>tests/test_state_manager.py</path>
+        <kind>test</kind>
+        <symbol>TestStateManager</symbol>
+        <lines>1-200</lines>
+        <reason>Existing tests for StateManager. Extend with new tests for screen lifecycle integration and performance validation.</reason>
+      </file>
+      <file>
+        <path>tests/test_home_screen.py</path>
+        <kind>test</kind>
+        <symbol>TestFirstBootHomeScreen</symbol>
+        <lines>746-811</lines>
+        <reason>Tests for HomeScreen state integration established in Story 4.1. Pattern to follow for new tests.</reason>
+      </file>
+    </code>
+    
+    <dependencies>
+      <python>
+        <package name="pygame" version=">=2.5.0">Graphics and display</package>
+        <package name="Pillow" version=">=10.0.0">Image processing</package>
+        <package name="pytest" version=">=7.4.0">Testing framework</package>
+        <package name="pytest-cov" version=">=4.1.0">Coverage reporting</package>
+      </python>
+      <stdlib>
+        <package name="json">State file serialization</package>
+        <package name="pathlib">File path handling</package>
+        <package name="tempfile">Test isolation</package>
+        <package name="time">Performance timing</package>
+      </stdlib>
+    </dependencies>
+  </artifacts>
+
+  <interfaces>
+    <interface>
+      <name>StateManager.set_last_viewed</name>
+      <kind>method</kind>
+      <signature>def set_last_viewed(self, pokemon_id: int, generation: Optional[int] = None) -> None</signature>
+      <path>src/state_manager.py</path>
+      <notes>Updates in-memory state. Auto-detects generation if not provided: 1-151→1, 152-251→2, 252-386→3. Does NOT save to file automatically.</notes>
+    </interface>
+    <interface>
+      <name>StateManager.get_last_viewed_id</name>
+      <kind>method</kind>
+      <signature>def get_last_viewed_id(self) -> int</signature>
+      <path>src/state_manager.py</path>
+      <notes>Returns last viewed Pokémon ID from in-memory state (1-386).</notes>
+    </interface>
+    <interface>
+      <name>StateManager.get_last_viewed_generation</name>
+      <kind>method</kind>
+      <signature>def get_last_viewed_generation(self) -> int</signature>
+      <path>src/state_manager.py</path>
+      <notes>Returns last viewed generation from in-memory state (1, 2, or 3).</notes>
+    </interface>
+    <interface>
+      <name>StateManager.save_state</name>
+      <kind>method</kind>
+      <signature>def save_state(self) -> bool</signature>
+      <path>src/state_manager.py</path>
+      <notes>Persists current in-memory state to JSON file using atomic write pattern (temp file + rename). Returns True on success. Target: less than 50ms.</notes>
+    </interface>
+    <interface>
+      <name>Screen.on_enter</name>
+      <kind>lifecycle hook</kind>
+      <signature>def on_enter(self) -> None</signature>
+      <path>src/ui/screen.py</path>
+      <notes>Called when screen becomes active. Load state here with get_last_viewed_*() methods.</notes>
+    </interface>
+    <interface>
+      <name>Screen.on_exit</name>
+      <kind>lifecycle hook</kind>
+      <signature>def on_exit(self) -> None</signature>
+      <path>src/ui/screen.py</path>
+      <notes>Called when screen becomes inactive. Save state here with save_state() method.</notes>
+    </interface>
+  </interfaces>
+
+  <constraints>
+    <constraint type="architecture">
+      Screens access StateManager via self.screen_manager.state_manager pattern. Do not create new StateManager instances.
+    </constraint>
+    <constraint type="architecture">
+      State file location is data/shokedex_state.json. Do not change this path.
+    </constraint>
+    <constraint type="performance">
+      save_state() must complete in less than 50ms to avoid impacting frame rate during navigation.
+    </constraint>
+    <constraint type="performance">
+      _load_state() must complete in less than 50ms for fast application startup.
+    </constraint>
+    <constraint type="data-integrity">
+      Use atomic write pattern: write to temp file (.tmp), then rename. Prevents corruption during power loss.
+    </constraint>
+    <constraint type="validation">
+      Clamp pokemon_id to 1-386 range. Clamp generation to 1-3 range. Invalid values reset to defaults.
+    </constraint>
+    <constraint type="testing">
+      Use temporary state files for tests (not production data/shokedex_state.json). Clean up in tearDown().
+    </constraint>
+    <constraint type="error-handling">
+      Do not crash on save failure - log warning and continue. State persistence is best-effort.
+    </constraint>
+  </constraints>
+
+  <tests>
+    <standards>
+      Testing uses pytest framework with pytest-cov for coverage. Tests should use temporary directories and files for isolation (tempfile.mkdtemp(), tempfile.NamedTemporaryFile()). Clean up resources in tearDown(). Mock ScreenManager and StateManager for screen tests. Measure timing for performance tests. Run with: python -m pytest tests/ -v
+    </standards>
+    <locations>
+      <location>tests/test_state_manager.py</location>
+      <location>tests/test_home_screen.py</location>
+      <location>tests/test_detail_screen.py</location>
+    </locations>
+    <ideas>
+      <idea ac="1,2">Test screen on_exit() triggers save_state() - mock StateManager and verify method calls</idea>
+      <idea ac="3">Test application restart restores correct Pokémon - create state file, init StateManager, verify get_last_viewed_id()</idea>
+      <idea ac="4,5">Test cross-generation persistence - set Johto/Hoenn Pokémon, restart, verify generation restored</idea>
+      <idea ac="6">Test navigation updates state - simulate Up/Down input, verify set_last_viewed() called</idea>
+      <idea ac="7">Test generation switch updates state - simulate L/R input, verify generation field updated</idea>
+      <idea ac="8">Test save_state() performance - time 1000 iterations, assert average less than 50ms</idea>
+      <idea ac="8">Test _load_state() performance - time load operation, assert less than 50ms</idea>
+      <idea ac="1,2,3">Integration test: full lifecycle - navigate, save, restart, verify restored position</idea>
+    </ideas>
+  </tests>
+</story-context>
