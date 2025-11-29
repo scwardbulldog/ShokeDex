@@ -1,0 +1,214 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>3</epicId>
+    <storyId>6</storyId>
+    <title>Adjacent Pokémon Navigation in Detail View</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-17</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/3-6-adjacent-pokemon-navigation-in-detail-view.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>user</asA>
+    <iWant>to navigate to the previous/next Pokémon using L/R buttons while in detail view</iWant>
+    <soThat>I can browse details without returning to HomeScreen</soThat>
+    <tasks>
+      - Task 1: Implement Navigation Logic (AC: #1, #2, #3, #4) - Create _navigate_adjacent(direction: int) method with wrapping arithmetic
+      - Task 2: Input Handling for L/R Buttons (AC: #1, #2) - Modify handle_input() to process LEFT/RIGHT actions
+      - Task 3: State Persistence Integration (AC: #5) - Call StateManager.set_last_viewed() in navigation
+      - Task 4: Sprite Fade Transition Effect (AC: #6) - Create _fade_sprite_transition() with 100ms fade out/in
+      - Task 5: Data Refresh and UI Update (AC: #7) - Ensure _load_pokemon_data() refreshes ALL data fields
+      - Task 6: Performance Optimization (AC: #8, #9) - Profile navigation timing, sprite cache utilization
+      - Task 7: Error Handling and Edge Cases (AC: #7) - Handle database/sprite failures gracefully
+      - Task 8: Integration with Existing DetailScreen (AC: All) - Verify navigation works with all features
+      - Task 9: Comprehensive Testing (AC: All) - Create integration tests covering all ACs
+      - Task 10: Documentation and Code Quality (AC: All) - Add docstrings and performance logging
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    AC #1: Previous Pokémon Navigation - L button navigates to previous Pokémon with data/sprite update, stays in DetailScreen, completes in &lt;300ms
+    AC #2: Next Pokémon Navigation - R button navigates to next Pokémon with all data refreshed, remains in DetailScreen context
+    AC #3: Wrap Around at Beginning - From Pokémon #1, L button wraps to #386 (Deoxys) with UI updates
+    AC #4: Wrap Around at End - From Pokémon #386, R button wraps to #1 (Bulbasaur) with UI updates
+    AC #5: State Persistence During Navigation - StateManager.set_last_viewed() called on L/R navigation with automatic save
+    AC #6: Smooth Visual Transition - Sprite fades out (100ms) → loads new data → fades in (100ms), total &lt;300ms with smooth alpha blending
+    AC #7: Data Integrity During Navigation - All UI components update with correct data (name, dex number, sprite, stats, types, measurements, description, evolution chain), no stale data
+    AC #8: Performance Requirements - 30+ FPS during transitions, database query &lt;50ms, sprite cache &lt;20ms, total navigation &lt;300ms, no memory leaks
+    AC #9: Cache Optimization - Recently viewed Pokémon load from SpriteLoader cache (&lt;10ms), LRU eviction policy, max 50 sprites cached
+    AC #10: B Button Returns to HomeScreen - B button transitions back to HomeScreen with current Pokémon selected, StateManager retains last viewed ID
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/PRD.md</path>
+        <title>Product Requirements Document</title>
+        <section>FR3.4 - Navigation Within Detail View</section>
+        <snippet>User shall be able to navigate to adjacent Pokémon using L/R buttons while in detail view. B button shall return to browse view.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture.md</path>
+        <title>System Architecture</title>
+        <section>Screen Lifecycle & Navigation</section>
+        <snippet>Screen navigation using push/pop stack with ScreenManager. State persistence via StateManager on screen transitions. Performance targets: 30+ FPS, &lt;100ms input latency.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture.md</path>
+        <title>System Architecture</title>
+        <section>StateManager Integration</section>
+        <snippet>Save state on screen exit (on_exit method), update StateManager on Pokémon changes, call save_state() after significant state changes for data safety.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-2-detail-view-with-audio.md</path>
+        <title>Epic 2 Technical Specification</title>
+        <section>Adjacent Pokemon Navigation (L/R in Detail View)</section>
+        <snippet>Calculate new pokemon_id with direction wrapping, update state, call _load_pokemon_data(), trigger fade transition. Total navigation time &lt;300ms with sprite crossfade.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/3-5-pokedex-description-text-display.md</path>
+        <title>Story 3.5 - Description Text Display</title>
+        <section>Data Loading Pattern</section>
+        <snippet>_load_pokemon_data() method refreshes all fields. Pre-rendering optimization for performance. Database integration with error handling for missing data.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/1-6-up-down-scrolling-within-generation.md</path>
+        <title>Story 1.6 - Up/Down Scrolling</title>
+        <section>Navigation Pattern</section>
+        <snippet>State persistence with StateManager.set_last_viewed(), wrapping arithmetic, InputAction enum usage (LEFT, RIGHT, BACK), 30+ FPS performance requirement.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <artifact>
+        <path>src/ui/detail_screen.py</path>
+        <kind>screen</kind>
+        <symbol>DetailScreen</symbol>
+        <lines>1-700</lines>
+        <reason>Primary implementation target - needs L/R navigation methods, data loading, fade transitions</reason>
+      </artifact>
+      <artifact>
+        <path>src/ui/detail_screen.py</path>
+        <kind>method</kind>
+        <symbol>handle_input</symbol>
+        <lines>300-320</lines>
+        <reason>Needs modification to handle LEFT/RIGHT actions for adjacent navigation</reason>
+      </artifact>
+      <artifact>
+        <path>src/ui/detail_screen.py</path>
+        <kind>method</kind>
+        <symbol>_load_pokemon_data</symbol>
+        <lines>160-200</lines>
+        <reason>Existing data loading method to reuse for navigation - loads stats, types, physical data, description</reason>
+      </artifact>
+      <artifact>
+        <path>src/state_manager.py</path>
+        <kind>class</kind>
+        <symbol>StateManager</symbol>
+        <reason>State persistence for last viewed Pokémon during navigation</reason>
+      </artifact>
+      <artifact>
+        <path>src/ui/sprite_loader.py</path>
+        <kind>module</kind>
+        <symbol>load_detail</symbol>
+        <reason>Sprite loading with LRU cache for performance optimization</reason>
+      </artifact>
+      <artifact>
+        <path>src/input_manager.py</path>
+        <kind>enum</kind>
+        <symbol>InputAction</symbol>
+        <reason>LEFT, RIGHT, BACK action enum values for input handling</reason>
+      </artifact>
+      <artifact>
+        <path>src/ui/colors.py</path>
+        <kind>module</kind>
+        <symbol>Colors</symbol>
+        <reason>Color constants for fade transitions and UI consistency</reason>
+      </artifact>
+      <artifact>
+        <path>src/data/database.py</path>
+        <kind>class</kind>
+        <symbol>Database</symbol>
+        <reason>Data queries for Pokémon information during navigation - get_pokemon_by_id, get_pokemon_stats, get_pokemon_types</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <python>
+        <pygame>2.5.0+</pygame>
+        <Pillow>10.0.0+</Pillow>
+        <sqlite3>stdlib</sqlite3>
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    - Navigation must complete in &lt;300ms total (database query + sprite load + render)
+    - Database query time &lt;50ms per Pokémon (single transaction)
+    - Sprite loading: &lt;10ms from cache, &lt;50ms from disk
+    - Frame rate must maintain 30+ FPS during all transitions
+    - Memory usage: no leaks from repeated navigation, sprite cache bounded at 50 items
+    - Wrapping arithmetic: next = (current % 386) + 1, prev = ((current - 2) % 386) + 1
+    - State persistence required: call StateManager.set_last_viewed() on every navigation
+    - Error handling: graceful degradation for missing sprites, database failures, invalid IDs
+    - Thread safety: single-threaded pygame environment, no concurrent navigation
+    - Hardware constraints: optimized for Raspberry Pi 3B+ (1GB RAM, ARM CPU)
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>DetailScreen._navigate_adjacent</name>
+      <kind>method</kind>
+      <signature>def _navigate_adjacent(self, direction: int) -&gt; None</signature>
+      <path>src/ui/detail_screen.py</path>
+    </interface>
+    <interface>
+      <name>DetailScreen._fade_sprite_transition</name>
+      <kind>method</kind>
+      <signature>def _fade_sprite_transition(self, new_pokemon_id: int) -&gt; None</signature>
+      <path>src/ui/detail_screen.py</path>
+    </interface>
+    <interface>
+      <name>StateManager.set_last_viewed</name>
+      <kind>method</kind>
+      <signature>def set_last_viewed(self, pokemon_id: int) -&gt; None</signature>
+      <path>src/state_manager.py</path>
+    </interface>
+    <interface>
+      <name>Database.get_pokemon_by_id</name>
+      <kind>method</kind>
+      <signature>def get_pokemon_by_id(self, pokemon_id: int) -&gt; Dict</signature>
+      <path>src/data/database.py</path>
+    </interface>
+    <interface>
+      <name>SpriteLoader.load_detail</name>
+      <kind>function</kind>
+      <signature>def load_detail(pokemon_id: int) -&gt; pygame.Surface</signature>
+      <path>src/ui/sprite_loader.py</path>
+    </interface>
+    <interface>
+      <name>pygame.Surface.set_alpha</name>
+      <kind>method</kind>
+      <signature>surface.set_alpha(alpha_value: int) -&gt; None</signature>
+      <path>pygame</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Use Python unittest framework with test classes inheriting from unittest.TestCase. Test method naming: test_{method_name}_{scenario}. Mock external dependencies (database, sprite loader) using unittest.mock. Setup/teardown with setUp() and tearDown() methods. Use pygame test surfaces for rendering tests. Profile performance with time.perf_counter() for timing assertions.
+    </standards>
+    <locations>tests/test_detail_screen.py</locations>
+    <ideas>
+      AC #1-2: test_navigate_to_next_pokemon(), test_navigate_to_previous_pokemon() - R/L button navigation with data verification
+      AC #3-4: test_wrap_around_from_first_pokemon(), test_wrap_around_from_last_pokemon() - boundary wrapping #1↔#386
+      AC #5: test_state_persistence_during_navigation() - StateManager integration with set_last_viewed() calls
+      AC #6: test_fade_transition_timing() - sprite fade effect completes within 300ms with proper alpha values
+      AC #7: test_data_integrity_after_navigation() - all UI elements show correct data for new Pokémon
+      AC #8: test_navigation_performance(), test_rapid_navigation_maintains_fps() - timing and frame rate requirements
+      AC #9: test_sprite_cache_optimization() - cache hit rate and LRU eviction behavior
+      AC #10: test_b_button_returns_to_homescreen() - original behavior preserved after navigation
+      Edge cases: test_navigation_with_missing_sprite(), test_database_error_recovery(), test_invalid_pokemon_id_handling()
+      Performance: test_memory_usage_after_100_navigations(), test_cache_effectiveness_sequential_browsing()
+    </ideas>
+  </tests>
+</story-context>

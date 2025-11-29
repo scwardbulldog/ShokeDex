@@ -70,7 +70,7 @@ development_status:
   3-3-type-badge-display-on-detail-view: review
   3-4-physical-measurements-display: review
   3-5-pokedex-description-text-display: review
-  3-6-adjacent-pokemon-navigation-in-detail-view: backlog
+  3-6-adjacent-pokemon-navigation-in-detail-view: done
   3-7-detail-view-performance-and-visual-polish: backlog
   epic-3-retrospective: optional
 

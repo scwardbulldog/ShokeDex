@@ -5,6 +5,7 @@ Story 3.1: Basic layout with large sprite, header, and placeholder panels.
 Story 3.2: Six base stats with visual progress bars, color-coded by value.
 Story 3.3: Type badges with holographic colors and rounded rectangle styling.
 Story 3.4: Physical measurements (height in meters, weight in kilograms) display.
+Story 3.6: L/R button navigation to adjacent Pokémon with fade transitions.
 """
 
 import pygame
@@ -52,6 +53,15 @@ class DetailScreen(Screen):
     - Labels (ice blue) right-aligned, values (white) left-aligned
     - 8px vertical spacing between height and weight lines
     - Positioned below sprite and type badges without overlap
+    
+    Story 3.6 Implementation:
+    - L button (LEFT) navigates to previous Pokémon (#25 → #24)
+    - R button (RIGHT) navigates to next Pokémon (#25 → #26)
+    - Wrap-around navigation: #1 ↔ #386 circular browsing
+    - Smooth sprite fade transition (100ms out + 100ms in)
+    - StateManager updated on each navigation for persistence
+    - All UI components refresh: name, sprite, stats, types, measurements, description
+    - Performance target: total navigation < 300ms
     """
     
     def __init__(self, screen_manager, pokemon_id: int):
@@ -317,11 +327,180 @@ class DetailScreen(Screen):
         Args:
             action: InputAction enum value (BACK, LEFT, RIGHT, etc.)
             
-        AC #1: B button returns to HomeScreen (pop navigation stack)
+        Story 3.1 AC #1: B button returns to HomeScreen (pop navigation stack)
+        Story 3.6 AC #1: L button (LEFT) navigates to previous Pokémon
+        Story 3.6 AC #2: R button (RIGHT) navigates to next Pokémon
         """
         if action == InputAction.BACK:
             # Pop screen stack to return to HomeScreen
             self.screen_manager.pop()
+        elif action == InputAction.LEFT:
+            # Story 3.6: Navigate to previous Pokémon
+            self._navigate_adjacent(-1)
+        elif action == InputAction.RIGHT:
+            # Story 3.6: Navigate to next Pokémon
+            self._navigate_adjacent(1)
+    
+    def _calculate_adjacent_id(self, current_id: int, direction: int) -> int:
+        """
+        Calculate adjacent Pokémon ID with wrap-around.
+        
+        Args:
+            current_id: Current Pokémon ID (1-386)
+            direction: 1 for next (R button), -1 for previous (L button)
+            
+        Returns:
+            New Pokémon ID (1-386) with wrap-around at boundaries
+            
+        Story 3.6 AC #3: #1 + LEFT → #386 (wrap to end)
+        Story 3.6 AC #4: #386 + RIGHT → #1 (wrap to beginning)
+        """
+        if direction == 1:  # Next (R button)
+            return (current_id % 386) + 1
+        else:  # Previous (L button)
+            return ((current_id - 2) % 386) + 1
+    
+    def _navigate_adjacent(self, direction: int):
+        """
+        Navigate to adjacent Pokémon with state persistence and visual transition.
+        
+        Args:
+            direction: 1 for next (R button), -1 for previous (L button)
+            
+        Story 3.6 Implementation:
+        AC #1, #2: Navigate to prev/next Pokémon, update all data and sprite
+        AC #3, #4: Wrap around at boundaries (#1 ↔ #386)
+        AC #5: Update StateManager for persistence
+        AC #6: Smooth fade transition effect
+        AC #7: Data integrity - all UI components update correctly
+        AC #8: Performance - total navigation < 300ms
+        """
+        start_time = time.perf_counter()
+        
+        # Calculate new pokemon_id with wrap-around (AC #3, #4)
+        new_id = self._calculate_adjacent_id(self.pokemon_id, direction)
+        
+        logging.debug(f"Navigating from Pokemon #{self.pokemon_id} to #{new_id} (direction={direction})")
+        
+        try:
+            # Perform fade transition with data loading (AC #6)
+            self._fade_sprite_transition(new_id)
+            
+            # Update state for persistence (AC #5)
+            if self.state_manager:
+                self.state_manager.set_last_viewed(self.pokemon_id)
+            
+        except Exception as e:
+            # AC #7 Error handling: stay on current Pokémon if navigation fails
+            logging.error(f"Navigation failed: {e}, staying on Pokemon #{self.pokemon_id}")
+            return
+        
+        # Performance logging (AC #8: total < 300ms)
+        total_time = (time.perf_counter() - start_time) * 1000
+        if total_time > 300:
+            logging.warning(f"Slow navigation: {total_time:.2f}ms (target: <300ms)")
+        else:
+            logging.debug(f"Navigation completed in {total_time:.2f}ms")
+    
+    def _fade_sprite_transition(self, new_pokemon_id: int):
+        """
+        Smooth sprite transition with fade effect during Pokémon change.
+        
+        Args:
+            new_pokemon_id: Target Pokémon ID to navigate to
+            
+        Story 3.6 AC #6:
+        - Sprite fades out (100ms) → load new data → fades in (100ms)
+        - Total fade transition < 300ms
+        - Smooth alpha blending (not jarring cuts)
+        - Fade applies to sprite only, not entire screen
+        """
+        import pygame
+        
+        # Get current screen surface for rendering during transition
+        screen = pygame.display.get_surface()
+        if screen is None:
+            # No display available (testing mode), skip fade and just load data
+            self.pokemon_id = new_pokemon_id
+            self._load_pokemon_data()
+            self._refresh_pre_rendered_elements()
+            self._reload_sprite()
+            return
+        
+        start_time = time.perf_counter()
+        clock = pygame.time.Clock()
+        
+        # Phase 1: Fade out current sprite (100ms)
+        if self.sprite:
+            fade_duration_ms = 100
+            fade_steps = 10
+            step_time = fade_duration_ms / fade_steps
+            
+            for step in range(fade_steps):
+                alpha = int(255 * (1.0 - (step + 1) / fade_steps))
+                self.sprite.set_alpha(alpha)
+                self.render(screen)
+                pygame.display.flip()
+                clock.tick(100)  # Cap at 100 FPS during transition
+        
+        # Phase 2: Load new Pokémon data while faded out
+        load_start = time.perf_counter()
+        self.pokemon_id = new_pokemon_id
+        self._load_pokemon_data()
+        self._refresh_pre_rendered_elements()
+        self._reload_sprite()
+        load_time = (time.perf_counter() - load_start) * 1000
+        logging.debug(f"Data load during transition: {load_time:.2f}ms")
+        
+        # Phase 3: Fade in new sprite (100ms)
+        if self.sprite:
+            fade_duration_ms = 100
+            fade_steps = 10
+            
+            for step in range(fade_steps):
+                alpha = int(255 * ((step + 1) / fade_steps))
+                self.sprite.set_alpha(alpha)
+                self.render(screen)
+                pygame.display.flip()
+                clock.tick(100)
+            
+            # Ensure full opacity restored
+            self.sprite.set_alpha(255)
+        
+        total_time = (time.perf_counter() - start_time) * 1000
+        logging.debug(f"Fade transition completed: {total_time:.2f}ms")
+    
+    def _refresh_pre_rendered_elements(self):
+        """
+        Refresh cached rendered surfaces after Pokémon change.
+        
+        Called after _load_pokemon_data() to regenerate pre-rendered
+        elements that depend on pokemon_id (description lines, stat bars, etc.)
+        
+        Story 3.6 AC #7: Clear stale data, regenerate cached surfaces
+        """
+        # Clear description line cache and re-render (Story 3.5)
+        self.description_lines = []
+        self._render_description_lines()
+    
+    def _reload_sprite(self):
+        """
+        Reload sprite for current pokemon_id from SpriteLoader.
+        
+        Uses cached sprites when available for performance (AC #9).
+        Falls back to text placeholder if sprite missing (AC #7).
+        """
+        if self.pokemon_data:
+            try:
+                self.sprite = load_detail(self.pokemon_id)
+                if self.sprite is None:
+                    logging.warning(f"Missing sprite for Pokemon #{self.pokemon_id}")
+                    self.sprite = self._create_text_placeholder(self.pokemon_data['name'])
+            except Exception as e:
+                logging.error(f"Error loading sprite for Pokemon #{self.pokemon_id}: {e}")
+                self.sprite = self._create_text_placeholder(
+                    self.pokemon_data.get('name', f'Pokemon #{self.pokemon_id}')
+                )
     
     def update(self, delta_time: float):
         """

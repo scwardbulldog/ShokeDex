@@ -267,6 +267,39 @@ Tests run automatically in GitHub Actions:
 - **UI Screens**: ≥70%
 - **Utilities**: ≥90%
 
+## DetailScreen Navigation Tests (Story 3.6)
+
+Story 3.6 added comprehensive navigation testing for L/R button traversal:
+
+```bash
+# Run navigation-specific tests
+pytest tests/test_detail_screen.py -k "Navigation"
+
+# Run all Story 3.6 tests
+pytest tests/test_detail_screen.py -k "Navigation or Persistence or DataIntegrity or Cache"
+```
+
+### Test Classes Added
+- `TestDetailScreenNavigationLogic` - Wrap-around arithmetic (#1 ↔ #386)
+- `TestDetailScreenInputHandling` - L/R/B button responses
+- `TestDetailScreenStatePersistence` - StateManager integration
+- `TestDetailScreenDataIntegrity` - All UI components refresh correctly
+- `TestDetailScreenNavigationPerformance` - < 300ms timing requirements
+- `TestDetailScreenCacheOptimization` - Sprite cache hit rates
+- `TestDetailScreenErrorHandlingNavigation` - Graceful degradation
+- `TestDetailScreenRefreshMethods` - Helper method functionality
+
+### Key Test Cases
+| Test | AC | Description |
+|------|-----|-------------|
+| `test_calculate_next_pokemon_id` | #2 | R button calculates next ID |
+| `test_wrap_around_at_beginning` | #3 | #1 → #386 wrap |
+| `test_wrap_around_at_end` | #4 | #386 → #1 wrap |
+| `test_navigate_updates_state_manager` | #5 | State persistence |
+| `test_navigation_with_fade_under_300ms` | #6, #8 | Performance timing |
+| `test_all_data_refreshes_on_navigation` | #7 | Data integrity |
+| `test_back_button_still_pops_screen` | #10 | B button preserved |
+
 ## Performance Targets
 
 - **Frame time**: P95 < 33ms (30 FPS)

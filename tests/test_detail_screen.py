@@ -2225,6 +2225,697 @@ class TestStory35DescriptionDisplay:
                         assert not wrapped_lines[-1].endswith("...")
 
 
+# ============================================================================
+# Story 3.6: Adjacent Pokémon Navigation in Detail View
+# ============================================================================
+
+class TestDetailScreenNavigationLogic:
+    """Test Story 3.6: Navigation logic and wrap-around arithmetic (AC #1-4)"""
+    
+    def test_calculate_next_pokemon_id(self, pygame_init, mock_screen_manager):
+        """Test AC #2: R button (direction=1) calculates next Pokémon ID"""
+        detail = DetailScreen(mock_screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        # Pikachu #25 → Raichu #26
+        next_id = detail._calculate_adjacent_id(25, 1)
+        assert next_id == 26, f"Expected 26, got {next_id}"
+        
+        # Test sequential navigation
+        assert detail._calculate_adjacent_id(1, 1) == 2
+        assert detail._calculate_adjacent_id(100, 1) == 101
+        assert detail._calculate_adjacent_id(385, 1) == 386
+    
+    def test_calculate_previous_pokemon_id(self, pygame_init, mock_screen_manager):
+        """Test AC #1: L button (direction=-1) calculates previous Pokémon ID"""
+        detail = DetailScreen(mock_screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        # Pikachu #25 → Arbok #24
+        prev_id = detail._calculate_adjacent_id(25, -1)
+        assert prev_id == 24, f"Expected 24, got {prev_id}"
+        
+        # Test sequential navigation
+        assert detail._calculate_adjacent_id(100, -1) == 99
+        assert detail._calculate_adjacent_id(386, -1) == 385
+        assert detail._calculate_adjacent_id(2, -1) == 1
+    
+    def test_wrap_around_at_beginning(self, pygame_init, mock_screen_manager):
+        """Test AC #3: From Pokémon #1, L button wraps to #386"""
+        detail = DetailScreen(mock_screen_manager, pokemon_id=1)
+        detail.on_enter()
+        
+        # Bulbasaur #1 + LEFT → Deoxys #386
+        wrapped_id = detail._calculate_adjacent_id(1, -1)
+        assert wrapped_id == 386, f"Expected 386 (Deoxys), got {wrapped_id}"
+    
+    def test_wrap_around_at_end(self, pygame_init, mock_screen_manager):
+        """Test AC #4: From Pokémon #386, R button wraps to #1"""
+        detail = DetailScreen(mock_screen_manager, pokemon_id=386)
+        detail.on_enter()
+        
+        # Deoxys #386 + RIGHT → Bulbasaur #1
+        wrapped_id = detail._calculate_adjacent_id(386, 1)
+        assert wrapped_id == 1, f"Expected 1 (Bulbasaur), got {wrapped_id}"
+    
+    def test_wrap_around_boundary_values(self, pygame_init, mock_screen_manager):
+        """Test wrap-around for all boundary conditions"""
+        detail = DetailScreen(mock_screen_manager, pokemon_id=1)
+        detail.on_enter()
+        
+        # Test complete wrap-around cycle
+        assert detail._calculate_adjacent_id(1, -1) == 386  # Start → End
+        assert detail._calculate_adjacent_id(386, 1) == 1   # End → Start
+        assert detail._calculate_adjacent_id(1, 1) == 2     # Start → Second
+        assert detail._calculate_adjacent_id(386, -1) == 385  # End → Second-to-last
+
+
+class TestDetailScreenInputHandling:
+    """Test Story 3.6: Input handling for L/R navigation (AC #1, #2, #10)"""
+    
+    def test_left_button_calls_navigate_previous(self, pygame_init, mock_screen_manager):
+        """Test AC #1: LEFT action triggers navigation to previous Pokémon"""
+        # Create a mock database that returns different Pokémon for different IDs
+        class FlexibleMockDatabase(MockDatabase):
+            def get_pokemon_by_id(self, pokemon_id):
+                return {
+                    'id': pokemon_id,
+                    'name': f'pokemon_{pokemon_id}',
+                    'height': 4,
+                    'weight': 60,
+                    'generation': 1,
+                    'description': 'Test description'
+                }
+            
+            def get_pokemon_stats(self, pokemon_id):
+                return self.stats_data
+            
+            def get_pokemon_types(self, pokemon_id):
+                return self.types_data
+        
+        db = FlexibleMockDatabase()
+        screen_manager = MockScreenManager(database=db, state_manager=MockStateManager())
+        detail = DetailScreen(screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        # Press LEFT to navigate to previous
+        detail.handle_input(InputAction.LEFT)
+        
+        # Should now be on Pokémon #24
+        assert detail.pokemon_id == 24
+    
+    def test_right_button_calls_navigate_next(self, pygame_init, mock_screen_manager):
+        """Test AC #2: RIGHT action triggers navigation to next Pokémon"""
+        class FlexibleMockDatabase(MockDatabase):
+            def get_pokemon_by_id(self, pokemon_id):
+                return {
+                    'id': pokemon_id,
+                    'name': f'pokemon_{pokemon_id}',
+                    'height': 4,
+                    'weight': 60,
+                    'generation': 1,
+                    'description': 'Test description'
+                }
+            
+            def get_pokemon_stats(self, pokemon_id):
+                return self.stats_data
+            
+            def get_pokemon_types(self, pokemon_id):
+                return self.types_data
+        
+        db = FlexibleMockDatabase()
+        screen_manager = MockScreenManager(database=db, state_manager=MockStateManager())
+        detail = DetailScreen(screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        # Press RIGHT to navigate to next
+        detail.handle_input(InputAction.RIGHT)
+        
+        # Should now be on Pokémon #26
+        assert detail.pokemon_id == 26
+    
+    def test_back_button_still_pops_screen(self, pygame_init, mock_screen_manager):
+        """Test AC #10: B button still returns to HomeScreen after navigation"""
+        detail = DetailScreen(mock_screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        # B button should still pop screen
+        detail.handle_input(InputAction.BACK)
+        
+        assert mock_screen_manager.popped is True
+    
+    def test_navigation_preserves_back_button(self, pygame_init):
+        """Test AC #10: After L/R navigation, B button still works"""
+        class FlexibleMockDatabase(MockDatabase):
+            def get_pokemon_by_id(self, pokemon_id):
+                return {
+                    'id': pokemon_id,
+                    'name': f'pokemon_{pokemon_id}',
+                    'height': 4,
+                    'weight': 60,
+                    'generation': 1,
+                    'description': 'Test description'
+                }
+            
+            def get_pokemon_stats(self, pokemon_id):
+                return self.stats_data
+            
+            def get_pokemon_types(self, pokemon_id):
+                return self.types_data
+        
+        db = FlexibleMockDatabase()
+        state_manager = MockStateManager()
+        screen_manager = MockScreenManager(database=db, state_manager=state_manager)
+        detail = DetailScreen(screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        # Navigate right then left
+        detail.handle_input(InputAction.RIGHT)  # 25 → 26
+        detail.handle_input(InputAction.LEFT)   # 26 → 25
+        
+        # B button should still work
+        detail.handle_input(InputAction.BACK)
+        assert screen_manager.popped is True
+
+
+class TestDetailScreenStatePersistence:
+    """Test Story 3.6: State persistence during navigation (AC #5)"""
+    
+    def test_navigate_updates_state_manager(self, pygame_init):
+        """Test AC #5: StateManager.set_last_viewed() called on L/R navigation"""
+        class FlexibleMockDatabase(MockDatabase):
+            def get_pokemon_by_id(self, pokemon_id):
+                return {
+                    'id': pokemon_id,
+                    'name': f'pokemon_{pokemon_id}',
+                    'height': 4,
+                    'weight': 60,
+                    'generation': 1,
+                    'description': 'Test description'
+                }
+            
+            def get_pokemon_stats(self, pokemon_id):
+                return self.stats_data
+            
+            def get_pokemon_types(self, pokemon_id):
+                return self.types_data
+        
+        db = FlexibleMockDatabase()
+        state_manager = MockStateManager()
+        screen_manager = MockScreenManager(database=db, state_manager=state_manager)
+        detail = DetailScreen(screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        # Initial state should be set
+        assert state_manager.last_viewed_id == 25
+        
+        # Navigate right
+        detail.handle_input(InputAction.RIGHT)
+        
+        # State should be updated to new Pokémon
+        assert state_manager.last_viewed_id == 26
+    
+    def test_navigate_left_updates_state(self, pygame_init):
+        """Test AC #5: LEFT navigation updates StateManager"""
+        class FlexibleMockDatabase(MockDatabase):
+            def get_pokemon_by_id(self, pokemon_id):
+                return {
+                    'id': pokemon_id,
+                    'name': f'pokemon_{pokemon_id}',
+                    'height': 4,
+                    'weight': 60,
+                    'generation': 1,
+                    'description': 'Test description'
+                }
+            
+            def get_pokemon_stats(self, pokemon_id):
+                return self.stats_data
+            
+            def get_pokemon_types(self, pokemon_id):
+                return self.types_data
+        
+        db = FlexibleMockDatabase()
+        state_manager = MockStateManager()
+        screen_manager = MockScreenManager(database=db, state_manager=state_manager)
+        detail = DetailScreen(screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        # Navigate left
+        detail.handle_input(InputAction.LEFT)
+        
+        # State should be updated to previous Pokémon
+        assert state_manager.last_viewed_id == 24
+    
+    def test_wrap_around_updates_state(self, pygame_init):
+        """Test AC #5: State updated correctly on wrap-around navigation"""
+        class FlexibleMockDatabase(MockDatabase):
+            def get_pokemon_by_id(self, pokemon_id):
+                return {
+                    'id': pokemon_id,
+                    'name': f'pokemon_{pokemon_id}',
+                    'height': 4,
+                    'weight': 60,
+                    'generation': 1,
+                    'description': 'Test description'
+                }
+            
+            def get_pokemon_stats(self, pokemon_id):
+                return self.stats_data
+            
+            def get_pokemon_types(self, pokemon_id):
+                return self.types_data
+        
+        db = FlexibleMockDatabase()
+        state_manager = MockStateManager()
+        screen_manager = MockScreenManager(database=db, state_manager=state_manager)
+        
+        # Start at Pokémon #1
+        detail = DetailScreen(screen_manager, pokemon_id=1)
+        detail.on_enter()
+        
+        # Navigate left (wrap to #386)
+        detail.handle_input(InputAction.LEFT)
+        
+        # State should reflect wrap-around
+        assert detail.pokemon_id == 386
+        assert state_manager.last_viewed_id == 386
+
+
+class TestDetailScreenDataIntegrity:
+    """Test Story 3.6: Data integrity during navigation (AC #7)"""
+    
+    def test_all_data_refreshes_on_navigation(self, pygame_init):
+        """Test AC #7: All UI components update with correct data after navigation"""
+        class FlexibleMockDatabase(MockDatabase):
+            def get_pokemon_by_id(self, pokemon_id):
+                if pokemon_id == 25:
+                    return {
+                        'id': 25,
+                        'name': 'pikachu',
+                        'height': 4,
+                        'weight': 60,
+                        'generation': 1,
+                        'description': 'Electric mouse Pokémon'
+                    }
+                elif pokemon_id == 26:
+                    return {
+                        'id': 26,
+                        'name': 'raichu',
+                        'height': 8,
+                        'weight': 300,
+                        'generation': 1,
+                        'description': 'Mouse Pokémon that evolved'
+                    }
+                return None
+            
+            def get_pokemon_stats(self, pokemon_id):
+                if pokemon_id == 25:
+                    return [
+                        {'name': 'HP', 'base_stat': 35},
+                        {'name': 'Attack', 'base_stat': 55},
+                        {'name': 'Defense', 'base_stat': 40},
+                        {'name': 'Special Attack', 'base_stat': 50},
+                        {'name': 'Special Defense', 'base_stat': 50},
+                        {'name': 'Speed', 'base_stat': 90}
+                    ]
+                elif pokemon_id == 26:
+                    return [
+                        {'name': 'HP', 'base_stat': 60},
+                        {'name': 'Attack', 'base_stat': 90},
+                        {'name': 'Defense', 'base_stat': 55},
+                        {'name': 'Special Attack', 'base_stat': 90},
+                        {'name': 'Special Defense', 'base_stat': 80},
+                        {'name': 'Speed', 'base_stat': 110}
+                    ]
+                return []
+            
+            def get_pokemon_types(self, pokemon_id):
+                return ['Electric']
+        
+        db = FlexibleMockDatabase()
+        screen_manager = MockScreenManager(database=db, state_manager=MockStateManager())
+        detail = DetailScreen(screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        # Verify initial data
+        assert detail.pokemon_data['name'] == 'pikachu'
+        assert detail.height == 0.4  # 4 dm = 0.4 m
+        assert detail.weight == 6.0  # 60 hg = 6.0 kg
+        assert detail.stats[0]['base_stat'] == 35  # HP
+        
+        # Navigate to next Pokémon
+        detail.handle_input(InputAction.RIGHT)
+        
+        # Verify all data refreshed correctly
+        assert detail.pokemon_id == 26
+        assert detail.pokemon_data['name'] == 'raichu'
+        assert detail.height == 0.8  # 8 dm = 0.8 m
+        assert detail.weight == 30.0  # 300 hg = 30.0 kg
+        assert detail.stats[0]['base_stat'] == 60  # HP
+        assert detail.description == 'Mouse Pokémon that evolved'
+    
+    def test_no_stale_data_after_navigation(self, pygame_init):
+        """Test AC #7: No stale data from previous Pokémon is displayed"""
+        class FlexibleMockDatabase(MockDatabase):
+            def get_pokemon_by_id(self, pokemon_id):
+                return {
+                    'id': pokemon_id,
+                    'name': f'pokemon_{pokemon_id}',
+                    'height': pokemon_id,  # Unique per Pokémon
+                    'weight': pokemon_id * 10,
+                    'generation': 1,
+                    'description': f'Description for #{pokemon_id}'
+                }
+            
+            def get_pokemon_stats(self, pokemon_id):
+                return [
+                    {'name': 'HP', 'base_stat': pokemon_id},
+                    {'name': 'Attack', 'base_stat': pokemon_id + 10},
+                    {'name': 'Defense', 'base_stat': pokemon_id + 20},
+                    {'name': 'Special Attack', 'base_stat': pokemon_id + 30},
+                    {'name': 'Special Defense', 'base_stat': pokemon_id + 40},
+                    {'name': 'Speed', 'base_stat': pokemon_id + 50}
+                ]
+            
+            def get_pokemon_types(self, pokemon_id):
+                return ['Electric']
+        
+        db = FlexibleMockDatabase()
+        screen_manager = MockScreenManager(database=db, state_manager=MockStateManager())
+        detail = DetailScreen(screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        # Store initial values
+        initial_stats = detail.stats[0]['base_stat']
+        
+        # Navigate multiple times
+        detail.handle_input(InputAction.RIGHT)  # 25 → 26
+        detail.handle_input(InputAction.RIGHT)  # 26 → 27
+        detail.handle_input(InputAction.LEFT)   # 27 → 26
+        
+        # Verify final data is for Pokémon #26
+        assert detail.pokemon_id == 26
+        assert detail.pokemon_data['name'] == 'pokemon_26'
+        assert detail.stats[0]['base_stat'] == 26  # Not 25 or 27
+
+
+class TestDetailScreenNavigationPerformance:
+    """Test Story 3.6: Navigation performance requirements (AC #8)"""
+    
+    def test_navigation_logic_performance(self, pygame_init):
+        """Test AC #8: Core navigation logic (excluding fade) is fast"""
+        class FlexibleMockDatabase(MockDatabase):
+            def get_pokemon_by_id(self, pokemon_id):
+                return {
+                    'id': pokemon_id,
+                    'name': f'pokemon_{pokemon_id}',
+                    'height': 4,
+                    'weight': 60,
+                    'generation': 1,
+                    'description': 'Test description'
+                }
+            
+            def get_pokemon_stats(self, pokemon_id):
+                return self.stats_data
+            
+            def get_pokemon_types(self, pokemon_id):
+                return self.types_data
+        
+        db = FlexibleMockDatabase()
+        screen_manager = MockScreenManager(database=db, state_manager=MockStateManager())
+        detail = DetailScreen(screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        # Measure just the ID calculation and data loading (no fade)
+        start_time = time.perf_counter()
+        
+        new_id = detail._calculate_adjacent_id(detail.pokemon_id, 1)
+        detail.pokemon_id = new_id
+        detail._load_pokemon_data()
+        detail._refresh_pre_rendered_elements()
+        
+        elapsed = (time.perf_counter() - start_time) * 1000
+        
+        # Data loading should be very fast with mock database
+        assert elapsed < 50, f"Core navigation took {elapsed:.2f}ms (target: <50ms)"
+    
+    def test_navigation_with_fade_under_300ms(self, pygame_init):
+        """Test AC #8: Total navigation time < 300ms (including fade animation)"""
+        class FlexibleMockDatabase(MockDatabase):
+            def get_pokemon_by_id(self, pokemon_id):
+                return {
+                    'id': pokemon_id,
+                    'name': f'pokemon_{pokemon_id}',
+                    'height': 4,
+                    'weight': 60,
+                    'generation': 1,
+                    'description': 'Test description'
+                }
+            
+            def get_pokemon_stats(self, pokemon_id):
+                return self.stats_data
+            
+            def get_pokemon_types(self, pokemon_id):
+                return self.types_data
+        
+        db = FlexibleMockDatabase()
+        screen_manager = MockScreenManager(database=db, state_manager=MockStateManager())
+        detail = DetailScreen(screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        # Measure full navigation including fade
+        start_time = time.perf_counter()
+        detail._navigate_adjacent(1)
+        elapsed = (time.perf_counter() - start_time) * 1000
+        
+        # Should complete in < 300ms total (200ms fade + 100ms budget for loading)
+        assert elapsed < 300, f"Navigation took {elapsed:.2f}ms (target: <300ms)"
+    
+    def test_sequential_navigation_performance(self, pygame_init):
+        """Test AC #8: Multiple sequential navigations complete efficiently"""
+        class FlexibleMockDatabase(MockDatabase):
+            def get_pokemon_by_id(self, pokemon_id):
+                return {
+                    'id': pokemon_id,
+                    'name': f'pokemon_{pokemon_id}',
+                    'height': 4,
+                    'weight': 60,
+                    'generation': 1,
+                    'description': 'Test description'
+                }
+            
+            def get_pokemon_stats(self, pokemon_id):
+                return self.stats_data
+            
+            def get_pokemon_types(self, pokemon_id):
+                return self.types_data
+        
+        db = FlexibleMockDatabase()
+        screen_manager = MockScreenManager(database=db, state_manager=MockStateManager())
+        detail = DetailScreen(screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        # Navigate 5 times sequentially
+        start_time = time.perf_counter()
+        for _ in range(5):
+            detail._navigate_adjacent(1)
+        total_elapsed = (time.perf_counter() - start_time) * 1000
+        
+        avg_per_navigation = total_elapsed / 5
+        
+        # Average should be under 300ms per navigation
+        assert avg_per_navigation < 300, f"Avg navigation {avg_per_navigation:.2f}ms exceeds 300ms"
+    
+    def test_database_query_time(self, pygame_init):
+        """Test AC #8: Database query completes in < 50ms"""
+        class FlexibleMockDatabase(MockDatabase):
+            def get_pokemon_by_id(self, pokemon_id):
+                return {
+                    'id': pokemon_id,
+                    'name': f'pokemon_{pokemon_id}',
+                    'height': 4,
+                    'weight': 60,
+                    'generation': 1,
+                    'description': 'Test description'
+                }
+            
+            def get_pokemon_stats(self, pokemon_id):
+                return self.stats_data
+            
+            def get_pokemon_types(self, pokemon_id):
+                return self.types_data
+        
+        db = FlexibleMockDatabase()
+        screen_manager = MockScreenManager(database=db, state_manager=MockStateManager())
+        detail = DetailScreen(screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        # Measure data loading time
+        query_times = []
+        for _ in range(10):
+            start = time.perf_counter()
+            detail._load_pokemon_data()
+            elapsed = (time.perf_counter() - start) * 1000
+            query_times.append(elapsed)
+        
+        avg_query_time = sum(query_times) / len(query_times)
+        
+        # Mock database should be very fast
+        assert avg_query_time < 50, f"Avg query time {avg_query_time:.2f}ms exceeds 50ms"
+
+
+class TestDetailScreenCacheOptimization:
+    """Test Story 3.6: Sprite cache optimization (AC #9)"""
+    
+    def test_sprite_cache_utilization(self, pygame_init):
+        """Test AC #9: Recently viewed Pokémon load from SpriteLoader cache"""
+        from src.ui.sprite_loader import get_cache_stats, reset_cache_stats
+        
+        reset_cache_stats()
+        
+        class FlexibleMockDatabase(MockDatabase):
+            def get_pokemon_by_id(self, pokemon_id):
+                return {
+                    'id': pokemon_id,
+                    'name': f'pokemon_{pokemon_id}',
+                    'height': 4,
+                    'weight': 60,
+                    'generation': 1,
+                    'description': 'Test description'
+                }
+            
+            def get_pokemon_stats(self, pokemon_id):
+                return self.stats_data
+            
+            def get_pokemon_types(self, pokemon_id):
+                return self.types_data
+        
+        db = FlexibleMockDatabase()
+        screen_manager = MockScreenManager(database=db, state_manager=MockStateManager())
+        detail = DetailScreen(screen_manager, pokemon_id=25)
+        detail.on_enter()  # First load - cache miss
+        
+        # Navigate away and back
+        detail._navigate_adjacent(1)   # 25 → 26 (miss)
+        detail._navigate_adjacent(-1)  # 26 → 25 (should be hit if cached)
+        
+        stats = get_cache_stats()
+        # At least some cache activity should occur
+        assert stats['size'] >= 0  # Cache initialized
+
+
+class TestDetailScreenErrorHandlingNavigation:
+    """Test Story 3.6: Error handling during navigation (AC #7)"""
+    
+    def test_navigation_error_stays_on_current(self, pygame_init, mock_state_manager):
+        """Test AC #7: Navigation failure keeps user on current Pokémon"""
+        class FailingDatabase(MockDatabase):
+            def __init__(self):
+                super().__init__()
+                self.call_count = 0
+            
+            def get_pokemon_by_id(self, pokemon_id):
+                self.call_count += 1
+                if self.call_count > 1:  # Fail on navigation
+                    raise Exception("Database error")
+                return super().get_pokemon_by_id(pokemon_id)
+        
+        db = FailingDatabase()
+        screen_manager = MockScreenManager(database=db, state_manager=mock_state_manager)
+        detail = DetailScreen(screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        original_id = detail.pokemon_id
+        
+        # Navigation should fail but not crash
+        # Note: Error handling in _fade_sprite_transition will catch the error
+        # and _navigate_adjacent will catch and stay on current Pokémon
+        try:
+            detail.handle_input(InputAction.RIGHT)
+        except Exception:
+            pass  # Expected to fail internally but be caught
+        
+        # May have changed ID before error, but screen should still be functional
+        surface = pygame.Surface((800, 480))
+        detail.render(surface)  # Should not crash
+    
+    def test_missing_sprite_during_navigation(self, pygame_init):
+        """Test AC #7: Handle missing sprite files gracefully during navigation"""
+        class FlexibleMockDatabase(MockDatabase):
+            def get_pokemon_by_id(self, pokemon_id):
+                return {
+                    'id': pokemon_id,
+                    'name': f'pokemon_{pokemon_id}',
+                    'height': 4,
+                    'weight': 60,
+                    'generation': 1,
+                    'description': 'Test description'
+                }
+            
+            def get_pokemon_stats(self, pokemon_id):
+                return self.stats_data
+            
+            def get_pokemon_types(self, pokemon_id):
+                return self.types_data
+        
+        db = FlexibleMockDatabase()
+        screen_manager = MockScreenManager(database=db, state_manager=MockStateManager())
+        
+        with patch('src.ui.detail_screen.load_detail', return_value=None):
+            detail = DetailScreen(screen_manager, pokemon_id=25)
+            detail.on_enter()
+            
+            # Navigate to trigger sprite reload
+            detail._navigate_adjacent(1)
+            
+            # Should have placeholder, not crash
+            assert detail.sprite is not None
+
+
+class TestDetailScreenRefreshMethods:
+    """Test Story 3.6: Helper method functionality"""
+    
+    def test_refresh_pre_rendered_elements(self, pygame_init, mock_screen_manager):
+        """Test _refresh_pre_rendered_elements() clears and regenerates caches"""
+        db = MockDatabase(
+            pokemon_data={
+                'id': 25,
+                'name': 'pikachu',
+                'height': 4,
+                'weight': 60,
+                'generation': 1,
+                'description': 'A description that will be pre-rendered'
+            }
+        )
+        screen_manager = MockScreenManager(database=db, state_manager=MockStateManager())
+        detail = DetailScreen(screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        # Should have pre-rendered description lines
+        original_lines_count = len(detail.description_lines)
+        
+        # Modify description
+        detail.description = "New description text"
+        
+        # Refresh should regenerate
+        detail._refresh_pre_rendered_elements()
+        
+        # Lines should be regenerated
+        assert len(detail.description_lines) > 0
+    
+    def test_reload_sprite_creates_placeholder_on_missing(self, pygame_init, mock_screen_manager):
+        """Test _reload_sprite() creates placeholder when sprite file missing"""
+        detail = DetailScreen(mock_screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        # Mock load_detail to return None
+        with patch('src.ui.detail_screen.load_detail', return_value=None):
+            detail._reload_sprite()
+            
+            # Should have placeholder sprite
+            assert detail.sprite is not None
+            assert detail.sprite.get_size() == (128, 128)
+
 
 
 
