@@ -1,0 +1,407 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>3</epicId>
+    <storyId>7</storyId>
+    <title>Detail View Performance and Visual Polish</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-29</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/3-7-detail-view-performance-and-visual-polish.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>user</asA>
+    <iWant>the detail view to load quickly, render smoothly, and look polished</iWant>
+    <soThat>browsing details feels responsive and matches the authentic Pokédex aesthetic</soThat>
+    <tasks>
+      <task id="1" ac="#4">
+        <title>Fix Stat Label Formatting</title>
+        <subtasks>
+          <subtask>Locate stat label rendering in _render_stat_bars() or data loading</subtask>
+          <subtask>Update stat name mapping: "hp" → "HP", "attack" → "Attack", "defense" → "Defense", "special-attack" → "Sp.Atk", "special-defense" → "Sp.Def", "speed" → "Speed"</subtask>
+          <subtask>Create STAT_LABEL_MAP constant for consistent formatting</subtask>
+          <subtask>Apply title case/proper formatting on render, not on database values</subtask>
+          <subtask>Add unit tests for stat label formatting</subtask>
+        </subtasks>
+      </task>
+      <task id="2" ac="#5">
+        <title>Fix Stats Panel Layout</title>
+        <subtasks>
+          <subtask>Audit stats panel dimensions and positioning</subtask>
+          <subtask>Ensure panel height accommodates all 6 stats with 8px row spacing</subtask>
+          <subtask>Calculate required height: 6 stats × (row_height + spacing) + padding</subtask>
+          <subtask>Adjust panel positioning to ensure no stats are cut off</subtask>
+          <subtask>Test with Pokémon having various stat distributions</subtask>
+        </subtasks>
+      </task>
+      <task id="3" ac="#6,#7" ux-reviewed="true">
+        <title>Fix Physical Measurements Positioning</title>
+        <subtasks>
+          <subtask>Move height/weight from description panel area to LEFT ZONE</subtask>
+          <subtask>Position measurements below type badge with 12px top margin</subtask>
+          <subtask>Render as plain text (NO panel border - just text in left zone)</subtask>
+          <subtask>Height line: "Height: X.Xm" - ice blue label, white value</subtask>
+          <subtask>Weight line: "Weight: XX.Xkg" - ice blue label, white value</subtask>
+          <subtask>8px vertical gap between height and weight lines</subtask>
+          <subtask>Ensure both height AND weight are visible (height currently missing)</subtask>
+          <subtask>Verify no overlap with description panel content</subtask>
+          <subtask>Add visual test for measurements visibility and positioning</subtask>
+        </subtasks>
+      </task>
+      <task id="4" ac="#7">
+        <title>Fix Panel Z-Order and Layer Rendering</title>
+        <subtasks>
+          <subtask>Audit render order in render() method</subtask>
+          <subtask>Establish correct layer order: background → panels → sprite → badges → text</subtask>
+          <subtask>Fix description panel rendering to not obscure other elements</subtask>
+          <subtask>Ensure all panels render in consistent order</subtask>
+          <subtask>Add integration test verifying no visual overlap</subtask>
+        </subtasks>
+      </task>
+      <task id="5" ac="#8" ux-reviewed="true">
+        <title>Fix Type Badge Positioning</title>
+        <subtasks>
+          <subtask>Move type badge position from over-sprite to below-sprite in LEFT ZONE</subtask>
+          <subtask>Calculate badge position: sprite_bottom_y + 8px margin</subtask>
+          <subtask>Center badge(s) horizontally relative to sprite width</subtask>
+          <subtask>For dual types: position side-by-side with 8px gap between badges</subtask>
+          <subtask>Verify badges don't overlap with sprite image above</subtask>
+          <subtask>Verify badges don't extend into stats panel (right zone)</subtask>
+          <subtask>Add visual test for badge positioning</subtask>
+        </subtasks>
+      </task>
+      <task id="6" ac="#9">
+        <title>Fix Stat Bar Color Rendering</title>
+        <subtasks>
+          <subtask>Audit get_stat_color() function implementation</subtask>
+          <subtask>Verify color thresholds: 0-50 gray, 51-100 blue, 101-150 cyan, 151+ orange</subtask>
+          <subtask>Check that colors are being applied correctly (Speed 110 should be cyan)</subtask>
+          <subtask>Verify glow effect is visible for high stats (100+)</subtask>
+          <subtask>Add unit tests for each color threshold boundary</subtask>
+          <subtask>Test with Raichu (Speed: 110) to confirm cyan rendering</subtask>
+        </subtasks>
+      </task>
+      <task id="7" ac="#1,#2,#3">
+        <title>Performance Profiling and Optimization</title>
+        <subtasks>
+          <subtask>Add performance timing to render() method with time.perf_counter()</subtask>
+          <subtask>Profile DetailScreen render time on Raspberry Pi 3B+</subtask>
+          <subtask>Measure database query time for _load_pokemon_data()</subtask>
+          <subtask>Measure sprite loading time (cache hit vs miss)</subtask>
+          <subtask>Optimize slow areas if render time > 33ms</subtask>
+          <subtask>Pre-render static text surfaces in on_enter()</subtask>
+          <subtask>Use dirty rects for efficient screen updates</subtask>
+          <subtask>Cache stat bar surfaces (regenerate only on Pokémon change)</subtask>
+          <subtask>Add performance test suite measuring FPS during navigation</subtask>
+          <subtask>Run tools/profile_performance.py to validate metrics</subtask>
+        </subtasks>
+      </task>
+      <task id="8" ac="#3">
+        <title>Memory Leak Prevention</title>
+        <subtasks>
+          <subtask>Audit sprite cache eviction logic in SpriteLoader</subtask>
+          <subtask>Verify LRU eviction maintains max 50 sprites</subtask>
+          <subtask>Add memory usage tracking during rapid navigation test</subtask>
+          <subtask>Test: navigate 100 times, check for memory growth</subtask>
+          <subtask>Clear cached surfaces properly in _refresh_pre_rendered_elements()</subtask>
+          <subtask>Add unit test for memory stability</subtask>
+        </subtasks>
+      </task>
+      <task id="9" ac="#10">
+        <title>UX Compliance Visual Audit</title>
+        <subtasks>
+          <subtask>Compare DetailScreen against UX Design Specification mockup</subtask>
+          <subtask>Verify sprite position and size (120-150px, left side)</subtask>
+          <subtask>Verify header styling (Pokémon name + #xxx format)</subtask>
+          <subtask>Verify stats panel (right side with holographic borders)</subtask>
+          <subtask>Verify description panel (bottom with proper text wrapping)</subtask>
+          <subtask>Verify color palette matches holographic blue theme</subtask>
+          <subtask>Verify panel backgrounds use correct rgba values</subtask>
+          <subtask>Verify border colors use electric blue (#00d4ff)</subtask>
+          <subtask>Document any remaining visual deviations</subtask>
+          <subtask>Test on 480x320 and 800x480 resolutions</subtask>
+        </subtasks>
+      </task>
+      <task id="10" ac="all">
+        <title>Comprehensive Testing</title>
+        <subtasks>
+          <subtask>Create/update tests in tests/test_detail_screen.py</subtask>
+          <subtask>test_stat_label_formatting() - Labels use proper format (HP not hp)</subtask>
+          <subtask>test_all_stats_visible() - 6 stats render within panel bounds</subtask>
+          <subtask>test_physical_measurements_visibility() - Height and weight both visible</subtask>
+          <subtask>test_panel_z_order() - No overlapping content</subtask>
+          <subtask>test_type_badge_position() - Below sprite, not overlapping</subtask>
+          <subtask>test_stat_bar_colors() - Correct colors for each threshold</subtask>
+          <subtask>test_render_performance() - less than 33ms per frame</subtask>
+          <subtask>test_navigation_performance() - less than 300ms per navigation</subtask>
+          <subtask>test_memory_stability() - No leaks after 100 navigations</subtask>
+          <subtask>Run full test suite: python -m pytest tests/test_detail_screen.py -v</subtask>
+          <subtask>Manual visual test on target hardware</subtask>
+        </subtasks>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="1" title="Frame Rate Performance">
+      <given>a user navigates to DetailScreen</given>
+      <when>the screen renders</when>
+      <then>frame rate maintains 30+ FPS during all operations</then>
+      <and>DetailScreen initial render time less than 33ms per frame</and>
+      <and>no dropped frames or stuttering visible to user</and>
+    </criterion>
+    <criterion id="2" title="Navigation Performance">
+      <given>a user navigates between adjacent Pokémon</given>
+      <when>using L/R buttons</when>
+      <then>navigation completes in less than 300ms total (load + render)</then>
+      <and>database query time less than 50ms for all Pokémon data</and>
+      <and>sprite loading from cache completes in less than 20ms</and>
+    </criterion>
+    <criterion id="3" title="Cached Data Performance">
+      <given>a user returns to previously viewed DetailScreen</given>
+      <when>screen loads with cached data</when>
+      <then>render completes within 50ms (cached sprites and data)</then>
+      <and>no memory leaks from sprite cache</and>
+      <and>memory usage stays within bounds (max 50 sprites cached)</and>
+    </criterion>
+    <criterion id="4" title="Stat Label Formatting">
+      <given>DetailScreen displays base stats</given>
+      <when>stat labels render</when>
+      <then>labels use proper formatting: "HP", "Attack", "Defense", "Sp.Atk", "Sp.Def", "Speed"</then>
+      <and>labels are NOT lowercase with hyphens (e.g., not "special-attack")</and>
+      <and>labels align left with consistent spacing</and>
+      <and>values align right with monospace font for number alignment</and>
+    </criterion>
+    <criterion id="5" title="Stats Panel Visibility">
+      <given>DetailScreen displays the stats panel</given>
+      <when>all 6 stats render</when>
+      <then>all 6 stats are fully visible within the panel boundaries</then>
+      <and>no stats are cut off or partially hidden</and>
+      <and>stats panel has proper padding and spacing (8px between rows)</and>
+      <and>panel scrolls OR resizes to fit all stats if space is constrained</and>
+    </criterion>
+    <criterion id="6" title="Physical Measurements Layout" ux-reviewed="true">
+      <given>DetailScreen displays height and weight</given>
+      <when>physical measurements render</when>
+      <then>height is visible and displays correctly (e.g., "Height: 0.8m")</then>
+      <and>weight is visible and displays correctly (e.g., "Weight: 30.0kg")</and>
+      <and>measurements are positioned in LEFT ZONE below type badge (not in description panel)</and>
+      <and>measurements do NOT overlap with description panel</and>
+      <and>measurements render as plain text (no panel border) in left zone</and>
+      <and>8px vertical gap between height and weight lines</and>
+      <and>12px margin below type badge before height line</and>
+      <and>labels use ice blue color (#a8e6ff), values use white (#ffffff)</and>
+    </criterion>
+    <criterion id="7" title="Panel Layer Order">
+      <given>DetailScreen has multiple visual panels</given>
+      <when>panels render</when>
+      <then>panels render in correct Z-order (no overlapping content)</then>
+      <and>description panel does not obscure physical measurements</and>
+      <and>sprite panel does not obscure stats panel</and>
+      <and>type badge renders above sprite without clipping</and>
+    </criterion>
+    <criterion id="8" title="Type Badge Positioning" ux-reviewed="true">
+      <given>DetailScreen displays type badge(s)</given>
+      <when>type badges render</when>
+      <then>badges are positioned in LEFT ZONE below the sprite</then>
+      <and>badges have 8px margin below sprite bottom edge</and>
+      <and>badges are horizontally centered or left-aligned with sprite</and>
+      <and>single type badge is centered relative to sprite</and>
+      <and>dual type badges have 8px spacing between them</and>
+      <and>badges do not overlap with sprite image</and>
+      <and>badges do not overlap with stats panel (right zone)</and>
+    </criterion>
+    <criterion id="9" title="Stat Bar Color Accuracy">
+      <given>DetailScreen renders stat bars with color coding</given>
+      <when>stats render</when>
+      <then>low stats (0-50) display gray (#718096)</then>
+      <and>medium stats (51-100) display electric blue (#00d4ff)</and>
+      <and>high stats (101-150) display bright cyan (#4df7ff)</and>
+      <and>exceptional stats (151+) display plasma orange (#ff6b35)</and>
+      <and>high stats (100+) have visible glow effect</and>
+      <and>Speed stat (110 in Raichu) shows bright cyan, not gray</and>
+    </criterion>
+    <criterion id="10" title="UX Design Specification Compliance">
+      <given>DetailScreen renders completely</given>
+      <when>compared to UX Design Specification mockup</when>
+      <then>layout matches spec (sprite left, stats right, description bottom)</then>
+      <and>holographic blue styling consistently applied</and>
+      <and>panel backgrounds use dark blue with transparency rgba(26, 47, 74, 0.9)</and>
+      <and>panel borders use 2px electric blue (#00d4ff)</and>
+      <and>all text remains within display boundaries (no cutoff)</and>
+      <and>tested on target display resolutions (480x320, 800x480)</and>
+    </criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-2-detail-view-with-audio.md</path>
+        <title>Epic 2 Technical Specification - Detail View</title>
+        <section>Detailed Design, Stat Bar Color Coding, Performance Requirements</section>
+        <snippet>Defines stat bar color ranges (0-50 gray, 51-100 blue, 101-150 cyan, 151+ orange), layout specification with sprite left and stats right, and performance targets (30+ FPS, render &lt;33ms, navigation &lt;300ms).</snippet>
+      </doc>
+      <doc>
+        <path>docs/ux-design-specification.md</path>
+        <title>ShokeDex UX Design Specification</title>
+        <section>Section 4.3 Detail Screen, Section 2.2 Color System</section>
+        <snippet>Defines holographic blue palette (Electric Blue #00d4ff, Ice Blue #a8e6ff, Bright Cyan #4df7ff), type colors, panel layout with sprite left and stats right, and visual hierarchy specifications.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture.md</path>
+        <title>ShokeDex Architecture</title>
+        <section>Manager Architecture Pattern, Epic to Architecture Mapping</section>
+        <snippet>Defines screen lifecycle (on_enter/on_exit), manager singleton pattern, sprite caching strategy (max 50), and performance targets for Raspberry Pi 3B+ hardware.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/3-6-adjacent-pokemon-navigation-in-detail-view.md</path>
+        <title>Story 3.6 - Adjacent Navigation</title>
+        <section>Completion Notes, Performance Results</section>
+        <snippet>Documents successful navigation implementation with &lt;300ms target achieved, fade transition pattern (100ms out + 100ms in), pre-rendering pattern for description lines, and 130 passing tests.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <artifact>
+        <path>src/ui/detail_screen.py</path>
+        <kind>screen</kind>
+        <symbol>DetailScreen</symbol>
+        <lines>1-1071</lines>
+        <reason>Primary implementation file for all visual fixes and performance optimization. Contains _render_stat_bars(), _render_type_badges(), _render_physical_data(), and render() methods that need modification.</reason>
+      </artifact>
+      <artifact>
+        <path>src/ui/colors.py</path>
+        <kind>module</kind>
+        <symbol>get_stat_color, Colors, TYPE_COLORS</symbol>
+        <lines>1-119</lines>
+        <reason>Defines stat bar color thresholds and holographic color palette. Needs verification that get_stat_color() returns correct colors for each value range.</reason>
+      </artifact>
+      <artifact>
+        <path>src/ui/sprite_loader.py</path>
+        <kind>module</kind>
+        <symbol>load_detail, _CACHE, _CACHE_MAX_SIZE</symbol>
+        <lines>1-163</lines>
+        <reason>Manages sprite caching with LRU eviction. Needs audit for memory leak prevention and verification of max 50 sprite cache limit.</reason>
+      </artifact>
+      <artifact>
+        <path>tests/test_detail_screen.py</path>
+        <kind>test</kind>
+        <symbol>TestDetailScreen</symbol>
+        <lines>1-2925</lines>
+        <reason>Existing test file with 130+ tests. Needs new tests for stat label formatting, panel visibility, physical measurements positioning, and performance benchmarks.</reason>
+      </artifact>
+      <artifact>
+        <path>tools/profile_performance.py</path>
+        <kind>tool</kind>
+        <symbol>ProfiledApp</symbol>
+        <lines>1-297</lines>
+        <reason>Performance profiling tool for measuring FPS, render times, and navigation latency. Use to validate performance targets on Raspberry Pi.</reason>
+      </artifact>
+      <artifact>
+        <path>src/performance_monitor.py</path>
+        <kind>module</kind>
+        <symbol>PerformanceMonitor, PerformanceProfiler</symbol>
+        <reason>Performance monitoring utilities for tracking render times and FPS. Integrate with DetailScreen for AC #1-3 validation.</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <python>
+        <package name="pygame" version=">=2.5.0">Graphics rendering, event handling, font rendering</package>
+        <package name="Pillow" version=">=10.0.0">Image loading for sprites</package>
+      </python>
+      <system>
+        <requirement>Python 3.11+</requirement>
+        <requirement>SQLite3 (stdlib)</requirement>
+        <requirement>Target: Raspberry Pi 3B+ with Raspberry Pi OS Bookworm</requirement>
+      </system>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint source="architecture">Maintain 30+ FPS on Raspberry Pi 3B+ hardware (NFR-P1)</constraint>
+    <constraint source="architecture">Single-file SQLite database, parameterized queries only</constraint>
+    <constraint source="architecture">Manager singleton pattern - access managers via screen_manager injection</constraint>
+    <constraint source="architecture">Screen lifecycle hooks: on_enter() for data loading, on_exit() for state saving</constraint>
+    <constraint source="ux-spec">Holographic blue palette: Electric Blue #00d4ff, Ice Blue #a8e6ff, Dark Blue #1a2f4a</constraint>
+    <constraint source="ux-spec">Panel backgrounds: rgba(26, 47, 74, 0.9), borders: 2px Electric Blue</constraint>
+    <constraint source="tech-spec">Stat bar colors: 0-50 gray, 51-100 electric blue, 101-150 cyan, 151+ orange</constraint>
+    <constraint source="tech-spec">Description: max 4 lines, 400px width, Rajdhani 16px, Ice Blue color</constraint>
+    <constraint source="story">Stat labels: HP, Attack, Defense, Sp.Atk, Sp.Def, Speed (not database names)</constraint>
+    <constraint source="story">Type badges: 8px below sprite in LEFT ZONE, not overlapping</constraint>
+    <constraint source="story">Height/Weight: 12px below badge, plain text (no panel), LEFT ZONE</constraint>
+    <constraint source="perf">Render time &lt; 33ms, Navigation &lt; 300ms, DB query &lt; 50ms</constraint>
+    <constraint source="perf">Sprite cache max 50 items with LRU eviction</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>get_stat_color</name>
+      <kind>function</kind>
+      <signature>get_stat_color(value: int) -> tuple[int, int, int]</signature>
+      <path>src/ui/colors.py</path>
+      <usage>Maps stat value (0-255) to RGB color for stat bar rendering</usage>
+    </interface>
+    <interface>
+      <name>DetailScreen._render_stat_bars</name>
+      <kind>method</kind>
+      <signature>_render_stat_bars(surface: pygame.Surface) -> None</signature>
+      <path>src/ui/detail_screen.py</path>
+      <usage>Renders all 6 stat bars with labels, proportional bars, and values. Target for stat label formatting fix.</usage>
+    </interface>
+    <interface>
+      <name>DetailScreen._render_type_badges</name>
+      <kind>method</kind>
+      <signature>_render_type_badges(surface: pygame.Surface) -> None</signature>
+      <path>src/ui/detail_screen.py</path>
+      <usage>Renders 1-2 type badges. Target for repositioning below sprite with 8px margin.</usage>
+    </interface>
+    <interface>
+      <name>DetailScreen._render_physical_data</name>
+      <kind>method</kind>
+      <signature>_render_physical_data(surface: pygame.Surface) -> None</signature>
+      <path>src/ui/detail_screen.py</path>
+      <usage>Renders height/weight measurements. Target for repositioning to LEFT ZONE below badges.</usage>
+    </interface>
+    <interface>
+      <name>load_detail</name>
+      <kind>function</kind>
+      <signature>load_detail(pokemon_id: int) -> Optional[pygame.Surface]</signature>
+      <path>src/ui/sprite_loader.py</path>
+      <usage>Loads 128x128 detail sprite with LRU caching. Verify cache performance and eviction.</usage>
+    </interface>
+    <interface>
+      <name>get_cache_stats</name>
+      <kind>function</kind>
+      <signature>get_cache_stats() -> dict</signature>
+      <path>src/ui/sprite_loader.py</path>
+      <usage>Returns cache statistics (size, max_size, hits, misses, hit_rate). Use for memory leak testing.</usage>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Tests use pytest framework with unittest.mock for mocking pygame and database. 
+      Tests should be in tests/test_detail_screen.py, following existing patterns with 
+      MockDatabase, MockScreenManager, and MockStateManager fixtures. Performance tests 
+      use time.perf_counter() for microsecond precision. Visual rendering tests mock 
+      pygame.Surface and verify render method calls and positioning calculations.
+    </standards>
+    <locations>
+      <location>tests/test_detail_screen.py</location>
+      <location>tests/test_performance_mvp.py</location>
+      <location>tests/conftest.py</location>
+    </locations>
+    <ideas>
+      <idea ac="#4">test_stat_label_formatting: Verify STAT_LABEL_MAP transforms db names correctly (hp→HP, special-attack→Sp.Atk)</idea>
+      <idea ac="#5">test_all_stats_visible_in_panel: Assert 6 stats render within STATS_PANEL_HEIGHT bounds</idea>
+      <idea ac="#6">test_physical_measurements_position: Verify height/weight Y positions are below type badges in LEFT ZONE</idea>
+      <idea ac="#7">test_render_order_no_overlap: Verify render() calls methods in correct order (sprite before badges before text)</idea>
+      <idea ac="#8">test_type_badge_below_sprite: Assert badge Y position = sprite_bottom_y + 8px margin</idea>
+      <idea ac="#9">test_stat_color_boundaries: Test get_stat_color(50)=gray, get_stat_color(51)=blue, get_stat_color(100)=blue, get_stat_color(101)=cyan, get_stat_color(150)=cyan, get_stat_color(151)=orange</idea>
+      <idea ac="#9">test_raichu_speed_color: Load Raichu (Speed=110), verify stat bar is cyan not gray</idea>
+      <idea ac="#1,#2">test_render_performance_under_33ms: Profile render() call, assert duration &lt; 33ms</idea>
+      <idea ac="#2">test_navigation_performance_under_300ms: Profile _navigate_adjacent(), assert duration &lt; 300ms</idea>
+      <idea ac="#3">test_memory_stability_100_navigations: Navigate 100 times, check cache size and memory growth</idea>
+      <idea ac="#10">test_ux_compliance_panel_colors: Verify panel backgrounds use DARK_BLUE with 230 alpha</idea>
+    </ideas>
+  </tests>
+</story-context>

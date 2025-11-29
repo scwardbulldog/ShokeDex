@@ -18,6 +18,32 @@ from ..input_manager import InputAction
 from .sprite_loader import load_detail
 
 
+# Story 3.7: Stat label formatting map (AC #4)
+# Database stores lowercase hyphenated names, display uses proper game conventions
+STAT_LABEL_MAP = {
+    'hp': 'HP',
+    'attack': 'Attack',
+    'defense': 'Defense',
+    'special-attack': 'Sp.Atk',
+    'special-defense': 'Sp.Def',
+    'speed': 'Speed'
+}
+
+
+def format_stat_label(db_stat_name: str) -> str:
+    """Convert database stat name to display label.
+    
+    Args:
+        db_stat_name: Stat name from database (e.g., 'special-attack')
+        
+    Returns:
+        Formatted display label (e.g., 'Sp.Atk')
+        
+    Story 3.7 AC #4: Labels use proper formatting like game conventions
+    """
+    return STAT_LABEL_MAP.get(db_stat_name.lower(), db_stat_name.title())
+
+
 class DetailScreen(Screen):
     """
     Detail screen showing comprehensive information about a single Pokémon.
@@ -602,6 +628,8 @@ class DetailScreen(Screen):
             
         AC #2: 128x128 sprite, 50-60% screen real estate, center-left position
         Sprite has electric blue border for holographic effect
+        
+        Story 3.7: Store sprite bounds for type badge and physical measurements positioning
         """
         if not self.sprite:
             return
@@ -610,9 +638,25 @@ class DetailScreen(Screen):
         screen_width = surface.get_width()
         screen_height = surface.get_height()
         
-        # Position sprite in left-center area
-        sprite_x = screen_width // 4 - self.sprite.get_width() // 2
-        sprite_y = screen_height // 2 - self.sprite.get_height() // 2
+        # Story 3.7: Adaptive sprite positioning for 480x320
+        is_small_screen = screen_width <= 480
+        
+        # Position sprite in left area - adjusted for small screens
+        sprite_x = (screen_width // 4 - self.sprite.get_width() // 2) if not is_small_screen else 20
+        
+        # Vertical positioning - keep sprite higher to leave room below
+        # For small screen: position higher to leave room for badges + measurements
+        if is_small_screen:
+            sprite_y = 50  # Fixed top position for small screens
+        else:
+            sprite_y = screen_height // 2 - self.sprite.get_height() // 2 - 20
+        
+        # Story 3.7: Store sprite bounds for type badge and measurements positioning
+        self._sprite_x = sprite_x
+        self._sprite_y = sprite_y
+        self._sprite_width = self.sprite.get_width()
+        self._sprite_height = self.sprite.get_height()
+        self._sprite_bottom_y = sprite_y + self.sprite.get_height()
         
         # Draw holographic border around sprite (AC #5: electric blue)
         border_rect = pygame.Rect(
@@ -641,6 +685,10 @@ class DetailScreen(Screen):
         AC #5: Labels and values with proper fonts and colors
         AC #6: Stats panel layout on right side with holographic styling
         AC #9: Rendering must complete in < 10ms per frame
+        
+        Story 3.7 Updates:
+        AC #4: Use STAT_LABEL_MAP for proper label formatting (HP, Sp.Atk, etc.)
+        AC #5: All 6 stats visible with 8px spacing, adaptive for 480x320
         """
         if not self.stats:
             # No stats loaded - show placeholder or skip
@@ -648,14 +696,27 @@ class DetailScreen(Screen):
         
         start_time = time.perf_counter()
         
-        # Stats panel positioning (right side, 40% width)
+        # Stats panel positioning (right side, ~45% width)
         screen_width = surface.get_width()
         screen_height = surface.get_height()
         
-        STATS_PANEL_X = screen_width // 2 + 20
-        STATS_PANEL_Y = 60
-        STATS_PANEL_WIDTH = screen_width // 2 - 40
-        STATS_PANEL_HEIGHT = 200
+        # Story 3.7: Adaptive layout for 480x320 and 800x480
+        # For 480x320: tighter spacing, smaller panel
+        # For 800x480: more comfortable spacing
+        is_small_screen = screen_width <= 480
+        
+        STATS_PANEL_X = screen_width // 2 + (10 if is_small_screen else 20)
+        STATS_PANEL_Y = 50 if is_small_screen else 60
+        STATS_PANEL_WIDTH = screen_width // 2 - (20 if is_small_screen else 40)
+        
+        # Story 3.7 AC #5: Calculate panel height to fit all 6 stats
+        # Row height + spacing calculation ensures no cutoff
+        STAT_BAR_HEIGHT = 14 if is_small_screen else 18
+        STAT_SPACING = 22 if is_small_screen else 28
+        PADDING = 10 if is_small_screen else 16
+        
+        # Height = top padding + (6 stats * spacing) + bottom padding
+        STATS_PANEL_HEIGHT = PADDING + (6 * STAT_SPACING) + PADDING
         
         # Draw stats panel background (AC #6: holographic blue styling)
         panel_surface = pygame.Surface((STATS_PANEL_WIDTH, STATS_PANEL_HEIGHT), pygame.SRCALPHA)
@@ -664,16 +725,19 @@ class DetailScreen(Screen):
                         pygame.Rect(0, 0, STATS_PANEL_WIDTH, STATS_PANEL_HEIGHT), 2)
         surface.blit(panel_surface, (STATS_PANEL_X, STATS_PANEL_Y))
         
-        # Stat bar constants
-        STAT_BAR_HEIGHT = 18
-        STAT_BAR_MAX_WIDTH = STATS_PANEL_WIDTH - 120  # Room for label + value
-        STAT_SPACING = 28
-        PADDING = 16
+        # Stat bar layout constants - adaptive for screen size
+        # Layout: [PADDING][LABEL 50px][GAP 4px][BAR variable][GAP 4px][VALUE 30px][PADDING]
+        LABEL_WIDTH = 50 if is_small_screen else 60
+        VALUE_WIDTH = 30 if is_small_screen else 35
+        GAP = 4
         
-        # Position calculations
+        # Calculate positions within panel
         STAT_LABEL_X = STATS_PANEL_X + PADDING
-        STAT_BAR_X = STAT_LABEL_X + 80  # Room for label
+        STAT_BAR_X = STAT_LABEL_X + LABEL_WIDTH + GAP
         STAT_VALUE_X = STATS_PANEL_X + STATS_PANEL_WIDTH - PADDING
+        
+        # Bar width = panel width - padding*2 - label - value - gaps
+        STAT_BAR_MAX_WIDTH = STATS_PANEL_WIDTH - (PADDING * 2) - LABEL_WIDTH - VALUE_WIDTH - (GAP * 2)
         
         # Render each of the 6 stats (AC #1)
         for i, stat_dict in enumerate(self.stats[:6]):  # Limit to 6 stats
@@ -714,9 +778,9 @@ class DetailScreen(Screen):
                 surface.blit(glow_surface, (STAT_BAR_X, y))
             
             # AC #5: Render stat label (left-aligned, ice blue)
+            # Story 3.7 AC #4: Use STAT_LABEL_MAP for proper formatting
             if self.stat_label_font:
-                # Shorten stat names for display
-                display_name = stat_name.replace('Special ', 'Sp.')
+                display_name = format_stat_label(stat_name)
                 label_surface = self.stat_label_font.render(display_name, True, Colors.ICE_BLUE)
                 surface.blit(label_surface, (STAT_LABEL_X, y + 2))
             
@@ -810,7 +874,7 @@ class DetailScreen(Screen):
     
     def _render_type_badges(self, surface: pygame.Surface):
         """
-        Render all type badges (1 or 2) near the sprite.
+        Render all type badges (1 or 2) below the sprite in LEFT ZONE.
         
         Args:
             surface: pygame.Surface to draw on
@@ -820,23 +884,49 @@ class DetailScreen(Screen):
         AC #2: Dual type display (two badges side-by-side, 8px spacing)
         AC #4: Positioned near sprite without overlapping sprite or stats
         AC #10: Performance target <5ms per frame
+        
+        Story 3.7 Updates (AC #8):
+        - Badges positioned 8px BELOW sprite bottom edge (not over sprite)
+        - Badges centered relative to sprite width in LEFT ZONE
+        - Badges don't overlap with stats panel (right zone)
         """
         if not self.types or not self.type_badge_font:
             return  # No types to display or font not loaded
         
         start_time = time.perf_counter()
         
-        # Badge positioning (AC #4: near sprite, top-right area)
         screen_width = surface.get_width()
-        screen_height = surface.get_height()
+        is_small_screen = screen_width <= 480
         
-        # Position above the placeholder panels, below sprite
-        TYPES_X = 30
-        TYPES_Y = screen_height - 220  # Above bottom placeholder panels
+        # Story 3.7 AC #8: Position badges 8px below sprite bottom edge
+        # Use sprite bounds stored by _render_sprite()
+        sprite_bottom = getattr(self, '_sprite_bottom_y', 180)
+        sprite_x = getattr(self, '_sprite_x', 20 if is_small_screen else 72)
+        sprite_width = getattr(self, '_sprite_width', 128)
+        
         BADGE_SPACING = 8  # AC #2: 8px spacing between dual-type badges
+        BADGE_MARGIN_TOP = 8  # Story 3.7: 8px margin below sprite
+        
+        # Calculate total width of badges for centering
+        badge_widths = []
+        for type_name in self.types:
+            # Estimate badge width (same calculation as _render_type_badge)
+            text_surface = self.type_badge_font.render(type_name.upper(), True, Colors.HOLOGRAM_WHITE)
+            text_width = text_surface.get_width()
+            badge_width = max(80, min(120, text_width + 32))  # 16px padding each side
+            badge_widths.append(badge_width)
+        
+        total_badges_width = sum(badge_widths) + (BADGE_SPACING * (len(badge_widths) - 1)) if badge_widths else 0
+        
+        # Center badges relative to sprite
+        badges_start_x = sprite_x + (sprite_width - total_badges_width) // 2
+        TYPES_Y = sprite_bottom + BADGE_MARGIN_TOP
+        
+        # Store badge bottom for physical measurements positioning
+        self._badges_bottom_y = TYPES_Y + 32  # Badge height is 32px
         
         # Render badges
-        x = TYPES_X
+        x = badges_start_x
         for type_name in self.types:
             badge_width = self._render_type_badge(surface, type_name, x, TYPES_Y)
             x += badge_width + BADGE_SPACING  # Position next badge
@@ -862,57 +952,76 @@ class DetailScreen(Screen):
         AC #4: Labels right-aligned (80px width), values left-aligned (10px offset), 8px spacing
         AC #9: Labels ice blue (#a8e6ff), values white (#ffffff), Rajdhani 16px
         AC #10: Rendering must complete in < 2ms per frame
+        
+        Story 3.7 Updates (AC #6):
+        - Position in LEFT ZONE below type badges (not in description panel)
+        - 12px margin below type badge before height line
+        - 8px vertical gap between height and weight lines
+        - Plain text (NO panel border)
+        - Labels use ice blue, values use white
         """
         if self.height == 0.0 and self.weight == 0.0:
             return  # No data loaded yet
         
         start_time = time.perf_counter()
         
-        # Positioning constants (AC #3, #4)
-        PHYSICAL_DATA_X = 30
-        PHYSICAL_DATA_Y = surface.get_height() - 120  # Below sprite and type badges
-        LABEL_WIDTH = 80  # Fixed width for right-aligned labels
-        VALUE_OFFSET = 10  # Gap between label and value
-        LINE_HEIGHT = 24  # Vertical spacing (8px base + font height)
+        screen_width = surface.get_width()
+        screen_height = surface.get_height()
+        is_small_screen = screen_width <= 480
+        
+        # Story 3.7 AC #6: Position in LEFT ZONE below type badges
+        # Use badge bottom stored by _render_type_badges(), or calculate fallback
+        badges_bottom = getattr(self, '_badges_bottom_y', 220)
+        sprite_x = getattr(self, '_sprite_x', 20 if is_small_screen else 72)
+        
+        # Calculate description panel top to avoid overlap
+        desc_panel_top = screen_height - (100 if is_small_screen else 140)
         
         # Use body_font (16px) for physical data - matches Rajdhani 16px spec
         if not self.body_font:
             return  # Can't render without font
         
+        # Get font height for calculations
+        font_height = self.body_font.get_height()
+        
+        # Calculate required space for height + weight (2 lines + spacing)
+        LINE_SPACING = 4 if is_small_screen else 8  # Tighter on small screens
+        required_height = (font_height * 2) + LINE_SPACING
+        
+        # Position measurements to fit between badges and description panel
+        # Start from badges_bottom + small margin, but ensure we don't overlap description
+        MARGIN_BELOW_BADGE = 8 if is_small_screen else 12
+        max_measurements_y = desc_panel_top - required_height - 4  # 4px safety margin
+        
+        PHYSICAL_DATA_Y = min(badges_bottom + MARGIN_BELOW_BADGE, max_measurements_y)
+        PHYSICAL_DATA_X = sprite_x
+        
         # Format values with placeholders for invalid data (AC #6, #7, #8)
         height_str = f"{self.height:.1f}m" if self.height > 0 else "???"
         weight_str = f"{self.weight:.1f}kg" if self.weight > 0 else "???"
         
-        # Render height line (AC #1, #4, #9)
-        # Label: right-aligned at LABEL_WIDTH
-        height_label = self.body_font.render("Height:", True, Colors.ICE_BLUE)
-        label_rect = height_label.get_rect(topright=(PHYSICAL_DATA_X + LABEL_WIDTH, PHYSICAL_DATA_Y))
-        surface.blit(height_label, label_rect)
-        
-        # Value: left-aligned after label
+        # Story 3.7 AC #6: Height line - "Height: X.Xm" with ice blue label, white value
+        height_label = self.body_font.render("Height: ", True, Colors.ICE_BLUE)
         height_value = self.body_font.render(height_str, True, Colors.HOLOGRAM_WHITE)
-        value_rect = height_value.get_rect(topleft=(PHYSICAL_DATA_X + LABEL_WIDTH + VALUE_OFFSET, PHYSICAL_DATA_Y))
-        surface.blit(height_value, value_rect)
         
-        # Render weight line (AC #2, #4, #9)
-        weight_y = PHYSICAL_DATA_Y + LINE_HEIGHT
+        surface.blit(height_label, (PHYSICAL_DATA_X, PHYSICAL_DATA_Y))
+        surface.blit(height_value, (PHYSICAL_DATA_X + height_label.get_width(), PHYSICAL_DATA_Y))
         
-        # Label: right-aligned at LABEL_WIDTH
-        weight_label = self.body_font.render("Weight:", True, Colors.ICE_BLUE)
-        label_rect = weight_label.get_rect(topright=(PHYSICAL_DATA_X + LABEL_WIDTH, weight_y))
-        surface.blit(weight_label, label_rect)
+        # Story 3.7 AC #6: Weight line - below height with spacing
+        weight_y = PHYSICAL_DATA_Y + font_height + LINE_SPACING
         
-        # Value: left-aligned after label
+        weight_label = self.body_font.render("Weight: ", True, Colors.ICE_BLUE)
         weight_value = self.body_font.render(weight_str, True, Colors.HOLOGRAM_WHITE)
-        value_rect = weight_value.get_rect(topleft=(PHYSICAL_DATA_X + LABEL_WIDTH + VALUE_OFFSET, weight_y))
-        surface.blit(weight_value, value_rect)
+        
+        surface.blit(weight_label, (PHYSICAL_DATA_X, weight_y))
+        surface.blit(weight_value, (PHYSICAL_DATA_X + weight_label.get_width(), weight_y))
         
         # Performance logging (AC #10: < 2ms target)
         render_time = (time.perf_counter() - start_time) * 1000
         if render_time > 2:
             logging.warning(f"Physical data rendered in {render_time:.2f}ms (target: <2ms)")
         else:
-            logging.debug(f"Physical data rendered in {render_time:.2f}ms")
+            logging.debug(f"Physical data rendered in {render_time:.2f}ms)")
     
     def _wrap_description_text(self, text: str, font: pygame.font.Font, 
                                max_width: int, max_lines: int) -> List[str]:
@@ -1041,13 +1150,16 @@ class DetailScreen(Screen):
         screen_width = surface.get_width()
         screen_height = surface.get_height()
         
-        DESC_PANEL_X = 20
-        DESC_PANEL_Y = screen_height - 140
-        DESC_PANEL_WIDTH = screen_width - 40
-        DESC_PANEL_HEIGHT = 120
-        DESC_TEXT_X = DESC_PANEL_X + 16  # 16px padding
-        DESC_TEXT_Y = DESC_PANEL_Y + 16
-        DESC_LINE_HEIGHT = 22.4  # AC #3: 1.4 × 16px font size
+        # Story 3.7: Adaptive layout for 480x320
+        is_small_screen = screen_width <= 480
+        
+        DESC_PANEL_X = 10 if is_small_screen else 20
+        DESC_PANEL_Y = screen_height - (100 if is_small_screen else 140)
+        DESC_PANEL_WIDTH = screen_width - (20 if is_small_screen else 40)
+        DESC_PANEL_HEIGHT = 80 if is_small_screen else 120
+        DESC_TEXT_X = DESC_PANEL_X + (8 if is_small_screen else 16)  # padding
+        DESC_TEXT_Y = DESC_PANEL_Y + (8 if is_small_screen else 16)
+        DESC_LINE_HEIGHT = 18 if is_small_screen else 22.4  # Tighter for small screens
         
         # Draw panel background (AC #6: holographic blue styling)
         panel_surface = pygame.Surface((DESC_PANEL_WIDTH, DESC_PANEL_HEIGHT), pygame.SRCALPHA)

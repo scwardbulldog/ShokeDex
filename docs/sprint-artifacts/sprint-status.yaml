@@ -71,7 +71,7 @@ development_status:
   3-4-physical-measurements-display: done
   3-5-pokedex-description-text-display: done
   3-6-adjacent-pokemon-navigation-in-detail-view: done
-  3-7-detail-view-performance-and-visual-polish: backlog
+  3-7-detail-view-performance-and-visual-polish: review
   epic-3-retrospective: optional
 
   # Epic 4: State Persistence

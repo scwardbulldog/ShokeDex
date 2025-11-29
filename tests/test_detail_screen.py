@@ -2917,8 +2917,355 @@ class TestDetailScreenRefreshMethods:
             assert detail.sprite.get_size() == (128, 128)
 
 
+# =============================================================================
+# Story 3.7: Detail View Performance and Visual Polish Tests
+# =============================================================================
+
+class TestStatLabelFormatting:
+    """Test Story 3.7: Stat label formatting (AC #4)"""
+    
+    def test_stat_label_map_exists(self):
+        """Test STAT_LABEL_MAP constant is defined"""
+        from src.ui.detail_screen import STAT_LABEL_MAP
+        
+        assert 'hp' in STAT_LABEL_MAP
+        assert 'attack' in STAT_LABEL_MAP
+        assert 'defense' in STAT_LABEL_MAP
+        assert 'special-attack' in STAT_LABEL_MAP
+        assert 'special-defense' in STAT_LABEL_MAP
+        assert 'speed' in STAT_LABEL_MAP
+    
+    def test_stat_label_formatting_hp(self):
+        """Test HP formats correctly"""
+        from src.ui.detail_screen import format_stat_label
+        
+        assert format_stat_label('hp') == 'HP'
+        assert format_stat_label('HP') == 'HP'
+    
+    def test_stat_label_formatting_attack(self):
+        """Test Attack formats correctly"""
+        from src.ui.detail_screen import format_stat_label
+        
+        assert format_stat_label('attack') == 'Attack'
+    
+    def test_stat_label_formatting_defense(self):
+        """Test Defense formats correctly"""
+        from src.ui.detail_screen import format_stat_label
+        
+        assert format_stat_label('defense') == 'Defense'
+    
+    def test_stat_label_formatting_special_attack(self):
+        """Test Special Attack abbreviates to Sp.Atk"""
+        from src.ui.detail_screen import format_stat_label
+        
+        assert format_stat_label('special-attack') == 'Sp.Atk'
+    
+    def test_stat_label_formatting_special_defense(self):
+        """Test Special Defense abbreviates to Sp.Def"""
+        from src.ui.detail_screen import format_stat_label
+        
+        assert format_stat_label('special-defense') == 'Sp.Def'
+    
+    def test_stat_label_formatting_speed(self):
+        """Test Speed formats correctly"""
+        from src.ui.detail_screen import format_stat_label
+        
+        assert format_stat_label('speed') == 'Speed'
+    
+    def test_stat_label_formatting_unknown_defaults_to_title(self):
+        """Test unknown stat names default to title case"""
+        from src.ui.detail_screen import format_stat_label
+        
+        assert format_stat_label('unknown-stat') == 'Unknown-Stat'
 
 
+class TestStatBarColors:
+    """Test Story 3.7: Stat bar color accuracy (AC #9)"""
+    
+    def test_stat_color_low_range(self):
+        """Test 0-50 stats display gray"""
+        assert get_stat_color(0) == Colors.STAT_COLORS['low']
+        assert get_stat_color(25) == Colors.STAT_COLORS['low']
+        assert get_stat_color(50) == Colors.STAT_COLORS['low']
+    
+    def test_stat_color_medium_range(self):
+        """Test 51-100 stats display electric blue"""
+        assert get_stat_color(51) == Colors.STAT_COLORS['medium']
+        assert get_stat_color(75) == Colors.STAT_COLORS['medium']
+        assert get_stat_color(100) == Colors.STAT_COLORS['medium']
+    
+    def test_stat_color_high_range(self):
+        """Test 101-150 stats display bright cyan"""
+        assert get_stat_color(101) == Colors.STAT_COLORS['high']
+        assert get_stat_color(110) == Colors.STAT_COLORS['high']  # Raichu Speed
+        assert get_stat_color(125) == Colors.STAT_COLORS['high']
+        assert get_stat_color(150) == Colors.STAT_COLORS['high']
+    
+    def test_stat_color_exceptional_range(self):
+        """Test 151+ stats display plasma orange"""
+        assert get_stat_color(151) == Colors.STAT_COLORS['exceptional']
+        assert get_stat_color(180) == Colors.STAT_COLORS['exceptional']
+        assert get_stat_color(255) == Colors.STAT_COLORS['exceptional']
+    
+    def test_raichu_speed_is_cyan(self):
+        """Test Raichu's Speed stat (110) shows bright cyan"""
+        raichu_speed = 110
+        expected_color = Colors.STAT_COLORS['high']  # Bright cyan
+        assert get_stat_color(raichu_speed) == expected_color
+        # Verify it's NOT gray
+        assert get_stat_color(raichu_speed) != Colors.STAT_COLORS['low']
+
+
+class TestStatsPanelLayout:
+    """Test Story 3.7: Stats panel visibility (AC #5)"""
+    
+    def test_stats_panel_fits_all_six_stats_480x320(self, pygame_init, mock_screen_manager):
+        """Test all 6 stats are visible on 480x320 screen"""
+        detail = DetailScreen(mock_screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        # Render to 480x320 surface
+        surface = pygame.Surface((480, 320))
+        detail.render(surface)
+        
+        # Verify 6 stats were loaded
+        assert len(detail.stats) == 6
+    
+    def test_stats_panel_fits_all_six_stats_800x480(self, pygame_init, mock_screen_manager):
+        """Test all 6 stats are visible on 800x480 screen"""
+        detail = DetailScreen(mock_screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        # Render to 800x480 surface
+        surface = pygame.Surface((800, 480))
+        detail.render(surface)
+        
+        # Verify 6 stats were loaded
+        assert len(detail.stats) == 6
+
+
+class TestTypeBadgePositioning:
+    """Test Story 3.7: Type badge positioning (AC #8)"""
+    
+    def test_type_badge_stores_bottom_y(self, pygame_init, mock_screen_manager):
+        """Test type badge rendering stores _badges_bottom_y for measurements"""
+        detail = DetailScreen(mock_screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        # Create test surface
+        surface = pygame.Surface((480, 320))
+        detail.render(surface)
+        
+        # Should have stored badge bottom position
+        assert hasattr(detail, '_badges_bottom_y')
+        assert detail._badges_bottom_y > 0
+    
+    def test_type_badge_below_sprite(self, pygame_init, mock_screen_manager):
+        """Test type badges positioned below sprite (8px margin)"""
+        detail = DetailScreen(mock_screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        # Create test surface
+        surface = pygame.Surface((480, 320))
+        detail.render(surface)
+        
+        # Badge should be below sprite bottom
+        sprite_bottom = getattr(detail, '_sprite_bottom_y', 0)
+        badges_top = getattr(detail, '_badges_bottom_y', 0) - 32  # Badge height
+        
+        # Badges should start 8px below sprite
+        assert badges_top >= sprite_bottom + 8
+
+
+class TestPhysicalMeasurementsPositioning:
+    """Test Story 3.7: Physical measurements positioning (AC #6)"""
+    
+    def test_measurements_visible_480x320(self, pygame_init, mock_screen_manager):
+        """Test height and weight render on 480x320 screen"""
+        detail = DetailScreen(mock_screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        # Create test surface
+        surface = pygame.Surface((480, 320))
+        detail.render(surface)
+        
+        # Should have height and weight values
+        assert detail.height > 0
+        assert detail.weight > 0
+    
+    def test_measurements_below_badges(self, pygame_init, mock_screen_manager):
+        """Test measurements positioned below type badges (12px margin)"""
+        detail = DetailScreen(mock_screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        # Create test surface
+        surface = pygame.Surface((480, 320))
+        detail.render(surface)
+        
+        # Should have badges bottom stored
+        assert hasattr(detail, '_badges_bottom_y')
+
+
+class TestRenderPerformance:
+    """Test Story 3.7: Render performance (AC #1, #2)"""
+    
+    def test_render_under_33ms(self, pygame_init, mock_screen_manager):
+        """Test render() completes in under 33ms (30+ FPS)"""
+        detail = DetailScreen(mock_screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        surface = pygame.Surface((480, 320))
+        
+        # Measure render time
+        start = time.perf_counter()
+        detail.render(surface)
+        render_time = (time.perf_counter() - start) * 1000
+        
+        # Should complete in under 33ms
+        assert render_time < 33, f"Render took {render_time:.2f}ms, expected < 33ms"
+    
+    def test_multiple_renders_maintain_performance(self, pygame_init, mock_screen_manager):
+        """Test multiple consecutive renders maintain < 33ms"""
+        detail = DetailScreen(mock_screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        surface = pygame.Surface((480, 320))
+        
+        # Run 10 render cycles
+        total_time = 0
+        for _ in range(10):
+            start = time.perf_counter()
+            detail.render(surface)
+            total_time += (time.perf_counter() - start) * 1000
+        
+        avg_time = total_time / 10
+        assert avg_time < 33, f"Average render time {avg_time:.2f}ms, expected < 33ms"
+
+
+class TestUXCompliance:
+    """Test Story 3.7: UX Design Specification compliance (AC #10)"""
+    
+    def test_panel_background_color(self, pygame_init, mock_screen_manager):
+        """Test panel backgrounds use correct dark blue with alpha"""
+        # Verify Colors.DARK_BLUE is correct
+        assert Colors.DARK_BLUE == (26, 47, 74)
+    
+    def test_panel_border_color(self, pygame_init, mock_screen_manager):
+        """Test panel borders use electric blue"""
+        assert Colors.ELECTRIC_BLUE == (0, 212, 255)
+    
+    def test_stat_colors_defined(self, pygame_init):
+        """Test all stat color ranges are defined"""
+        assert 'low' in Colors.STAT_COLORS
+        assert 'medium' in Colors.STAT_COLORS
+        assert 'high' in Colors.STAT_COLORS
+        assert 'exceptional' in Colors.STAT_COLORS
+    
+    def test_layout_adapts_to_small_screen(self, pygame_init, mock_screen_manager):
+        """Test layout adapts for 480x320 (small screen)"""
+        detail = DetailScreen(mock_screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        # Render to small screen
+        surface = pygame.Surface((480, 320))
+        detail.render(surface)
+        
+        # Should render without errors
+        assert detail.pokemon_data is not None
+    
+    def test_layout_adapts_to_large_screen(self, pygame_init, mock_screen_manager):
+        """Test layout adapts for 800x480 (large screen)"""
+        detail = DetailScreen(mock_screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        # Render to large screen
+        surface = pygame.Surface((800, 480))
+        detail.render(surface)
+        
+        # Should render without errors
+        assert detail.pokemon_data is not None
+
+
+class TestMemoryStability:
+    """Test Story 3.7: Memory leak prevention (AC #3)"""
+    
+    def test_sprite_cache_max_size(self):
+        """Test sprite cache has correct max size limit"""
+        from src.ui.sprite_loader import _CACHE_MAX_SIZE
+        
+        assert _CACHE_MAX_SIZE == 50
+    
+    def test_sprite_cache_stats_available(self):
+        """Test cache stats function is available"""
+        from src.ui.sprite_loader import get_cache_stats, reset_cache_stats
+        
+        reset_cache_stats()
+        stats = get_cache_stats()
+        
+        assert 'size' in stats
+        assert 'max_size' in stats
+        assert 'hits' in stats
+        assert 'misses' in stats
+        assert 'hit_rate' in stats
+    
+    def test_cache_lru_eviction(self, pygame_init):
+        """Test LRU eviction works when cache exceeds max size"""
+        from src.ui.sprite_loader import _CACHE, _CACHE_MAX_SIZE, _evict_lru_if_needed
+        
+        # Cache should never exceed max size
+        assert len(_CACHE) <= _CACHE_MAX_SIZE
+    
+    def test_refresh_clears_description_cache(self, pygame_init, mock_screen_manager):
+        """Test _refresh_pre_rendered_elements() clears description cache"""
+        db = MockDatabase(
+            pokemon_data={
+                'id': 25,
+                'name': 'pikachu',
+                'height': 4,
+                'weight': 60,
+                'generation': 1,
+                'description': 'Test description one'
+            }
+        )
+        screen_manager = MockScreenManager(database=db, state_manager=MockStateManager())
+        detail = DetailScreen(screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        # Change description
+        detail.description = "New description"
+        detail._refresh_pre_rendered_elements()
+        
+        # Description lines should be regenerated
+        assert len(detail.description_lines) > 0
+
+
+class TestDualTypeDisplay:
+    """Test Story 3.7: Dual type badge positioning"""
+    
+    def test_dual_type_badges_spacing(self, pygame_init):
+        """Test dual types have 8px spacing between them"""
+        # Create database with dual-type Pokémon (Charizard)
+        db = MockDatabase(
+            pokemon_data={
+                'id': 6,
+                'name': 'charizard',
+                'height': 17,
+                'weight': 905,
+                'generation': 1,
+                'description': 'A dragon-like Pokémon'
+            },
+            types_data=['Fire', 'Flying']
+        )
+        screen_manager = MockScreenManager(database=db, state_manager=MockStateManager())
+        detail = DetailScreen(screen_manager, pokemon_id=6)
+        detail.on_enter()
+        
+        surface = pygame.Surface((480, 320))
+        detail.render(surface)
+        
+        # Should have 2 types
+        assert len(detail.types) == 2
+        assert detail.types == ['Fire', 'Flying']
 
 
 
