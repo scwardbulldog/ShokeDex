@@ -3,10 +3,27 @@ Data loader for ShokeDex
 Fetches Pokémon data from PokéAPI and loads it into the database
 """
 
+import re
 import requests
 import time
 from typing import Dict, Any, List, Optional
 from .database import Database
+
+
+# Valid types for Gen 1-3 (17 types - excludes Fairy from Gen 6 and Stellar from Gen 9)
+VALID_GEN3_TYPES = {
+    'normal', 'fire', 'water', 'electric', 'grass', 'ice',
+    'fighting', 'poison', 'ground', 'flying', 'psychic',
+    'bug', 'rock', 'ghost', 'dragon', 'dark', 'steel'
+}
+
+# Preferred game versions for flavor text by generation
+# Listed in preference order - first available will be used
+PREFERRED_VERSIONS = {
+    1: ['red', 'blue', 'yellow', 'firered', 'leafgreen'],  # Gen 1: Kanto
+    2: ['gold', 'silver', 'crystal', 'heartgold', 'soulsilver'],  # Gen 2: Johto
+    3: ['ruby', 'sapphire', 'emerald', 'omega-ruby', 'alpha-sapphire'],  # Gen 3: Hoenn
+}
 
 
 class PokemonDataLoader:
@@ -79,8 +96,9 @@ class PokemonDataLoader:
                 type_id = type_detail['id']
                 type_name = type_detail['name']
                 
-                # Skip special types
-                if type_name in ['unknown', 'shadow']:
+                # Only include valid Gen 1-3 types (17 types)
+                # Excludes: unknown, shadow, fairy (Gen 6), stellar (Gen 9)
+                if type_name not in VALID_GEN3_TYPES:
                     continue
                     
                 self.db.execute("""
@@ -140,10 +158,15 @@ class PokemonDataLoader:
             generation = self.get_generation_for_pokemon(pokemon_id)
             species_id = species_data['id'] if species_data else pokemon_id
             
+            # Get era-appropriate Pokédex description
+            description = None
+            if species_data:
+                description = self._get_era_flavor_text(species_data, generation)
+            
             self.db.execute("""
                 INSERT OR REPLACE INTO pokemon 
-                (id, name, species_id, height, weight, base_experience, generation, is_default)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                (id, name, species_id, height, weight, base_experience, generation, is_default, description)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 pokemon_data['id'],
                 pokemon_data['name'],
@@ -152,7 +175,8 @@ class PokemonDataLoader:
                 pokemon_data['weight'],
                 pokemon_data.get('base_experience'),
                 generation,
-                pokemon_data.get('is_default', True)
+                pokemon_data.get('is_default', True),
+                description
             ))
             
             # Insert types
@@ -313,6 +337,55 @@ class PokemonDataLoader:
         cursor = self.db.execute("SELECT id FROM stats WHERE name = ?", (stat_name,))
         row = cursor.fetchone()
         return row[0] if row else None
+    
+    def _clean_flavor_text(self, text: str) -> str:
+        """Clean up flavor text from PokéAPI.
+        
+        Removes form feed characters, normalizes newlines, and cleans whitespace.
+        """
+        # Replace form feed and other control characters with space
+        text = re.sub(r'[\f\x0c]', ' ', text)
+        # Replace newlines with space
+        text = re.sub(r'\n', ' ', text)
+        # Normalize multiple spaces to single space
+        text = re.sub(r'\s+', ' ', text)
+        # Strip leading/trailing whitespace
+        return text.strip()
+    
+    def _get_era_flavor_text(self, species_data: Dict, generation: int) -> Optional[str]:
+        """Extract era-appropriate English flavor text for a Pokémon.
+        
+        Prefers games from the Pokémon's original generation.
+        
+        Args:
+            species_data: Species data from PokéAPI
+            generation: The Pokémon's generation (1, 2, or 3)
+            
+        Returns:
+            Cleaned flavor text string, or None if not found
+        """
+        flavor_entries = species_data.get('flavor_text_entries', [])
+        
+        # Filter to English entries only
+        english_entries = [
+            entry for entry in flavor_entries 
+            if entry.get('language', {}).get('name') == 'en'
+        ]
+        
+        if not english_entries:
+            return None
+        
+        # Get preferred versions for this generation
+        preferred = PREFERRED_VERSIONS.get(generation, [])
+        
+        # Try preferred versions in order
+        for version_name in preferred:
+            for entry in english_entries:
+                if entry.get('version', {}).get('name') == version_name:
+                    return self._clean_flavor_text(entry['flavor_text'])
+        
+        # Fallback: use any English entry (prefer earlier ones)
+        return self._clean_flavor_text(english_entries[0]['flavor_text'])
         
     def load_all_gen1_to_3(self):
         """Load all data for Gen 1-3 (Pokémon #1-386)"""
