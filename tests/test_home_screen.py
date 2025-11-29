@@ -920,9 +920,8 @@ class TestUpDownScrollingNavigation(unittest.TestCase):
         self.screen.active_button = InputAction.DOWN
         self.screen.scroll_speed = 3
         
-        # Release button
-        self.screen.handle_input(InputAction.NONE)
-        self.screen.update(0.016)
+        # Release button - use handle_input_release() which is the proper method
+        self.screen.handle_input_release(InputAction.DOWN)
         
         # Should reset to normal speed
         self.assertEqual(self.screen.scroll_speed, 1, "Should reset to normal speed")
