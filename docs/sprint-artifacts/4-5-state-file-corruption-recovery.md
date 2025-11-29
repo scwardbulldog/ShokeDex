@@ -1,6 +1,6 @@
 # Story 4.5: State File Corruption Recovery
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -86,65 +86,65 @@ so that the device always works even if something goes wrong.
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1: Verify JSON Parse Error Handling (AC #1, #2, #3, #4)**
-  - [ ] 1.1: Review `_load_state()` try/except block catches `json.JSONDecodeError`
-  - [ ] 1.2: Review `_load_state()` try/except block catches `IOError`
-  - [ ] 1.3: Verify default state is returned on exception
-  - [ ] 1.4: Verify corrupt file is overwritten with valid defaults
-  - [ ] 1.5: Verify warning log message format matches AC #4
+- [x] **Task 1: Verify JSON Parse Error Handling (AC #1, #2, #3, #4)**
+  - [x] 1.1: Review `_load_state()` try/except block catches `json.JSONDecodeError`
+  - [x] 1.2: Review `_load_state()` try/except block catches `IOError`
+  - [x] 1.3: Verify default state is returned on exception
+  - [x] 1.4: Verify corrupt file is overwritten with valid defaults
+  - [x] 1.5: Verify warning log message format matches AC #4
 
-- [ ] **Task 2: Verify Field Validation Logic (AC #5, #6, #7, #8, #9)**
-  - [ ] 2.1: Review pokemon_id validation: `max(1, min(386, original_id))`
-  - [ ] 2.2: Review generation validation: `max(1, min(3, original_gen))`
-  - [ ] 2.3: Review volume validation: `max(0.0, min(1.0, float(original_volume)))`
-  - [ ] 2.4: Review input_mode validation: check against `('keyboard', 'gpio')`
-  - [ ] 2.5: Verify `needs_correction` flag triggers file save with corrected values
+- [x] **Task 2: Verify Field Validation Logic (AC #5, #6, #7, #8, #9)**
+  - [x] 2.1: Review pokemon_id validation: `max(1, min(386, original_id))`
+  - [x] 2.2: Review generation validation: `max(1, min(3, original_gen))`
+  - [x] 2.3: Review volume validation: `max(0.0, min(1.0, float(original_volume)))`
+  - [x] 2.4: Review input_mode validation: check against `('keyboard', 'gpio')`
+  - [x] 2.5: Verify `needs_correction` flag triggers file save with corrected values
 
-- [ ] **Task 3: Write Unit Tests for Corrupt JSON Handling (AC #1, #2, #3, #4)**
-  - [ ] 3.1: Test `test_corrupt_json_does_not_crash()` - write invalid JSON, init StateManager
-  - [ ] 3.2: Test `test_corrupt_json_returns_defaults()` - verify default values loaded
-  - [ ] 3.3: Test `test_corrupt_json_overwrites_file()` - verify file now contains valid JSON
-  - [ ] 3.4: Test `test_corrupt_json_logs_warning()` - use caplog to verify warning message
-  - [ ] 3.5: Test `test_truncated_json_handled()` - test with incomplete JSON like `{"version": "1`
-  - [ ] 3.6: Test `test_empty_file_handled()` - test with 0-byte file
+- [x] **Task 3: Write Unit Tests for Corrupt JSON Handling (AC #1, #2, #3, #4)**
+  - [x] 3.1: Test `test_corrupt_json_does_not_crash()` - write invalid JSON, init StateManager
+  - [x] 3.2: Test `test_corrupt_json_returns_defaults()` - verify default values loaded
+  - [x] 3.3: Test `test_corrupt_json_overwrites_file()` - verify file now contains valid JSON
+  - [x] 3.4: Test `test_corrupt_json_logs_warning()` - use caplog to verify warning message
+  - [x] 3.5: Test `test_truncated_json_handled()` - test with incomplete JSON like `{"version": "1`
+  - [x] 3.6: Test `test_empty_file_handled()` - test with 0-byte file
 
-- [ ] **Task 4: Write Unit Tests for pokemon_id Validation (AC #5, #9)**
-  - [ ] 4.1: Test `test_pokemon_id_above_max_clamped()` - id=999 clamped to 386
-  - [ ] 4.2: Test `test_pokemon_id_below_min_clamped()` - id=-5 clamped to 1
-  - [ ] 4.3: Test `test_pokemon_id_zero_clamped()` - id=0 clamped to 1
-  - [ ] 4.4: Test `test_pokemon_id_valid_unchanged()` - id=25 remains 25
-  - [ ] 4.5: Test `test_pokemon_id_boundary_values()` - id=1 and id=386 unchanged
+- [x] **Task 4: Write Unit Tests for pokemon_id Validation (AC #5, #9)**
+  - [x] 4.1: Test `test_pokemon_id_above_max_clamped()` - id=999 clamped to 386
+  - [x] 4.2: Test `test_pokemon_id_below_min_clamped()` - id=-5 clamped to 1
+  - [x] 4.3: Test `test_pokemon_id_zero_clamped()` - id=0 clamped to 1
+  - [x] 4.4: Test `test_pokemon_id_valid_unchanged()` - id=25 remains 25
+  - [x] 4.5: Test `test_pokemon_id_boundary_values()` - id=1 and id=386 unchanged
 
-- [ ] **Task 5: Write Unit Tests for Generation Validation (AC #6, #9)**
-  - [ ] 5.1: Test `test_generation_above_max_clamped()` - gen=5 clamped to 3
-  - [ ] 5.2: Test `test_generation_below_min_clamped()` - gen=-1 clamped to 1
-  - [ ] 5.3: Test `test_generation_zero_clamped()` - gen=0 clamped to 1
-  - [ ] 5.4: Test `test_generation_valid_unchanged()` - gen=2 remains 2
-  - [ ] 5.5: Test `test_generation_boundary_values()` - gen=1 and gen=3 unchanged
+- [x] **Task 5: Write Unit Tests for Generation Validation (AC #6, #9)**
+  - [x] 5.1: Test `test_generation_above_max_clamped()` - gen=5 clamped to 3
+  - [x] 5.2: Test `test_generation_below_min_clamped()` - gen=-1 clamped to 1
+  - [x] 5.3: Test `test_generation_zero_clamped()` - gen=0 clamped to 1
+  - [x] 5.4: Test `test_generation_valid_unchanged()` - gen=2 remains 2
+  - [x] 5.5: Test `test_generation_boundary_values()` - gen=1 and gen=3 unchanged
 
-- [ ] **Task 6: Write Unit Tests for Volume Validation (AC #7, #9)**
-  - [ ] 6.1: Test `test_volume_above_max_clamped()` - vol=2.5 clamped to 1.0
-  - [ ] 6.2: Test `test_volume_below_min_clamped()` - vol=-0.5 clamped to 0.0
-  - [ ] 6.3: Test `test_volume_valid_unchanged()` - vol=0.5 remains 0.5
-  - [ ] 6.4: Test `test_volume_boundary_values()` - vol=0.0 and vol=1.0 unchanged
-  - [ ] 6.5: Test `test_volume_string_coerced()` - vol="0.5" converted to float 0.5
+- [x] **Task 6: Write Unit Tests for Volume Validation (AC #7, #9)**
+  - [x] 6.1: Test `test_volume_above_max_clamped()` - vol=2.5 clamped to 1.0
+  - [x] 6.2: Test `test_volume_below_min_clamped()` - vol=-0.5 clamped to 0.0
+  - [x] 6.3: Test `test_volume_valid_unchanged()` - vol=0.5 remains 0.5
+  - [x] 6.4: Test `test_volume_boundary_values()` - vol=0.0 and vol=1.0 unchanged
+  - [x] 6.5: Test `test_volume_string_coerced()` - vol="0.5" converted to float 0.5
 
-- [ ] **Task 7: Write Unit Tests for Input Mode Validation (AC #8)**
-  - [ ] 7.1: Test `test_input_mode_invalid_reset_to_keyboard()` - "touchscreen" → "keyboard"
-  - [ ] 7.2: Test `test_input_mode_empty_string_reset()` - "" → "keyboard"
-  - [ ] 7.3: Test `test_input_mode_case_sensitive()` - "GPIO" (uppercase) → "keyboard"
-  - [ ] 7.4: Test `test_input_mode_valid_keyboard_unchanged()` - "keyboard" remains
-  - [ ] 7.5: Test `test_input_mode_valid_gpio_unchanged()` - "gpio" remains
+- [x] **Task 7: Write Unit Tests for Input Mode Validation (AC #8)**
+  - [x] 7.1: Test `test_input_mode_invalid_reset_to_keyboard()` - "touchscreen" → "keyboard"
+  - [x] 7.2: Test `test_input_mode_empty_string_reset()` - "" → "keyboard"
+  - [x] 7.3: Test `test_input_mode_case_sensitive()` - "GPIO" (uppercase) → "keyboard"
+  - [x] 7.4: Test `test_input_mode_valid_keyboard_unchanged()` - "keyboard" remains
+  - [x] 7.5: Test `test_input_mode_valid_gpio_unchanged()` - "gpio" remains
 
-- [ ] **Task 8: Write Unit Tests for Logging Verification (AC #4, #5, #6, #7, #8)**
-  - [ ] 8.1: Test `test_corrupt_json_warning_logged()` - verify caplog contains expected message
-  - [ ] 8.2: Test `test_pokemon_id_clamping_warning_logged()` - verify warning format
-  - [ ] 8.3: Test `test_generation_clamping_warning_logged()` - verify warning format
-  - [ ] 8.4: Test `test_volume_clamping_warning_logged()` - verify warning format
-  - [ ] 8.5: Test `test_input_mode_reset_warning_logged()` - verify warning format
+- [x] **Task 8: Write Unit Tests for Logging Verification (AC #4, #5, #6, #7, #8)**
+  - [x] 8.1: Test `test_corrupt_json_warning_logged()` - verify caplog contains expected message
+  - [x] 8.2: Test `test_pokemon_id_clamping_warning_logged()` - verify warning format
+  - [x] 8.3: Test `test_generation_clamping_warning_logged()` - verify warning format
+  - [x] 8.4: Test `test_volume_clamping_warning_logged()` - verify warning format
+  - [x] 8.5: Test `test_input_mode_reset_warning_logged()` - verify warning format
 
-- [ ] **Task 9: Write Integration Test for Full Recovery Flow (AC #10)**
-  - [ ] 9.1: Test `test_recovery_allows_normal_operation()`:
+- [x] **Task 9: Write Integration Test for Full Recovery Flow (AC #10)**
+  - [x] 9.1: Test `test_recovery_allows_normal_operation()`:
     - Write corrupt JSON to state file
     - Initialize StateManager (triggers recovery)
     - Verify defaults loaded
@@ -152,7 +152,7 @@ so that the device always works even if something goes wrong.
     - Call save_state()
     - Create new StateManager with same file
     - Verify Pikachu (#25) restored correctly
-  - [ ] 9.2: Test `test_recovery_file_usable_after_overwrite()`:
+  - [x] 9.2: Test `test_recovery_file_usable_after_overwrite()`:
     - Write corrupt JSON
     - Initialize StateManager
     - Re-read file and verify it's valid JSON
@@ -298,10 +298,39 @@ Per tech spec NFR Security section:
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.5 (Preview)
 
 ### Debug Log References
 
+Implementation Plan: This was primarily a verification and testing story. The corruption recovery logic existed in `_load_state()`. During testing, discovered and fixed two edge cases:
+1. `UnicodeDecodeError` not caught (binary files)
+2. String volume comparison failed when `original_volume` is still a string
+
 ### Completion Notes List
 
+- **Tasks 1-2 (Verification)**: Reviewed existing implementation in `src/state_manager.py`:
+  - JSON parse errors caught via try/except for JSONDecodeError, IOError
+  - Now also catches UnicodeDecodeError and ValueError for edge cases
+  - Field validation with clamping for pokemon_id (1-386), generation (1-3), volume (0.0-1.0)
+  - Input mode validation against ('keyboard', 'gpio')
+  - `needs_correction` flag triggers save of corrected values
+
+- **Code Improvements Made**:
+  - Added `UnicodeDecodeError` and `ValueError` to exception handling for binary garbage files
+  - Fixed volume validation to handle string type coercion safely (avoids TypeError on comparison)
+
+- **Tasks 3-9 (Tests)**: Added 40 comprehensive pytest tests in 7 new test classes:
+  - `TestCorruptionRecovery`: 8 tests for corrupt JSON handling (invalid, truncated, empty, binary)
+  - `TestPokemonIdValidation`: 6 tests for pokemon_id clamping (above/below/zero/boundary)
+  - `TestGenerationValidation`: 6 tests for generation clamping
+  - `TestVolumeValidationOnLoad`: 5 tests for volume clamping including string coercion
+  - `TestInputModeValidationOnLoad`: 6 tests for input mode validation
+  - `TestValidationWarningLogs`: 5 tests for warning log format verification
+  - `TestFullRecoveryFlow`: 4 tests for end-to-end recovery scenarios
+
+- **All 495 project tests pass** with no regressions
+
 ### File List
+
+- `src/state_manager.py` - Enhanced exception handling in `_load_state()` (lines 150-168, 197)
+- `tests/test_state_manager.py` - Added 7 pytest test classes with 40 new tests

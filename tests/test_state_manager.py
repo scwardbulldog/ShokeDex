@@ -734,3 +734,1527 @@ class TestStatePersistencePerformance(unittest.TestCase):
 if __name__ == '__main__':
     unittest.main()
 
+
+# =============================================================================
+# Story 4.4: Volume and Input Mode Preferences Tests
+# =============================================================================
+
+class TestVolumePreference:
+    """
+    Story 4.4: Volume Preference Tests
+    
+    Tests for volume preference persistence and validation (AC #1, #2, #5, #7).
+    """
+    
+    def test_set_and_get_volume(self, temp_state_manager):
+        """AC #1, #2: Set volume and verify getter returns same value (Task 4.1)"""
+        temp_state_manager.set_volume(0.5)
+        assert temp_state_manager.get_volume() == 0.5
+        
+        temp_state_manager.set_volume(0.0)
+        assert temp_state_manager.get_volume() == 0.0
+        
+        temp_state_manager.set_volume(1.0)
+        assert temp_state_manager.get_volume() == 1.0
+    
+    def test_volume_clamping_low(self, temp_state_manager):
+        """AC #5: Negative volume clamped to 0.0 (Task 4.2)"""
+        temp_state_manager.set_volume(-0.5)
+        assert temp_state_manager.get_volume() == 0.0
+        
+        temp_state_manager.set_volume(-1.0)
+        assert temp_state_manager.get_volume() == 0.0
+        
+        temp_state_manager.set_volume(-0.001)
+        assert temp_state_manager.get_volume() == 0.0
+    
+    def test_volume_clamping_high(self, temp_state_manager):
+        """AC #5: Volume > 1.0 clamped to 1.0 (Task 4.3)"""
+        temp_state_manager.set_volume(1.5)
+        assert temp_state_manager.get_volume() == 1.0
+        
+        temp_state_manager.set_volume(2.0)
+        assert temp_state_manager.get_volume() == 1.0
+        
+        temp_state_manager.set_volume(1.001)
+        assert temp_state_manager.get_volume() == 1.0
+    
+    def test_volume_boundary_values(self, temp_state_manager):
+        """AC #5: Boundary values preserved unchanged"""
+        # Exact boundaries should be preserved
+        temp_state_manager.set_volume(0.0)
+        assert temp_state_manager.get_volume() == 0.0
+        
+        temp_state_manager.set_volume(1.0)
+        assert temp_state_manager.get_volume() == 1.0
+        
+        # Near boundaries should be preserved
+        temp_state_manager.set_volume(0.001)
+        assert abs(temp_state_manager.get_volume() - 0.001) < 0.0001
+        
+        temp_state_manager.set_volume(0.999)
+        assert abs(temp_state_manager.get_volume() - 0.999) < 0.0001
+    
+    def test_volume_persists_through_save_reload(self, tmp_path):
+        """AC #1, #2: Volume persists through save_state() and reload (Task 4.4)"""
+        state_file = tmp_path / "test_state.json"
+        
+        # Create first StateManager, set volume, save
+        sm1 = StateManager(str(state_file))
+        sm1.set_volume(0.5)
+        sm1.save_state()
+        
+        # Create NEW StateManager with same file path
+        sm2 = StateManager(str(state_file))
+        
+        # Verify volume persisted
+        assert sm2.get_volume() == 0.5
+    
+    def test_volume_validation_on_load(self, tmp_path, caplog):
+        """AC #7: Invalid volume in file is clamped on load (Task 4.5)"""
+        import json
+        import logging
+        
+        state_file = tmp_path / "test_state.json"
+        
+        # Create initial state with invalid volume
+        invalid_state = {
+            "version": "1.0.0",
+            "last_viewed": {"pokemon_id": 1, "generation": 1},
+            "preferences": {"input_mode": "keyboard", "volume": 2.5},
+            "favorites": [],
+            "recent": [],
+            "stats": {"total_views": 0, "unique_viewed": 0, "sessions": 0}
+        }
+        
+        with open(state_file, 'w') as f:
+            json.dump(invalid_state, f)
+        
+        # Load state - should clamp and log warning
+        with caplog.at_level(logging.WARNING):
+            sm = StateManager(str(state_file))
+        
+        # Verify volume was clamped to 1.0
+        assert sm.get_volume() == 1.0
+        
+        # Verify warning was logged
+        assert any("volume" in record.message.lower() and "clamped" in record.message.lower() 
+                  for record in caplog.records)
+    
+    def test_volume_validation_on_load_negative(self, tmp_path, caplog):
+        """AC #7: Negative volume in file is clamped to 0.0 on load"""
+        import json
+        import logging
+        
+        state_file = tmp_path / "test_state.json"
+        
+        # Create initial state with negative volume
+        invalid_state = {
+            "version": "1.0.0",
+            "last_viewed": {"pokemon_id": 1, "generation": 1},
+            "preferences": {"input_mode": "keyboard", "volume": -0.5},
+            "favorites": [],
+            "recent": [],
+            "stats": {"total_views": 0, "unique_viewed": 0, "sessions": 0}
+        }
+        
+        with open(state_file, 'w') as f:
+            json.dump(invalid_state, f)
+        
+        # Load state - should clamp to 0.0
+        with caplog.at_level(logging.WARNING):
+            sm = StateManager(str(state_file))
+        
+        # Verify volume was clamped to 0.0
+        assert sm.get_volume() == 0.0
+    
+    def test_volume_default_value(self, tmp_path):
+        """AC #1: New state file has volume=0.7 (Task 4.6)"""
+        state_file = tmp_path / "test_state.json"
+        
+        # Ensure file doesn't exist
+        assert not state_file.exists()
+        
+        # Create new StateManager
+        sm = StateManager(str(state_file))
+        
+        # Verify default volume is 0.7
+        assert sm.get_volume() == 0.7
+    
+    def test_volume_corrected_file_written_back(self, tmp_path):
+        """AC #7: Corrected volume value written back to state file"""
+        import json
+        
+        state_file = tmp_path / "test_state.json"
+        
+        # Create initial state with invalid volume
+        invalid_state = {
+            "version": "1.0.0",
+            "last_viewed": {"pokemon_id": 1, "generation": 1},
+            "preferences": {"input_mode": "keyboard", "volume": 2.5},
+            "favorites": [],
+            "recent": [],
+            "stats": {"total_views": 0, "unique_viewed": 0, "sessions": 0}
+        }
+        
+        with open(state_file, 'w') as f:
+            json.dump(invalid_state, f)
+        
+        # Load state (triggers correction)
+        sm = StateManager(str(state_file))
+        
+        # Verify corrected value was written back to file
+        with open(state_file, 'r') as f:
+            saved_state = json.load(f)
+        
+        assert saved_state['preferences']['volume'] == 1.0
+
+
+class TestInputModePreference:
+    """
+    Story 4.4: Input Mode Preference Tests
+    
+    Tests for input mode preference persistence and validation (AC #3, #4, #6).
+    """
+    
+    def test_set_and_get_input_mode_keyboard(self, temp_state_manager):
+        """AC #3, #4: Set input_mode="keyboard" and verify (Task 5.1)"""
+        temp_state_manager.set_input_mode('keyboard')
+        assert temp_state_manager.get_input_mode() == 'keyboard'
+    
+    def test_set_and_get_input_mode_gpio(self, temp_state_manager):
+        """AC #3, #4: Set input_mode="gpio" and verify (Task 5.2)"""
+        temp_state_manager.set_input_mode('gpio')
+        assert temp_state_manager.get_input_mode() == 'gpio'
+    
+    def test_input_mode_invalid_ignored(self, temp_state_manager):
+        """AC #6: Invalid mode values are silently ignored (Task 5.3)"""
+        # Set a valid mode first
+        temp_state_manager.set_input_mode('gpio')
+        
+        # Try to set invalid mode - should be ignored
+        temp_state_manager.set_input_mode('touchscreen')
+        assert temp_state_manager.get_input_mode() == 'gpio'
+        
+        temp_state_manager.set_input_mode('joystick')
+        assert temp_state_manager.get_input_mode() == 'gpio'
+        
+        temp_state_manager.set_input_mode('')
+        assert temp_state_manager.get_input_mode() == 'gpio'
+    
+    def test_input_mode_case_sensitive(self, temp_state_manager):
+        """AC #6: Input mode is case-sensitive - uppercase rejected"""
+        temp_state_manager.set_input_mode('keyboard')
+        
+        # Uppercase should be rejected
+        temp_state_manager.set_input_mode('GPIO')
+        assert temp_state_manager.get_input_mode() == 'keyboard'
+        
+        temp_state_manager.set_input_mode('KEYBOARD')
+        assert temp_state_manager.get_input_mode() == 'keyboard'
+        
+        temp_state_manager.set_input_mode('Gpio')
+        assert temp_state_manager.get_input_mode() == 'keyboard'
+    
+    def test_input_mode_persists_through_save_reload(self, tmp_path):
+        """AC #3, #4: Input mode persists through save and reload (Task 5.4)"""
+        state_file = tmp_path / "test_state.json"
+        
+        # Create first StateManager, set gpio, save
+        sm1 = StateManager(str(state_file))
+        sm1.set_input_mode('gpio')
+        sm1.save_state()
+        
+        # Create NEW StateManager with same file path
+        sm2 = StateManager(str(state_file))
+        
+        # Verify input_mode persisted
+        assert sm2.get_input_mode() == 'gpio'
+    
+    def test_input_mode_validation_on_load(self, tmp_path, caplog):
+        """AC #6: Invalid input_mode in file resets to "keyboard" (Task 5.5)"""
+        import json
+        import logging
+        
+        state_file = tmp_path / "test_state.json"
+        
+        # Create initial state with invalid input_mode
+        invalid_state = {
+            "version": "1.0.0",
+            "last_viewed": {"pokemon_id": 1, "generation": 1},
+            "preferences": {"input_mode": "touchscreen", "volume": 0.7},
+            "favorites": [],
+            "recent": [],
+            "stats": {"total_views": 0, "unique_viewed": 0, "sessions": 0}
+        }
+        
+        with open(state_file, 'w') as f:
+            json.dump(invalid_state, f)
+        
+        # Load state - should default to keyboard and log warning
+        with caplog.at_level(logging.WARNING):
+            sm = StateManager(str(state_file))
+        
+        # Verify input_mode was reset to keyboard
+        assert sm.get_input_mode() == 'keyboard'
+        
+        # Verify warning was logged
+        assert any("input_mode" in record.message.lower() and "keyboard" in record.message.lower()
+                  for record in caplog.records)
+    
+    def test_input_mode_default_value(self, tmp_path):
+        """AC #3: New state file has input_mode="keyboard" (Task 5.6)"""
+        state_file = tmp_path / "test_state.json"
+        
+        # Ensure file doesn't exist
+        assert not state_file.exists()
+        
+        # Create new StateManager
+        sm = StateManager(str(state_file))
+        
+        # Verify default input_mode is "keyboard"
+        assert sm.get_input_mode() == 'keyboard'
+    
+    def test_input_mode_corrected_file_written_back(self, tmp_path):
+        """AC #6: Corrected input_mode value written back to state file"""
+        import json
+        
+        state_file = tmp_path / "test_state.json"
+        
+        # Create initial state with invalid input_mode
+        invalid_state = {
+            "version": "1.0.0",
+            "last_viewed": {"pokemon_id": 1, "generation": 1},
+            "preferences": {"input_mode": "invalid_mode", "volume": 0.7},
+            "favorites": [],
+            "recent": [],
+            "stats": {"total_views": 0, "unique_viewed": 0, "sessions": 0}
+        }
+        
+        with open(state_file, 'w') as f:
+            json.dump(invalid_state, f)
+        
+        # Load state (triggers correction)
+        sm = StateManager(str(state_file))
+        
+        # Verify corrected value was written back to file
+        with open(state_file, 'r') as f:
+            saved_state = json.load(f)
+        
+        assert saved_state['preferences']['input_mode'] == 'keyboard'
+
+
+class TestPreferencesPowerCycle:
+    """
+    Story 4.4: Power Cycle Simulation Tests
+    
+    Integration test for preferences surviving application restart (AC #8).
+    """
+    
+    def test_preferences_survive_power_cycle(self, tmp_path):
+        """AC #8: Both preferences restored after save/restart cycle (Task 6.1)"""
+        state_file = tmp_path / "test_state.json"
+        
+        # Create StateManager with temp file
+        sm1 = StateManager(str(state_file))
+        
+        # Set volume=0.3, input_mode="gpio"
+        sm1.set_volume(0.3)
+        sm1.set_input_mode('gpio')
+        
+        # Call save_state()
+        sm1.save_state()
+        
+        # Create NEW StateManager instance with same file path (simulates power cycle)
+        sm2 = StateManager(str(state_file))
+        
+        # Verify get_volume() returns 0.3
+        assert sm2.get_volume() == 0.3
+        
+        # Verify get_input_mode() returns "gpio"
+        assert sm2.get_input_mode() == 'gpio'
+    
+    def test_multiple_preference_changes_persist(self, tmp_path):
+        """AC #8: Multiple preference changes all persist"""
+        state_file = tmp_path / "test_state.json"
+        
+        # Create and modify StateManager multiple times
+        sm1 = StateManager(str(state_file))
+        sm1.set_volume(0.1)
+        sm1.set_input_mode('keyboard')
+        sm1.save_state()
+        
+        # Modify again
+        sm2 = StateManager(str(state_file))
+        sm2.set_volume(0.9)
+        sm2.set_input_mode('gpio')
+        sm2.save_state()
+        
+        # Final reload should have latest values
+        sm3 = StateManager(str(state_file))
+        assert sm3.get_volume() == 0.9
+        assert sm3.get_input_mode() == 'gpio'
+    
+    def test_preferences_with_other_state_data(self, tmp_path):
+        """AC #8: Preferences persist alongside other state data"""
+        state_file = tmp_path / "test_state.json"
+        
+        # Create StateManager and set various state
+        sm1 = StateManager(str(state_file))
+        sm1.set_last_viewed(25, generation=1)  # Pikachu
+        sm1.add_favorite(150)  # Mewtwo
+        sm1.set_volume(0.5)
+        sm1.set_input_mode('gpio')
+        sm1.save_state()
+        
+        # Create new StateManager
+        sm2 = StateManager(str(state_file))
+        
+        # Verify all state restored
+        assert sm2.get_last_viewed_id() == 25
+        assert sm2.is_favorite(150)
+        assert sm2.get_volume() == 0.5
+        assert sm2.get_input_mode() == 'gpio'
+
+
+class TestValidationLogging:
+    """
+    Story 4.4: Validation Warning Logging Tests
+    
+    Tests for proper warning logs during validation (AC #6, #7).
+    """
+    
+    def test_invalid_volume_logs_warning(self, tmp_path, caplog):
+        """AC #7: Loading invalid volume logs warning with clamped values (Task 7.1)"""
+        import json
+        import logging
+        
+        state_file = tmp_path / "test_state.json"
+        
+        # Create state with invalid volume
+        invalid_state = {
+            "version": "1.0.0",
+            "last_viewed": {"pokemon_id": 1, "generation": 1},
+            "preferences": {"input_mode": "keyboard", "volume": 2.5},
+            "favorites": [],
+            "recent": [],
+            "stats": {"total_views": 0, "unique_viewed": 0, "sessions": 0}
+        }
+        
+        with open(state_file, 'w') as f:
+            json.dump(invalid_state, f)
+        
+        # Load state with log capture
+        with caplog.at_level(logging.WARNING):
+            sm = StateManager(str(state_file))
+        
+        # Find the volume warning
+        volume_warnings = [r for r in caplog.records 
+                         if 'volume' in r.message.lower() and r.levelno == logging.WARNING]
+        
+        assert len(volume_warnings) >= 1, "Expected warning log for invalid volume"
+        
+        # Verify warning mentions both original and clamped value
+        warning_msg = volume_warnings[0].message.lower()
+        assert '2.5' in warning_msg or 'out of range' in warning_msg
+        assert '1.0' in warning_msg or 'clamped' in warning_msg
+    
+    def test_invalid_input_mode_logs_warning(self, tmp_path, caplog):
+        """AC #6: Loading invalid input_mode logs warning about reset (Task 7.2)"""
+        import json
+        import logging
+        
+        state_file = tmp_path / "test_state.json"
+        
+        # Create state with invalid input_mode
+        invalid_state = {
+            "version": "1.0.0",
+            "last_viewed": {"pokemon_id": 1, "generation": 1},
+            "preferences": {"input_mode": "invalid_mode", "volume": 0.7},
+            "favorites": [],
+            "recent": [],
+            "stats": {"total_views": 0, "unique_viewed": 0, "sessions": 0}
+        }
+        
+        with open(state_file, 'w') as f:
+            json.dump(invalid_state, f)
+        
+        # Load state with log capture
+        with caplog.at_level(logging.WARNING):
+            sm = StateManager(str(state_file))
+        
+        # Find the input_mode warning
+        mode_warnings = [r for r in caplog.records 
+                        if 'input_mode' in r.message.lower() and r.levelno == logging.WARNING]
+        
+        assert len(mode_warnings) >= 1, "Expected warning log for invalid input_mode"
+        
+        # Verify warning mentions keyboard default
+        warning_msg = mode_warnings[0].message.lower()
+        assert 'keyboard' in warning_msg or 'default' in warning_msg
+    
+    def test_valid_values_no_warnings(self, tmp_path, caplog):
+        """AC #6, #7: Valid values do not trigger warnings (Task 7.3)"""
+        import json
+        import logging
+        
+        state_file = tmp_path / "test_state.json"
+        
+        # Create state with valid values
+        valid_state = {
+            "version": "1.0.0",
+            "last_viewed": {"pokemon_id": 25, "generation": 1},
+            "preferences": {"input_mode": "gpio", "volume": 0.5},
+            "favorites": [],
+            "recent": [],
+            "stats": {"total_views": 0, "unique_viewed": 0, "sessions": 0}
+        }
+        
+        with open(state_file, 'w') as f:
+            json.dump(valid_state, f)
+        
+        # Load state with log capture
+        with caplog.at_level(logging.WARNING):
+            sm = StateManager(str(state_file))
+        
+        # Filter for preference-related warnings
+        pref_warnings = [r for r in caplog.records 
+                        if r.levelno == logging.WARNING and 
+                        ('volume' in r.message.lower() or 'input_mode' in r.message.lower())]
+        
+        assert len(pref_warnings) == 0, f"Unexpected warnings: {[r.message for r in pref_warnings]}"
+
+
+# =============================================================================
+# Story 4.5: State File Corruption Recovery Tests
+# =============================================================================
+
+class TestCorruptionRecovery:
+    """
+    Story 4.5: Corruption Recovery Tests
+    
+    Tests for graceful recovery from corrupted state files (AC #1-4).
+    """
+    
+    def test_corrupt_json_does_not_crash(self, tmp_path):
+        """AC #1: Application does not crash on corrupted JSON (Task 3.1)"""
+        state_file = tmp_path / "test_state.json"
+        
+        # Write invalid JSON
+        with open(state_file, 'w') as f:
+            f.write("{invalid json content here")
+        
+        # Should not raise exception
+        sm = StateManager(str(state_file))
+        
+        # Verify StateManager is functional
+        assert sm is not None
+        assert sm.get_last_viewed_id() is not None
+    
+    def test_corrupt_json_returns_defaults(self, tmp_path):
+        """AC #2: Corrupted JSON returns default values (Task 3.2)"""
+        state_file = tmp_path / "test_state.json"
+        
+        # Write invalid JSON
+        with open(state_file, 'w') as f:
+            f.write("{this is not valid json}")
+        
+        # Create StateManager - should recover with defaults
+        sm = StateManager(str(state_file))
+        
+        # Verify default values
+        assert sm.get_last_viewed_id() == 1  # Bulbasaur
+        assert sm.get_last_viewed_generation() == 1  # Kanto
+        assert sm.get_input_mode() == 'keyboard'
+        assert sm.get_volume() == 0.7
+    
+    def test_corrupt_json_overwrites_file(self, tmp_path):
+        """AC #3: Corrupt file overwritten with valid defaults (Task 3.3)"""
+        import json
+        
+        state_file = tmp_path / "test_state.json"
+        
+        # Write invalid JSON
+        with open(state_file, 'w') as f:
+            f.write("{broken json}")
+        
+        # Create StateManager - should overwrite corrupt file
+        sm = StateManager(str(state_file))
+        
+        # Verify file now contains valid JSON
+        with open(state_file, 'r') as f:
+            state = json.load(f)  # Should not raise JSONDecodeError
+        
+        # Verify file contains expected fields
+        assert state['version'] == '1.0.0'
+        assert state['last_viewed']['pokemon_id'] == 1
+        assert state['last_viewed']['generation'] == 1
+        assert state['preferences']['input_mode'] == 'keyboard'
+        assert state['preferences']['volume'] == 0.7
+    
+    def test_corrupt_json_logs_warning(self, tmp_path, caplog):
+        """AC #4: Warning logged on corruption (Task 3.4)"""
+        import logging
+        
+        state_file = tmp_path / "test_state.json"
+        
+        # Write invalid JSON
+        with open(state_file, 'w') as f:
+            f.write("{invalid json}")
+        
+        # Load with log capture
+        with caplog.at_level(logging.WARNING):
+            sm = StateManager(str(state_file))
+        
+        # Verify warning was logged
+        corruption_warnings = [r for r in caplog.records 
+                              if 'corrupted' in r.message.lower() and r.levelno == logging.WARNING]
+        
+        assert len(corruption_warnings) >= 1, "Expected warning log for corruption"
+        
+        # Verify message format includes "resetting to defaults"
+        warning_msg = corruption_warnings[0].message.lower()
+        assert 'defaults' in warning_msg
+    
+    def test_truncated_json_handled(self, tmp_path):
+        """AC #1: Truncated JSON is handled gracefully (Task 3.5)"""
+        state_file = tmp_path / "test_state.json"
+        
+        # Write truncated JSON
+        with open(state_file, 'w') as f:
+            f.write('{"version": "1.0.0", "last_viewed": {"pokemon_id": 25')
+        
+        # Should not crash, should return defaults
+        sm = StateManager(str(state_file))
+        
+        assert sm.get_last_viewed_id() == 1  # Default, not 25
+        assert sm.get_volume() == 0.7
+    
+    def test_empty_file_handled(self, tmp_path):
+        """AC #1: Empty file is handled gracefully (Task 3.6)"""
+        state_file = tmp_path / "test_state.json"
+        
+        # Create empty file
+        state_file.touch()
+        assert state_file.stat().st_size == 0
+        
+        # Should not crash, should return defaults
+        sm = StateManager(str(state_file))
+        
+        assert sm.get_last_viewed_id() == 1
+        assert sm.get_volume() == 0.7
+    
+    def test_binary_garbage_handled(self, tmp_path):
+        """AC #1: Binary garbage is handled gracefully"""
+        state_file = tmp_path / "test_state.json"
+        
+        # Write random bytes
+        with open(state_file, 'wb') as f:
+            f.write(bytes([0x00, 0xFF, 0x80, 0x7F, 0xAB, 0xCD]))
+        
+        # Should not crash, should return defaults
+        sm = StateManager(str(state_file))
+        
+        assert sm.get_last_viewed_id() == 1
+        assert sm.get_volume() == 0.7
+    
+    def test_non_json_text_handled(self, tmp_path):
+        """AC #1: Non-JSON text file is handled gracefully"""
+        state_file = tmp_path / "test_state.json"
+        
+        # Write plain text (not JSON)
+        with open(state_file, 'w') as f:
+            f.write("Hello World, this is not JSON!")
+        
+        # Should not crash, should return defaults
+        sm = StateManager(str(state_file))
+        
+        assert sm.get_last_viewed_id() == 1
+        assert sm.get_volume() == 0.7
+
+
+class TestPokemonIdValidation:
+    """
+    Story 4.5: Pokemon ID Validation Tests
+    
+    Tests for pokemon_id clamping to valid range 1-386 (AC #5, #9).
+    """
+    
+    def test_pokemon_id_above_max_clamped(self, tmp_path, caplog):
+        """AC #5: pokemon_id=999 clamped to 386 (Task 4.1)"""
+        import json
+        import logging
+        
+        state_file = tmp_path / "test_state.json"
+        
+        # Create state with invalid pokemon_id
+        state = {
+            "version": "1.0.0",
+            "last_viewed": {"pokemon_id": 999, "generation": 1},
+            "preferences": {"input_mode": "keyboard", "volume": 0.7},
+            "favorites": [],
+            "recent": [],
+            "stats": {"total_views": 0, "unique_viewed": 0, "sessions": 0}
+        }
+        
+        with open(state_file, 'w') as f:
+            json.dump(state, f)
+        
+        # Load and verify clamping
+        with caplog.at_level(logging.WARNING):
+            sm = StateManager(str(state_file))
+        
+        assert sm.get_last_viewed_id() == 386
+        
+        # Verify warning logged
+        id_warnings = [r for r in caplog.records if 'pokemon_id' in r.message.lower()]
+        assert len(id_warnings) >= 1
+    
+    def test_pokemon_id_below_min_clamped(self, tmp_path):
+        """AC #9: pokemon_id=-5 clamped to 1 (Task 4.2)"""
+        import json
+        
+        state_file = tmp_path / "test_state.json"
+        
+        state = {
+            "version": "1.0.0",
+            "last_viewed": {"pokemon_id": -5, "generation": 1},
+            "preferences": {"input_mode": "keyboard", "volume": 0.7},
+            "favorites": [],
+            "recent": [],
+            "stats": {"total_views": 0, "unique_viewed": 0, "sessions": 0}
+        }
+        
+        with open(state_file, 'w') as f:
+            json.dump(state, f)
+        
+        sm = StateManager(str(state_file))
+        assert sm.get_last_viewed_id() == 1
+    
+    def test_pokemon_id_zero_clamped(self, tmp_path):
+        """AC #9: pokemon_id=0 clamped to 1 (Task 4.3)"""
+        import json
+        
+        state_file = tmp_path / "test_state.json"
+        
+        state = {
+            "version": "1.0.0",
+            "last_viewed": {"pokemon_id": 0, "generation": 1},
+            "preferences": {"input_mode": "keyboard", "volume": 0.7},
+            "favorites": [],
+            "recent": [],
+            "stats": {"total_views": 0, "unique_viewed": 0, "sessions": 0}
+        }
+        
+        with open(state_file, 'w') as f:
+            json.dump(state, f)
+        
+        sm = StateManager(str(state_file))
+        assert sm.get_last_viewed_id() == 1
+    
+    def test_pokemon_id_valid_unchanged(self, tmp_path):
+        """AC #5: Valid pokemon_id=25 remains unchanged (Task 4.4)"""
+        import json
+        
+        state_file = tmp_path / "test_state.json"
+        
+        state = {
+            "version": "1.0.0",
+            "last_viewed": {"pokemon_id": 25, "generation": 1},
+            "preferences": {"input_mode": "keyboard", "volume": 0.7},
+            "favorites": [],
+            "recent": [],
+            "stats": {"total_views": 0, "unique_viewed": 0, "sessions": 0}
+        }
+        
+        with open(state_file, 'w') as f:
+            json.dump(state, f)
+        
+        sm = StateManager(str(state_file))
+        assert sm.get_last_viewed_id() == 25
+    
+    def test_pokemon_id_boundary_values(self, tmp_path):
+        """AC #5: Boundary values 1 and 386 unchanged (Task 4.5)"""
+        import json
+        
+        state_file = tmp_path / "test_state.json"
+        
+        # Test min boundary (1)
+        state = {
+            "version": "1.0.0",
+            "last_viewed": {"pokemon_id": 1, "generation": 1},
+            "preferences": {"input_mode": "keyboard", "volume": 0.7},
+            "favorites": [],
+            "recent": [],
+            "stats": {"total_views": 0, "unique_viewed": 0, "sessions": 0}
+        }
+        
+        with open(state_file, 'w') as f:
+            json.dump(state, f)
+        
+        sm = StateManager(str(state_file))
+        assert sm.get_last_viewed_id() == 1
+        
+        # Test max boundary (386)
+        state['last_viewed']['pokemon_id'] = 386
+        
+        with open(state_file, 'w') as f:
+            json.dump(state, f)
+        
+        sm = StateManager(str(state_file))
+        assert sm.get_last_viewed_id() == 386
+    
+    def test_pokemon_id_corrected_written_back(self, tmp_path):
+        """AC #5: Corrected pokemon_id written back to file"""
+        import json
+        
+        state_file = tmp_path / "test_state.json"
+        
+        state = {
+            "version": "1.0.0",
+            "last_viewed": {"pokemon_id": 999, "generation": 1},
+            "preferences": {"input_mode": "keyboard", "volume": 0.7},
+            "favorites": [],
+            "recent": [],
+            "stats": {"total_views": 0, "unique_viewed": 0, "sessions": 0}
+        }
+        
+        with open(state_file, 'w') as f:
+            json.dump(state, f)
+        
+        # Load (triggers correction)
+        sm = StateManager(str(state_file))
+        
+        # Verify corrected value written back
+        with open(state_file, 'r') as f:
+            saved_state = json.load(f)
+        
+        assert saved_state['last_viewed']['pokemon_id'] == 386
+
+
+class TestGenerationValidation:
+    """
+    Story 4.5: Generation Validation Tests
+    
+    Tests for generation clamping to valid range 1-3 (AC #6, #9).
+    """
+    
+    def test_generation_above_max_clamped(self, tmp_path, caplog):
+        """AC #6: generation=5 clamped to 3 (Task 5.1)"""
+        import json
+        import logging
+        
+        state_file = tmp_path / "test_state.json"
+        
+        state = {
+            "version": "1.0.0",
+            "last_viewed": {"pokemon_id": 1, "generation": 5},
+            "preferences": {"input_mode": "keyboard", "volume": 0.7},
+            "favorites": [],
+            "recent": [],
+            "stats": {"total_views": 0, "unique_viewed": 0, "sessions": 0}
+        }
+        
+        with open(state_file, 'w') as f:
+            json.dump(state, f)
+        
+        with caplog.at_level(logging.WARNING):
+            sm = StateManager(str(state_file))
+        
+        assert sm.get_last_viewed_generation() == 3
+        
+        # Verify warning logged
+        gen_warnings = [r for r in caplog.records if 'generation' in r.message.lower()]
+        assert len(gen_warnings) >= 1
+    
+    def test_generation_below_min_clamped(self, tmp_path):
+        """AC #9: generation=-1 clamped to 1 (Task 5.2)"""
+        import json
+        
+        state_file = tmp_path / "test_state.json"
+        
+        state = {
+            "version": "1.0.0",
+            "last_viewed": {"pokemon_id": 1, "generation": -1},
+            "preferences": {"input_mode": "keyboard", "volume": 0.7},
+            "favorites": [],
+            "recent": [],
+            "stats": {"total_views": 0, "unique_viewed": 0, "sessions": 0}
+        }
+        
+        with open(state_file, 'w') as f:
+            json.dump(state, f)
+        
+        sm = StateManager(str(state_file))
+        assert sm.get_last_viewed_generation() == 1
+    
+    def test_generation_zero_clamped(self, tmp_path):
+        """AC #9: generation=0 clamped to 1 (Task 5.3)"""
+        import json
+        
+        state_file = tmp_path / "test_state.json"
+        
+        state = {
+            "version": "1.0.0",
+            "last_viewed": {"pokemon_id": 1, "generation": 0},
+            "preferences": {"input_mode": "keyboard", "volume": 0.7},
+            "favorites": [],
+            "recent": [],
+            "stats": {"total_views": 0, "unique_viewed": 0, "sessions": 0}
+        }
+        
+        with open(state_file, 'w') as f:
+            json.dump(state, f)
+        
+        sm = StateManager(str(state_file))
+        assert sm.get_last_viewed_generation() == 1
+    
+    def test_generation_valid_unchanged(self, tmp_path):
+        """AC #6: Valid generation=2 remains unchanged (Task 5.4)"""
+        import json
+        
+        state_file = tmp_path / "test_state.json"
+        
+        state = {
+            "version": "1.0.0",
+            "last_viewed": {"pokemon_id": 1, "generation": 2},
+            "preferences": {"input_mode": "keyboard", "volume": 0.7},
+            "favorites": [],
+            "recent": [],
+            "stats": {"total_views": 0, "unique_viewed": 0, "sessions": 0}
+        }
+        
+        with open(state_file, 'w') as f:
+            json.dump(state, f)
+        
+        sm = StateManager(str(state_file))
+        assert sm.get_last_viewed_generation() == 2
+    
+    def test_generation_boundary_values(self, tmp_path):
+        """AC #6: Boundary values 1 and 3 unchanged (Task 5.5)"""
+        import json
+        
+        state_file = tmp_path / "test_state.json"
+        
+        # Test min boundary (1)
+        state = {
+            "version": "1.0.0",
+            "last_viewed": {"pokemon_id": 1, "generation": 1},
+            "preferences": {"input_mode": "keyboard", "volume": 0.7},
+            "favorites": [],
+            "recent": [],
+            "stats": {"total_views": 0, "unique_viewed": 0, "sessions": 0}
+        }
+        
+        with open(state_file, 'w') as f:
+            json.dump(state, f)
+        
+        sm = StateManager(str(state_file))
+        assert sm.get_last_viewed_generation() == 1
+        
+        # Test max boundary (3)
+        state['last_viewed']['generation'] = 3
+        
+        with open(state_file, 'w') as f:
+            json.dump(state, f)
+        
+        sm = StateManager(str(state_file))
+        assert sm.get_last_viewed_generation() == 3
+    
+    def test_generation_corrected_written_back(self, tmp_path):
+        """AC #6: Corrected generation written back to file"""
+        import json
+        
+        state_file = tmp_path / "test_state.json"
+        
+        state = {
+            "version": "1.0.0",
+            "last_viewed": {"pokemon_id": 1, "generation": 5},
+            "preferences": {"input_mode": "keyboard", "volume": 0.7},
+            "favorites": [],
+            "recent": [],
+            "stats": {"total_views": 0, "unique_viewed": 0, "sessions": 0}
+        }
+        
+        with open(state_file, 'w') as f:
+            json.dump(state, f)
+        
+        # Load (triggers correction)
+        sm = StateManager(str(state_file))
+        
+        # Verify corrected value written back
+        with open(state_file, 'r') as f:
+            saved_state = json.load(f)
+        
+        assert saved_state['last_viewed']['generation'] == 3
+
+
+class TestVolumeValidationOnLoad:
+    """
+    Story 4.5: Volume Validation on Load Tests
+    
+    Tests for volume clamping to valid range 0.0-1.0 on load (AC #7, #9).
+    """
+    
+    def test_volume_above_max_clamped_on_load(self, tmp_path, caplog):
+        """AC #7: volume=2.5 clamped to 1.0 on load (Task 6.1)"""
+        import json
+        import logging
+        
+        state_file = tmp_path / "test_state.json"
+        
+        state = {
+            "version": "1.0.0",
+            "last_viewed": {"pokemon_id": 1, "generation": 1},
+            "preferences": {"input_mode": "keyboard", "volume": 2.5},
+            "favorites": [],
+            "recent": [],
+            "stats": {"total_views": 0, "unique_viewed": 0, "sessions": 0}
+        }
+        
+        with open(state_file, 'w') as f:
+            json.dump(state, f)
+        
+        with caplog.at_level(logging.WARNING):
+            sm = StateManager(str(state_file))
+        
+        assert sm.get_volume() == 1.0
+        
+        # Verify warning logged
+        vol_warnings = [r for r in caplog.records if 'volume' in r.message.lower()]
+        assert len(vol_warnings) >= 1
+    
+    def test_volume_below_min_clamped_on_load(self, tmp_path):
+        """AC #9: volume=-0.5 clamped to 0.0 on load (Task 6.2)"""
+        import json
+        
+        state_file = tmp_path / "test_state.json"
+        
+        state = {
+            "version": "1.0.0",
+            "last_viewed": {"pokemon_id": 1, "generation": 1},
+            "preferences": {"input_mode": "keyboard", "volume": -0.5},
+            "favorites": [],
+            "recent": [],
+            "stats": {"total_views": 0, "unique_viewed": 0, "sessions": 0}
+        }
+        
+        with open(state_file, 'w') as f:
+            json.dump(state, f)
+        
+        sm = StateManager(str(state_file))
+        assert sm.get_volume() == 0.0
+    
+    def test_volume_valid_unchanged_on_load(self, tmp_path):
+        """AC #7: Valid volume=0.5 unchanged on load (Task 6.3)"""
+        import json
+        
+        state_file = tmp_path / "test_state.json"
+        
+        state = {
+            "version": "1.0.0",
+            "last_viewed": {"pokemon_id": 1, "generation": 1},
+            "preferences": {"input_mode": "keyboard", "volume": 0.5},
+            "favorites": [],
+            "recent": [],
+            "stats": {"total_views": 0, "unique_viewed": 0, "sessions": 0}
+        }
+        
+        with open(state_file, 'w') as f:
+            json.dump(state, f)
+        
+        sm = StateManager(str(state_file))
+        assert sm.get_volume() == 0.5
+    
+    def test_volume_boundary_values_on_load(self, tmp_path):
+        """AC #7: Boundary values 0.0 and 1.0 unchanged on load (Task 6.4)"""
+        import json
+        
+        state_file = tmp_path / "test_state.json"
+        
+        # Test min boundary (0.0)
+        state = {
+            "version": "1.0.0",
+            "last_viewed": {"pokemon_id": 1, "generation": 1},
+            "preferences": {"input_mode": "keyboard", "volume": 0.0},
+            "favorites": [],
+            "recent": [],
+            "stats": {"total_views": 0, "unique_viewed": 0, "sessions": 0}
+        }
+        
+        with open(state_file, 'w') as f:
+            json.dump(state, f)
+        
+        sm = StateManager(str(state_file))
+        assert sm.get_volume() == 0.0
+        
+        # Test max boundary (1.0)
+        state['preferences']['volume'] = 1.0
+        
+        with open(state_file, 'w') as f:
+            json.dump(state, f)
+        
+        sm = StateManager(str(state_file))
+        assert sm.get_volume() == 1.0
+    
+    def test_volume_string_coerced(self, tmp_path):
+        """AC #7: Volume as string "0.5" coerced to float (Task 6.5)"""
+        import json
+        
+        state_file = tmp_path / "test_state.json"
+        
+        state = {
+            "version": "1.0.0",
+            "last_viewed": {"pokemon_id": 1, "generation": 1},
+            "preferences": {"input_mode": "keyboard", "volume": "0.5"},
+            "favorites": [],
+            "recent": [],
+            "stats": {"total_views": 0, "unique_viewed": 0, "sessions": 0}
+        }
+        
+        with open(state_file, 'w') as f:
+            json.dump(state, f)
+        
+        sm = StateManager(str(state_file))
+        assert sm.get_volume() == 0.5
+        assert isinstance(sm.get_volume(), float)
+
+
+class TestInputModeValidationOnLoad:
+    """
+    Story 4.5: Input Mode Validation on Load Tests
+    
+    Tests for input_mode validation on load (AC #8).
+    """
+    
+    def test_input_mode_invalid_reset_to_keyboard(self, tmp_path, caplog):
+        """AC #8: input_mode="touchscreen" reset to "keyboard" (Task 7.1)"""
+        import json
+        import logging
+        
+        state_file = tmp_path / "test_state.json"
+        
+        state = {
+            "version": "1.0.0",
+            "last_viewed": {"pokemon_id": 1, "generation": 1},
+            "preferences": {"input_mode": "touchscreen", "volume": 0.7},
+            "favorites": [],
+            "recent": [],
+            "stats": {"total_views": 0, "unique_viewed": 0, "sessions": 0}
+        }
+        
+        with open(state_file, 'w') as f:
+            json.dump(state, f)
+        
+        with caplog.at_level(logging.WARNING):
+            sm = StateManager(str(state_file))
+        
+        assert sm.get_input_mode() == 'keyboard'
+        
+        # Verify warning logged
+        mode_warnings = [r for r in caplog.records if 'input_mode' in r.message.lower()]
+        assert len(mode_warnings) >= 1
+    
+    def test_input_mode_empty_string_reset(self, tmp_path):
+        """AC #8: input_mode="" reset to "keyboard" (Task 7.2)"""
+        import json
+        
+        state_file = tmp_path / "test_state.json"
+        
+        state = {
+            "version": "1.0.0",
+            "last_viewed": {"pokemon_id": 1, "generation": 1},
+            "preferences": {"input_mode": "", "volume": 0.7},
+            "favorites": [],
+            "recent": [],
+            "stats": {"total_views": 0, "unique_viewed": 0, "sessions": 0}
+        }
+        
+        with open(state_file, 'w') as f:
+            json.dump(state, f)
+        
+        sm = StateManager(str(state_file))
+        assert sm.get_input_mode() == 'keyboard'
+    
+    def test_input_mode_case_sensitive_on_load(self, tmp_path):
+        """AC #8: input_mode="GPIO" (uppercase) reset to "keyboard" (Task 7.3)"""
+        import json
+        
+        state_file = tmp_path / "test_state.json"
+        
+        state = {
+            "version": "1.0.0",
+            "last_viewed": {"pokemon_id": 1, "generation": 1},
+            "preferences": {"input_mode": "GPIO", "volume": 0.7},
+            "favorites": [],
+            "recent": [],
+            "stats": {"total_views": 0, "unique_viewed": 0, "sessions": 0}
+        }
+        
+        with open(state_file, 'w') as f:
+            json.dump(state, f)
+        
+        sm = StateManager(str(state_file))
+        assert sm.get_input_mode() == 'keyboard'
+    
+    def test_input_mode_valid_keyboard_unchanged(self, tmp_path):
+        """AC #8: Valid input_mode="keyboard" unchanged (Task 7.4)"""
+        import json
+        
+        state_file = tmp_path / "test_state.json"
+        
+        state = {
+            "version": "1.0.0",
+            "last_viewed": {"pokemon_id": 1, "generation": 1},
+            "preferences": {"input_mode": "keyboard", "volume": 0.7},
+            "favorites": [],
+            "recent": [],
+            "stats": {"total_views": 0, "unique_viewed": 0, "sessions": 0}
+        }
+        
+        with open(state_file, 'w') as f:
+            json.dump(state, f)
+        
+        sm = StateManager(str(state_file))
+        assert sm.get_input_mode() == 'keyboard'
+    
+    def test_input_mode_valid_gpio_unchanged(self, tmp_path):
+        """AC #8: Valid input_mode="gpio" unchanged (Task 7.5)"""
+        import json
+        
+        state_file = tmp_path / "test_state.json"
+        
+        state = {
+            "version": "1.0.0",
+            "last_viewed": {"pokemon_id": 1, "generation": 1},
+            "preferences": {"input_mode": "gpio", "volume": 0.7},
+            "favorites": [],
+            "recent": [],
+            "stats": {"total_views": 0, "unique_viewed": 0, "sessions": 0}
+        }
+        
+        with open(state_file, 'w') as f:
+            json.dump(state, f)
+        
+        sm = StateManager(str(state_file))
+        assert sm.get_input_mode() == 'gpio'
+    
+    def test_input_mode_corrected_written_back(self, tmp_path):
+        """AC #8: Corrected input_mode written back to file"""
+        import json
+        
+        state_file = tmp_path / "test_state.json"
+        
+        state = {
+            "version": "1.0.0",
+            "last_viewed": {"pokemon_id": 1, "generation": 1},
+            "preferences": {"input_mode": "touchscreen", "volume": 0.7},
+            "favorites": [],
+            "recent": [],
+            "stats": {"total_views": 0, "unique_viewed": 0, "sessions": 0}
+        }
+        
+        with open(state_file, 'w') as f:
+            json.dump(state, f)
+        
+        # Load (triggers correction)
+        sm = StateManager(str(state_file))
+        
+        # Verify corrected value written back
+        with open(state_file, 'r') as f:
+            saved_state = json.load(f)
+        
+        assert saved_state['preferences']['input_mode'] == 'keyboard'
+
+
+class TestValidationWarningLogs:
+    """
+    Story 4.5: Validation Warning Log Tests
+    
+    Tests for proper warning log messages (AC #4, #5, #6, #7, #8).
+    """
+    
+    def test_corrupt_json_warning_format(self, tmp_path, caplog):
+        """AC #4: Corrupt JSON warning contains expected message (Task 8.1)"""
+        import logging
+        
+        state_file = tmp_path / "test_state.json"
+        
+        with open(state_file, 'w') as f:
+            f.write("{not valid json}")
+        
+        with caplog.at_level(logging.WARNING):
+            sm = StateManager(str(state_file))
+        
+        # Find corruption warning
+        warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
+        corruption_warning = next(
+            (r for r in warnings if 'corrupted' in r.message.lower()), 
+            None
+        )
+        
+        assert corruption_warning is not None, "Expected corruption warning"
+        assert 'resetting' in corruption_warning.message.lower() or 'defaults' in corruption_warning.message.lower()
+    
+    def test_pokemon_id_clamping_warning_format(self, tmp_path, caplog):
+        """AC #5: pokemon_id clamping warning contains original and clamped values (Task 8.2)"""
+        import json
+        import logging
+        
+        state_file = tmp_path / "test_state.json"
+        
+        state = {
+            "version": "1.0.0",
+            "last_viewed": {"pokemon_id": 999, "generation": 1},
+            "preferences": {"input_mode": "keyboard", "volume": 0.7},
+            "favorites": [],
+            "recent": [],
+            "stats": {"total_views": 0, "unique_viewed": 0, "sessions": 0}
+        }
+        
+        with open(state_file, 'w') as f:
+            json.dump(state, f)
+        
+        with caplog.at_level(logging.WARNING):
+            sm = StateManager(str(state_file))
+        
+        # Find pokemon_id warning
+        id_warning = next(
+            (r for r in caplog.records if 'pokemon_id' in r.message.lower()),
+            None
+        )
+        
+        assert id_warning is not None, "Expected pokemon_id warning"
+        assert '999' in id_warning.message
+        assert '386' in id_warning.message
+    
+    def test_generation_clamping_warning_format(self, tmp_path, caplog):
+        """AC #6: generation clamping warning contains original and clamped values (Task 8.3)"""
+        import json
+        import logging
+        
+        state_file = tmp_path / "test_state.json"
+        
+        state = {
+            "version": "1.0.0",
+            "last_viewed": {"pokemon_id": 1, "generation": 5},
+            "preferences": {"input_mode": "keyboard", "volume": 0.7},
+            "favorites": [],
+            "recent": [],
+            "stats": {"total_views": 0, "unique_viewed": 0, "sessions": 0}
+        }
+        
+        with open(state_file, 'w') as f:
+            json.dump(state, f)
+        
+        with caplog.at_level(logging.WARNING):
+            sm = StateManager(str(state_file))
+        
+        # Find generation warning
+        gen_warning = next(
+            (r for r in caplog.records if 'generation' in r.message.lower()),
+            None
+        )
+        
+        assert gen_warning is not None, "Expected generation warning"
+        assert '5' in gen_warning.message
+        assert '3' in gen_warning.message
+    
+    def test_volume_clamping_warning_format(self, tmp_path, caplog):
+        """AC #7: volume clamping warning contains original and clamped values (Task 8.4)"""
+        import json
+        import logging
+        
+        state_file = tmp_path / "test_state.json"
+        
+        state = {
+            "version": "1.0.0",
+            "last_viewed": {"pokemon_id": 1, "generation": 1},
+            "preferences": {"input_mode": "keyboard", "volume": 2.5},
+            "favorites": [],
+            "recent": [],
+            "stats": {"total_views": 0, "unique_viewed": 0, "sessions": 0}
+        }
+        
+        with open(state_file, 'w') as f:
+            json.dump(state, f)
+        
+        with caplog.at_level(logging.WARNING):
+            sm = StateManager(str(state_file))
+        
+        # Find volume warning
+        vol_warning = next(
+            (r for r in caplog.records if 'volume' in r.message.lower()),
+            None
+        )
+        
+        assert vol_warning is not None, "Expected volume warning"
+        assert '2.5' in vol_warning.message
+        assert '1.0' in vol_warning.message
+    
+    def test_input_mode_reset_warning_format(self, tmp_path, caplog):
+        """AC #8: input_mode reset warning contains invalid value and default (Task 8.5)"""
+        import json
+        import logging
+        
+        state_file = tmp_path / "test_state.json"
+        
+        state = {
+            "version": "1.0.0",
+            "last_viewed": {"pokemon_id": 1, "generation": 1},
+            "preferences": {"input_mode": "touchscreen", "volume": 0.7},
+            "favorites": [],
+            "recent": [],
+            "stats": {"total_views": 0, "unique_viewed": 0, "sessions": 0}
+        }
+        
+        with open(state_file, 'w') as f:
+            json.dump(state, f)
+        
+        with caplog.at_level(logging.WARNING):
+            sm = StateManager(str(state_file))
+        
+        # Find input_mode warning
+        mode_warning = next(
+            (r for r in caplog.records if 'input_mode' in r.message.lower()),
+            None
+        )
+        
+        assert mode_warning is not None, "Expected input_mode warning"
+        assert 'touchscreen' in mode_warning.message
+        assert 'keyboard' in mode_warning.message
+
+
+class TestFullRecoveryFlow:
+    """
+    Story 4.5: Full Recovery Flow Integration Tests
+    
+    Tests for application continuing normally after recovery (AC #10).
+    """
+    
+    def test_recovery_allows_normal_operation(self, tmp_path):
+        """AC #10: After recovery, normal operations work (Task 9.1)"""
+        import json
+        
+        state_file = tmp_path / "test_state.json"
+        
+        # Write corrupt JSON
+        with open(state_file, 'w') as f:
+            f.write("{corrupt data}")
+        
+        # Initialize StateManager (triggers recovery)
+        sm1 = StateManager(str(state_file))
+        
+        # Verify defaults loaded
+        assert sm1.get_last_viewed_id() == 1
+        
+        # Simulate navigation: set_last_viewed(25, 1)
+        sm1.set_last_viewed(25, 1)
+        assert sm1.get_last_viewed_id() == 25
+        
+        # Save state
+        sm1.save_state()
+        
+        # Create new StateManager with same file
+        sm2 = StateManager(str(state_file))
+        
+        # Verify Pikachu (#25) restored correctly
+        assert sm2.get_last_viewed_id() == 25
+        assert sm2.get_last_viewed_generation() == 1
+    
+    def test_recovery_file_usable_after_overwrite(self, tmp_path):
+        """AC #10: Recovered file is valid and usable JSON (Task 9.2)"""
+        import json
+        
+        state_file = tmp_path / "test_state.json"
+        
+        # Write corrupt JSON
+        with open(state_file, 'w') as f:
+            f.write("not json at all!")
+        
+        # Initialize StateManager
+        sm = StateManager(str(state_file))
+        
+        # Re-read file and verify it's valid JSON
+        with open(state_file, 'r') as f:
+            state = json.load(f)  # Should not raise
+        
+        # Verify all expected fields present
+        assert 'version' in state
+        assert 'last_viewed' in state
+        assert 'pokemon_id' in state['last_viewed']
+        assert 'generation' in state['last_viewed']
+        assert 'preferences' in state
+        assert 'input_mode' in state['preferences']
+        assert 'volume' in state['preferences']
+        assert 'favorites' in state
+        assert 'recent' in state
+        assert 'stats' in state
+    
+    def test_recovery_with_multiple_invalid_values(self, tmp_path):
+        """AC #10: Multiple invalid values all corrected"""
+        import json
+        
+        state_file = tmp_path / "test_state.json"
+        
+        # Create state with multiple invalid values
+        state = {
+            "version": "1.0.0",
+            "last_viewed": {"pokemon_id": 999, "generation": 10},
+            "preferences": {"input_mode": "invalid", "volume": 5.0},
+            "favorites": [],
+            "recent": [],
+            "stats": {"total_views": 0, "unique_viewed": 0, "sessions": 0}
+        }
+        
+        with open(state_file, 'w') as f:
+            json.dump(state, f)
+        
+        # Initialize StateManager - should correct all values
+        sm = StateManager(str(state_file))
+        
+        # Verify all corrected
+        assert sm.get_last_viewed_id() == 386
+        assert sm.get_last_viewed_generation() == 3
+        assert sm.get_input_mode() == 'keyboard'
+        assert sm.get_volume() == 1.0
+        
+        # Verify file updated with corrections
+        with open(state_file, 'r') as f:
+            saved_state = json.load(f)
+        
+        assert saved_state['last_viewed']['pokemon_id'] == 386
+        assert saved_state['last_viewed']['generation'] == 3
+        assert saved_state['preferences']['input_mode'] == 'keyboard'
+        assert saved_state['preferences']['volume'] == 1.0
+    
+    def test_recovery_preserves_valid_data(self, tmp_path):
+        """AC #10: Valid data preserved when correcting invalid data"""
+        import json
+        
+        state_file = tmp_path / "test_state.json"
+        
+        # Create state with mix of valid and invalid values
+        state = {
+            "version": "1.0.0",
+            "last_viewed": {"pokemon_id": 25, "generation": 5},  # id valid, gen invalid
+            "preferences": {"input_mode": "gpio", "volume": 2.0},  # mode valid, vol invalid
+            "favorites": [1, 4, 7],  # Valid favorites
+            "recent": [25, 1],  # Valid recent
+            "stats": {"total_views": 100, "unique_viewed": 50, "sessions": 10}
+        }
+        
+        with open(state_file, 'w') as f:
+            json.dump(state, f)
+        
+        sm = StateManager(str(state_file))
+        
+        # Valid values preserved
+        assert sm.get_last_viewed_id() == 25
+        assert sm.get_input_mode() == 'gpio'
+        assert sm.get_favorites() == [1, 4, 7]
+        
+        # Invalid values corrected
+        assert sm.get_last_viewed_generation() == 3
+        assert sm.get_volume() == 1.0
+

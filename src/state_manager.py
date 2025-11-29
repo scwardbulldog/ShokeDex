@@ -152,10 +152,21 @@ class StateManager:
                 # Clamp volume to valid range (0.0-1.0)
                 if 'volume' in state['preferences']:
                     original_volume = state['preferences']['volume']
-                    state['preferences']['volume'] = max(0.0, min(1.0, float(original_volume)))
-                    if abs(state['preferences']['volume'] - original_volume) > 0.001:
-                        logger.warning(f"volume {original_volume} out of range, clamped to {state['preferences']['volume']}")
+                    try:
+                        clamped_volume = max(0.0, min(1.0, float(original_volume)))
+                    except (ValueError, TypeError):
+                        clamped_volume = 0.7  # Default on conversion error
+                        logger.warning(f"volume '{original_volume}' invalid type, defaulting to 0.7")
                         needs_correction = True
+                    else:
+                        # Compare as floats to handle string input
+                        try:
+                            if abs(clamped_volume - float(original_volume)) > 0.001:
+                                logger.warning(f"volume {original_volume} out of range, clamped to {clamped_volume}")
+                                needs_correction = True
+                        except (ValueError, TypeError):
+                            needs_correction = True
+                    state['preferences']['volume'] = clamped_volume
                 
                 # Validate input_mode
                 if 'input_mode' in state['preferences']:
@@ -182,7 +193,7 @@ class StateManager:
             
             return state
             
-        except (json.JSONDecodeError, IOError) as e:
+        except (json.JSONDecodeError, IOError, UnicodeDecodeError, ValueError) as e:
             logger.warning(f"State file corrupted, resetting to defaults - {e}")
             # Overwrite corrupt file with defaults
             default_state = self._get_default_state()

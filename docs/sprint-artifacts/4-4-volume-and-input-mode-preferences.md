@@ -1,6 +1,6 @@
 # Story 4.4: Volume and Input Mode Preferences
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -66,43 +66,43 @@ so that they persist across sessions.
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1: Verify StateManager Volume Methods Exist and Work (AC #1, #2, #5)**
-  - [ ] 1.1: Verify `get_volume()` returns float from `preferences.volume`
-  - [ ] 1.2: Verify `set_volume()` updates `preferences.volume` in memory
-  - [ ] 1.3: Verify `set_volume()` clamps values to 0.0-1.0 range
-  - [ ] 1.4: Verify volume persists through save_state() and reload cycle
+- [x] **Task 1: Verify StateManager Volume Methods Exist and Work (AC #1, #2, #5)**
+  - [x] 1.1: Verify `get_volume()` returns float from `preferences.volume`
+  - [x] 1.2: Verify `set_volume()` updates `preferences.volume` in memory
+  - [x] 1.3: Verify `set_volume()` clamps values to 0.0-1.0 range
+  - [x] 1.4: Verify volume persists through save_state() and reload cycle
 
-- [ ] **Task 2: Verify StateManager Input Mode Methods Exist and Work (AC #3, #4, #6)**
-  - [ ] 2.1: Verify `get_input_mode()` returns string from `preferences.input_mode`
-  - [ ] 2.2: Verify `set_input_mode()` updates `preferences.input_mode` in memory
-  - [ ] 2.3: Verify `set_input_mode()` only accepts "keyboard" or "gpio"
-  - [ ] 2.4: Verify invalid mode values are silently ignored (no exception)
-  - [ ] 2.5: Verify input_mode persists through save_state() and reload cycle
+- [x] **Task 2: Verify StateManager Input Mode Methods Exist and Work (AC #3, #4, #6)**
+  - [x] 2.1: Verify `get_input_mode()` returns string from `preferences.input_mode`
+  - [x] 2.2: Verify `set_input_mode()` updates `preferences.input_mode` in memory
+  - [x] 2.3: Verify `set_input_mode()` only accepts "keyboard" or "gpio"
+  - [x] 2.4: Verify invalid mode values are silently ignored (no exception)
+  - [x] 2.5: Verify input_mode persists through save_state() and reload cycle
 
-- [ ] **Task 3: Verify Load-Time Validation (AC #5, #6, #7)**
-  - [ ] 3.1: Review `_load_state()` validation logic for volume clamping
-  - [ ] 3.2: Review `_load_state()` validation logic for input_mode validation
-  - [ ] 3.3: Verify invalid values trigger warning logs
-  - [ ] 3.4: Verify corrected values are written back to state file on load
+- [x] **Task 3: Verify Load-Time Validation (AC #5, #6, #7)**
+  - [x] 3.1: Review `_load_state()` validation logic for volume clamping
+  - [x] 3.2: Review `_load_state()` validation logic for input_mode validation
+  - [x] 3.3: Verify invalid values trigger warning logs
+  - [x] 3.4: Verify corrected values are written back to state file on load
 
-- [ ] **Task 4: Write Unit Tests for Volume Preference (AC #1, #2, #5, #7)**
-  - [ ] 4.1: Test `test_set_and_get_volume()` - set volume, verify getter returns same value
-  - [ ] 4.2: Test `test_volume_clamping_low()` - set -0.5, verify 0.0 returned
-  - [ ] 4.3: Test `test_volume_clamping_high()` - set 1.5, verify 1.0 returned
-  - [ ] 4.4: Test `test_volume_persists_through_save_reload()` - save, create new StateManager, verify restored
-  - [ ] 4.5: Test `test_volume_validation_on_load()` - write invalid volume to file, load, verify clamped
-  - [ ] 4.6: Test `test_volume_default_value()` - new state file has volume=0.7
+- [x] **Task 4: Write Unit Tests for Volume Preference (AC #1, #2, #5, #7)**
+  - [x] 4.1: Test `test_set_and_get_volume()` - set volume, verify getter returns same value
+  - [x] 4.2: Test `test_volume_clamping_low()` - set -0.5, verify 0.0 returned
+  - [x] 4.3: Test `test_volume_clamping_high()` - set 1.5, verify 1.0 returned
+  - [x] 4.4: Test `test_volume_persists_through_save_reload()` - save, create new StateManager, verify restored
+  - [x] 4.5: Test `test_volume_validation_on_load()` - write invalid volume to file, load, verify clamped
+  - [x] 4.6: Test `test_volume_default_value()` - new state file has volume=0.7
 
-- [ ] **Task 5: Write Unit Tests for Input Mode Preference (AC #3, #4, #6)**
-  - [ ] 5.1: Test `test_set_and_get_input_mode_keyboard()` - set "keyboard", verify returned
-  - [ ] 5.2: Test `test_set_and_get_input_mode_gpio()` - set "gpio", verify returned
-  - [ ] 5.3: Test `test_input_mode_invalid_ignored()` - set invalid mode, verify previous value retained
-  - [ ] 5.4: Test `test_input_mode_persists_through_save_reload()` - save "gpio", reload, verify "gpio"
-  - [ ] 5.5: Test `test_input_mode_validation_on_load()` - write invalid mode to file, load, verify "keyboard"
-  - [ ] 5.6: Test `test_input_mode_default_value()` - new state file has input_mode="keyboard"
+- [x] **Task 5: Write Unit Tests for Input Mode Preference (AC #3, #4, #6)**
+  - [x] 5.1: Test `test_set_and_get_input_mode_keyboard()` - set "keyboard", verify returned
+  - [x] 5.2: Test `test_set_and_get_input_mode_gpio()` - set "gpio", verify returned
+  - [x] 5.3: Test `test_input_mode_invalid_ignored()` - set invalid mode, verify previous value retained
+  - [x] 5.4: Test `test_input_mode_persists_through_save_reload()` - save "gpio", reload, verify "gpio"
+  - [x] 5.5: Test `test_input_mode_validation_on_load()` - write invalid mode to file, load, verify "keyboard"
+  - [x] 5.6: Test `test_input_mode_default_value()` - new state file has input_mode="keyboard"
 
-- [ ] **Task 6: Write Integration Test for Power Cycle Simulation (AC #8)**
-  - [ ] 6.1: Test `test_preferences_survive_power_cycle()`:
+- [x] **Task 6: Write Integration Test for Power Cycle Simulation (AC #8)**
+  - [x] 6.1: Test `test_preferences_survive_power_cycle()`:
     - Create StateManager with temp file
     - Set volume=0.3, input_mode="gpio"
     - Call save_state()
@@ -110,10 +110,10 @@ so that they persist across sessions.
     - Verify get_volume() returns 0.3
     - Verify get_input_mode() returns "gpio"
 
-- [ ] **Task 7: Verify Logging for Validation Warnings (AC #6, #7)**
-  - [ ] 7.1: Test that loading invalid volume logs warning with clamped values
-  - [ ] 7.2: Test that loading invalid input_mode logs warning about default reset
-  - [ ] 7.3: Use `caplog` pytest fixture to capture and assert log messages
+- [x] **Task 7: Verify Logging for Validation Warnings (AC #6, #7)**
+  - [x] 7.1: Test that loading invalid volume logs warning with clamped values
+  - [x] 7.2: Test that loading invalid input_mode logs warning about default reset
+  - [x] 7.3: Use `caplog` pytest fixture to capture and assert log messages
 
 ## Dev Notes
 
@@ -242,10 +242,29 @@ Per project testing standards (`TESTING.md`):
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.5 (Preview)
 
 ### Debug Log References
 
+Implementation Plan: This was a verification and testing story. The StateManager implementation already existed with proper volume clamping (lines 365-368), input mode validation (lines 374-377), and load-time validation (lines 145-169). Focus was on writing comprehensive tests to verify all acceptance criteria.
+
 ### Completion Notes List
 
+- **Tasks 1-3 (Verification)**: Confirmed existing implementation in `src/state_manager.py` meets all ACs:
+  - `get_volume()` returns float from preferences with 0.7 default
+  - `set_volume()` clamps to 0.0-1.0 using `max(0.0, min(1.0, volume))`
+  - `get_input_mode()` returns string from preferences with "keyboard" default
+  - `set_input_mode()` validates mode is in `('keyboard', 'gpio')`, ignores invalid
+  - `_load_state()` validates and clamps on load, logs warnings, writes back corrections
+
+- **Tasks 4-7 (Tests)**: Added 23 comprehensive pytest tests in 4 new test classes:
+  - `TestVolumePreference`: 9 tests covering set/get, clamping, persistence, load validation
+  - `TestInputModePreference`: 8 tests covering set/get, invalid rejection, persistence
+  - `TestPreferencesPowerCycle`: 3 tests for power cycle simulation (AC #8)
+  - `TestValidationLogging`: 3 tests for warning log verification using `caplog`
+
+- **All 455 project tests pass** with no regressions
+
 ### File List
+
+- `tests/test_state_manager.py` - Added 4 pytest test classes with 23 new tests (lines 740-1050)
