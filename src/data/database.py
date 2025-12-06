@@ -391,3 +391,161 @@ class Database:
         """, (pokemon_id, pokemon_id))
         
         return [dict(row) for row in cursor.fetchall()]
+    
+    def get_evolution_chain(self, pokemon_id: int) -> Dict[str, Any]:
+        """
+        Get complete evolution chain for a Pokémon.
+        
+        Args:
+            pokemon_id: National Dex number (1-386)
+            
+        Returns:
+            Dictionary with structure:
+            {
+                'chain_id': int,  # Evolution chain family ID
+                'stages': [  # All Pokémon in this evolution family
+                    {
+                        'pokemon_id': int,
+                        'name': str,
+                        'stage': int  # Position in chain (1, 2, or 3)
+                    },
+                    ...
+                ],
+                'evolutions': [  # Evolution relationships and requirements
+                    {
+                        'from_id': int,
+                        'to_id': int,
+                        'method': str,  # 'level-up', 'use-item', 'trade', etc.
+                        'level': int | None,  # Required level if method='level-up'
+                        'item': str | None,  # Item name if method='use-item'
+                        'trigger': str | None  # Additional context
+                    },
+                    ...
+                ],
+                'current_stage': int  # Which stage the queried Pokémon is at
+            }
+            
+        Story 5.1 AC #6: Parameterized SQL, <50ms target, returns complete chain data
+        """
+        # Step 1: Find the evolution chain ID for this Pokemon
+        cursor = self.execute("""
+            SELECT DISTINCT evolution_chain_id
+            FROM evolutions
+            WHERE from_pokemon_id = ? OR to_pokemon_id = ?
+        """, (pokemon_id, pokemon_id))
+        
+        row = cursor.fetchone()
+        if not row:
+            # Pokemon has no evolutions - return single-stage structure
+            cursor = self.execute("SELECT id, name FROM pokemon WHERE id = ?", (pokemon_id,))
+            pokemon_row = cursor.fetchone()
+            if pokemon_row:
+                return {
+                    'chain_id': None,
+                    'stages': [{
+                        'pokemon_id': pokemon_row['id'],
+                        'name': pokemon_row['name'],
+                        'stage': 1
+                    }],
+                    'evolutions': [],
+                    'current_stage': 1
+                }
+            return {'chain_id': None, 'stages': [], 'evolutions': [], 'current_stage': 0}
+        
+        chain_id = row['evolution_chain_id']
+        
+        # Step 2: Get all Pokemon in this evolution chain
+        cursor = self.execute("""
+            SELECT DISTINCT p.id, p.name
+            FROM pokemon p
+            WHERE p.id IN (
+                SELECT DISTINCT from_pokemon_id FROM evolutions WHERE evolution_chain_id = ?
+                UNION
+                SELECT DISTINCT to_pokemon_id FROM evolutions WHERE evolution_chain_id = ?
+            )
+            ORDER BY p.id
+        """, (chain_id, chain_id))
+        
+        all_pokemon = [dict(row) for row in cursor.fetchall()]
+        
+        # Step 3: Get all evolution relationships in this chain
+        cursor = self.execute("""
+            SELECT 
+                from_pokemon_id,
+                to_pokemon_id,
+                trigger,
+                min_level,
+                item,
+                min_happiness,
+                time_of_day
+            FROM evolutions
+            WHERE evolution_chain_id = ?
+            ORDER BY from_pokemon_id, to_pokemon_id
+        """, (chain_id,))
+        
+        evolution_rows = [dict(row) for row in cursor.fetchall()]
+        
+        # Step 4: Build evolution stages by determining depth in chain
+        # Create adjacency list to determine stages
+        pokemon_to_stage = {}
+        children_map = {}  # from_id -> [to_ids]
+        parent_map = {}    # to_id -> from_id
+        
+        for evo in evolution_rows:
+            from_id = evo['from_pokemon_id']
+            to_id = evo['to_pokemon_id']
+            
+            if from_id not in children_map:
+                children_map[from_id] = []
+            children_map[from_id].append(to_id)
+            parent_map[to_id] = from_id
+        
+        # Find root Pokemon (those with no parents)
+        all_ids = set(p['id'] for p in all_pokemon)
+        root_ids = all_ids - set(parent_map.keys())
+        
+        # Assign stages using BFS from roots
+        for root_id in root_ids:
+            pokemon_to_stage[root_id] = 1
+            queue = [(root_id, 1)]
+            
+            while queue:
+                current_id, current_stage = queue.pop(0)
+                if current_id in children_map:
+                    for child_id in children_map[current_id]:
+                        pokemon_to_stage[child_id] = current_stage + 1
+                        queue.append((child_id, current_stage + 1))
+        
+        # Step 5: Build stages list with stage numbers
+        stages = []
+        for pokemon in all_pokemon:
+            pid = pokemon['id']
+            stages.append({
+                'pokemon_id': pid,
+                'name': pokemon['name'],
+                'stage': pokemon_to_stage.get(pid, 1)
+            })
+        
+        # Step 6: Format evolution relationships
+        evolutions = []
+        for evo in evolution_rows:
+            evolutions.append({
+                'from_id': evo['from_pokemon_id'],
+                'to_id': evo['to_pokemon_id'],
+                'method': evo['trigger'] or 'level-up',
+                'level': evo['min_level'],
+                'item': evo['item'],
+                'trigger': evo['time_of_day'] or (
+                    'high-friendship' if evo['min_happiness'] else None
+                )
+            })
+        
+        # Step 7: Determine current Pokemon's stage
+        current_stage = pokemon_to_stage.get(pokemon_id, 1)
+        
+        return {
+            'chain_id': chain_id,
+            'stages': sorted(stages, key=lambda s: (s['stage'], s['pokemon_id'])),
+            'evolutions': evolutions,
+            'current_stage': current_stage
+        }

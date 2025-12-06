@@ -37,6 +37,9 @@ def main():
     # Initialize screen manager
     screen_manager = ScreenManager(screen)
     
+    # Inject database into screen_manager (following main.py pattern)
+    screen_manager.database = database
+    
     # Create screenshots directory
     screenshots_dir = Path(__file__).parent / "screenshots"
     screenshots_dir.mkdir(exist_ok=True)
@@ -58,7 +61,7 @@ def main():
     
     # 3. Detail Screen
     print("Capturing Detail Screen...")
-    detail_screen = DetailScreen(screen_manager, pokemon_id=25, database=database)
+    detail_screen = DetailScreen(screen_manager, pokemon_id=25)
     detail_screen.on_enter()
     screen.fill((0, 0, 0))
     detail_screen.render(screen)
@@ -88,7 +91,7 @@ def main():
     
     # 7. Different Pokemon
     print("Capturing Detail Screen - Different Pokemon...")
-    detail_screen2 = DetailScreen(screen_manager, pokemon_id=1, database=database)
+    detail_screen2 = DetailScreen(screen_manager, pokemon_id=1)
     detail_screen2.on_enter()
     screen.fill((0, 0, 0))
     detail_screen2.render(screen)

@@ -89,6 +89,18 @@ class MockDatabase:
         if self.pokemon_data and pokemon_id == self.pokemon_data['id']:
             return self.types_data
         return []
+    
+    def get_evolution_chain(self, pokemon_id):
+        """Return mock evolution chain data (Story 5.1)"""
+        # Default: return a simple single-stage evolution (no evolutions)
+        return {
+            'chain_id': 1,
+            'stages': [
+                {'pokemon_id': pokemon_id, 'name': self.pokemon_data.get('name', 'unknown'), 'stage': 1}
+            ],
+            'evolutions': [],
+            'current_stage': 1
+        }
 
 
 class MockScreenManager:

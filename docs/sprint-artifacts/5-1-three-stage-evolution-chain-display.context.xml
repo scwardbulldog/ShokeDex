@@ -1,0 +1,289 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>5</epicId>
+    <storyId>1</storyId>
+    <title>Three-Stage Evolution Chain Display</title>
+    <status>drafted</status>
+    <generatedAt>2025-12-06</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/5-1-three-stage-evolution-chain-display.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>user</asA>
+    <iWant>to see complete evolution chains for three-stage evolutions</iWant>
+    <soThat>I understand the full evolutionary path</soThat>
+    <tasks>
+- Task 1: Create Database Method get_evolution_chain()
+  - 1.1: Add get_evolution_chain(pokemon_id: int) -> Dict[str, Any] to Database class
+  - 1.2: Implement SQL query joining evolution_chains and evolutions tables
+  - 1.3: Use parameterized query with ? placeholder for pokemon_id
+  - 1.4: Return data structure: {'chain_id': int, 'stages': [...], 'evolutions': [...], 'current_stage': int}
+  - 1.5: Handle edge cases: Pokémon with no evolutions return empty evolutions list
+  - 1.6: Add database method test in tests/test_database.py
+
+- Task 2: Create EvolutionPanel Component
+  - 2.1: Create EvolutionPanel class in src/ui/detail_screen.py
+  - 2.2: Implement __init__(screen_manager, pokemon_id) constructor
+  - 2.3: Implement load_data() method calling Database.get_evolution_chain()
+  - 2.4: Implement load_sprites() method using SpriteLoader for all chain members
+  - 2.5: Implement render(surface, x, y) method for horizontal layout
+  - 2.6: Apply holographic styling: dark blue background, electric blue border
+
+- Task 3: Render Three-Stage Chain Horizontally
+  - 3.1: Calculate sprite positions for 3 stages with even spacing
+  - 3.2: Render each stage's sprite at 64x64 size
+  - 3.3: Render Pokémon name below each sprite (Rajdhani Bold, 14px, white)
+  - 3.4: Render Dex number below name in format "#NNN" (Share Tech Mono, 12px, ice blue)
+  - 3.5: Test layout fits within panel boundaries (verify on 480x320 and 800x480 displays)
+
+- Task 4: Render Evolution Arrows and Requirements
+  - 4.1: Draw arrow graphics between each stage using pygame.draw
+  - 4.2: Style arrows with electric blue (#00d4ff) and appropriate thickness
+  - 4.3: Position requirement text below each arrow
+  - 4.4: Format requirement text: "Level {level}", "{stone_name}", "Trade", etc.
+  - 4.5: Render requirement text (Rajdhani, 14px, ice blue #a8e6ff)
+  - 4.6: Verify text readability and no truncation
+
+- Task 5: Implement Current Pokémon Highlighting
+  - 5.1: Determine which stage is the current Pokémon from evolution data
+  - 5.2: Draw bright cyan glow (#4df7ff) border around current sprite
+  - 5.3: Render "Current" label below current Pokémon (ice blue #a8e6ff)
+  - 5.4: Test highlighting with Pokémon at different stages (pre-evo, mid-evo, final-evo)
+
+- Task 6: Integrate EvolutionPanel into DetailScreen
+  - 6.1: Add EvolutionPanel instantiation to DetailScreen.on_enter()
+  - 6.2: Call evolution_panel.load_data() and evolution_panel.load_sprites()
+  - 6.3: Add evolution_panel.render(surface, x, y) to DetailScreen.render()
+  - 6.4: Position evolution panel below stats section with proper spacing
+  - 6.5: Ensure panel doesn't overlap other DetailScreen elements
+
+- Task 7: Write Unit and Integration Tests
+  - 7.1: Test test_get_evolution_chain_three_stages() for Charmander line
+  - 7.2: Test test_evolution_panel_load_data() verifies database query
+  - 7.3: Test test_evolution_panel_load_sprites() verifies SpriteLoader calls
+  - 7.4: Test test_evolution_panel_render_three_stages() verifies all elements rendered
+  - 7.5: Test test_evolution_panel_highlights_current() verifies correct highlighting
+  - 7.6: Performance test: test_evolution_panel_renders_under_200ms()
+
+- Task 8: Visual Testing and Polish
+  - 8.1: Test rendering on both 480x320 and 800x480 displays
+  - 8.2: Verify holographic styling matches other DetailScreen panels
+  - 8.3: Verify layout spacing and alignment are consistent
+  - 8.4: Profile rendering performance on Raspberry Pi 3B+ if available
+  - 8.5: Screenshot comparison against UX specification mockups
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+AC #1: Three-Stage Chain Rendering
+- Given: a Pokémon with a three-stage evolution chain (e.g., Charmander → Charmeleon → Charizard)
+- When: viewing DetailScreen
+- Then: all three stages are displayed horizontally with sprites, names, and Dex numbers
+- And: sprites are thumbnail size (64x64)
+- And: each stage shows Pokémon name below the sprite
+- And: each stage shows National Dex number in format "#NNN"
+
+AC #2: Evolution Arrow Display
+- Given: a three-stage evolution chain is displayed
+- When: rendering the evolution panel
+- Then: arrows are shown between stages pointing in the direction of evolution
+- And: arrows use electric blue (#00d4ff) color matching holographic theme
+- And: arrows are clearly visible and indicate direction (→)
+
+AC #3: Evolution Requirements Display
+- Given: evolution arrows between stages
+- When: rendering the evolution panel
+- Then: evolution requirements are displayed below each arrow (e.g., "Level 16", "Level 36")
+- And: requirement text uses ice blue color (#a8e6ff)
+- And: requirement text font is Rajdhani, 14px
+- And: all requirement text is readable and not truncated
+
+AC #4: Current Pokémon Highlighting
+- Given: user is viewing a Pokémon that is part of an evolution chain
+- When: the evolution panel renders
+- Then: current Pokémon is highlighted with brighter cyan glow (#4df7ff)
+- And: "Current" label is displayed underneath the current Pokémon's sprite
+- And: "Current" label uses ice blue color (#a8e6ff)
+- And: current position is visually clear at a glance
+
+AC #5: Panel Styling and Layout
+- Given: the evolution panel is rendered on DetailScreen
+- When: viewing the panel
+- Then: panel uses holographic blue styling consistent with other DetailScreen panels
+- And: panel has electric blue (#00d4ff) 2px border
+- And: panel background uses dark blue rgba(26, 47, 74, 0.9)
+- And: all three stages fit within panel boundaries without overflow
+- And: horizontal layout maintains 16px padding and consistent spacing
+
+AC #6: Database Integration
+- Given: DetailScreen loads a Pokémon
+- When: evolution panel initializes
+- Then: Database.get_evolution_chain(pokemon_id) is called
+- And: query returns complete evolution data structure
+- And: query uses parameterized SQL to prevent injection
+- And: query completes in < 50ms (per performance requirements)
+
+AC #7: Sprite Loading Integration
+- Given: evolution chain data is loaded from database
+- When: EvolutionPanel renders sprites
+- Then: SpriteLoader.load_thumbnail(pokemon_id) is called for each stage
+- And: thumbnail sprites are 64x64 pixels
+- And: sprites are loaded from existing LRU cache when available
+- And: missing sprites display placeholder without crashing
+
+AC #8: Rendering Performance
+- Given: a user navigates to DetailScreen with evolution panel
+- When: evolution panel renders for the first time
+- Then: rendering completes within 200ms (database query + sprite loading)
+- And: frame rate maintains 30+ FPS during render
+- And: no visual stuttering or lag
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-5-evolution-system.md" title="Epic 5 Technical Specification" section="Database Method Contract">
+        Defines get_evolution_chain(pokemon_id) method contract returning {'chain_id', 'stages', 'evolutions', 'current_stage'}. Stages contain pokemon_id, name, stage number. Evolutions contain from_id, to_id, method, level, item, trigger.
+      </doc>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-5-evolution-system.md" title="Epic 5 Technical Specification" section="EvolutionPanel Render Interface">
+        EvolutionPanel class with __init__(screen_manager, pokemon_id), load_data(), load_sprites(), render(surface, x, y), and handle_input(action) methods. Horizontal layout for evolution chain display.
+      </doc>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-5-evolution-system.md" title="Epic 5 Technical Specification" section="Database Query Interface">
+        SQL queries for evolution data: SELECT chain_id FROM pokemon WHERE id = ?; SELECT pokemon from chain; SELECT evolutions with items joined. All parameterized for security.
+      </doc>
+      <doc path="docs/PRD.md" title="Product Requirements" section="FR4: Evolution Chain Display">
+        Evolution chain display requirements: show pre-evolution and evolution, display evolution requirements (level, item, method), sprite thumbnails for chain members.
+      </doc>
+      <doc path="docs/architecture.md" title="Architecture" section="Manager Architecture Pattern">
+        Screen-based architecture with manager injection. Database accessed via context manager. SpriteLoader for asset loading with LRU caching.
+      </doc>
+      <doc path="docs/ux-design-specification.md" title="UX Design" section="Holographic Blue Color Palette">
+        Electric Blue #00d4ff for borders/UI elements. Ice Blue #a8e6ff for secondary text. Dark Blue rgba(26, 47, 74, 0.9) for panels. Bright Cyan #4df7ff for highlights/glow.
+      </doc>
+      <doc path="docs/database_schema.md" title="Database Schema" section="evolution_chains and evolutions tables">
+        evolution_chains table groups Pokémon by family. evolutions table defines relationships with from_pokemon_id, to_pokemon_id, min_level, trigger, item, min_happiness, time_of_day fields.
+      </doc>
+    </docs>
+    <code>
+      <artifact path="src/ui/detail_screen.py" kind="screen-class" symbol="DetailScreen" lines="48-1200" reason="Base class for evolution panel integration. Contains on_enter(), render(), handle_input() lifecycle methods. Existing panels show holographic styling pattern.">
+      </artifact>
+      <artifact path="src/ui/detail_screen.py" kind="render-method" symbol="_render_stat_bars" lines="700-850" reason="Example of panel rendering with holographic blue styling, progress bars, and text labels. Pattern to follow for evolution panel.">
+      </artifact>
+      <artifact path="src/ui/detail_screen.py" kind="render-method" symbol="_render_description_panel" lines="1147-1200" reason="Shows panel background rendering with dark blue fill and electric blue border. Reference for EvolutionPanel styling.">
+      </artifact>
+      <artifact path="src/data/database.py" kind="database-class" symbol="Database" lines="1-394" reason="Database class with context manager pattern. Add get_evolution_chain() method here. Existing methods show parameterized query pattern.">
+      </artifact>
+      <artifact path="src/data/database.py" kind="query-method" symbol="get_evolutions" lines="382-394" reason="Existing evolution query method. Shows pattern for querying evolutions table with parameterized SQL. Foundation for new get_evolution_chain() method.">
+      </artifact>
+      <artifact path="src/ui/sprite_loader.py" kind="loader-function" symbol="load_thumb" lines="106-135" reason="Thumbnail sprite loading function (64x64 size). LRU caching implementation with statistics tracking. Use for evolution chain sprites.">
+      </artifact>
+      <artifact path="src/ui/sprite_loader.py" kind="cache-management" symbol="_evict_lru_if_needed" lines="53-77" reason="LRU cache eviction logic maintaining max 50 sprites. Shows cache management pattern used by evolution panel sprite loading.">
+      </artifact>
+      <artifact path="src/ui/colors.py" kind="constants" symbol="Colors" reason="Color constants for holographic theme. Contains ELECTRIC_BLUE, ICE_BLUE, DARK_BLUE, BRIGHT_CYAN used in evolution panel styling.">
+      </artifact>
+      <artifact path="tests/test_detail_screen.py" kind="test-class" symbol="TestDetailScreenBasic" lines="1-300" reason="Integration tests for DetailScreen. Pattern for testing EvolutionPanel rendering and integration.">
+      </artifact>
+      <artifact path="tests/test_database.py" kind="test-method" symbol="test_evolution_chain" lines="189-225" reason="Existing evolution database tests. Shows test pattern for evolution queries with Pikachu evolution chain example.">
+      </artifact>
+    </code>
+    <dependencies>
+      <ecosystem name="Python">
+        <package name="pygame" version="2.5.0+" />
+        <package name="Pillow" version="10.0.0+" />
+        <package name="pytest" version="7.4.0+" />
+      </ecosystem>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    - All database queries must use parameterized statements (no string formatting)
+    - Evolution panel must not overlap existing DetailScreen elements (stats, types, description)
+    - Rendering performance target: < 200ms first load, < 50ms cached
+    - Frame rate must maintain 30+ FPS during evolution panel display
+    - LRU sprite cache max 50 sprites (existing limit)
+    - Support both 480x320 and 800x480 display resolutions
+    - Holographic blue styling must match existing DetailScreen panels exactly
+    - Evolution panel positioned below stats section with 16px vertical spacing
+    - All text must be readable and not truncated on small displays
+    - Graceful degradation for missing evolution data or sprites
+  </constraints>
+
+  <interfaces>
+    <interface name="Database.get_evolution_chain" kind="method">
+      <signature>def get_evolution_chain(self, pokemon_id: int) -> Dict[str, Any]</signature>
+      <description>
+        Queries evolution_chains and evolutions tables to return complete evolution data.
+        Returns: {'chain_id': int, 'stages': [{'pokemon_id', 'name', 'stage'}], 
+                  'evolutions': [{'from_id', 'to_id', 'method', 'level', 'item', 'trigger'}],
+                  'current_stage': int}
+      </description>
+      <path>src/data/database.py</path>
+    </interface>
+    
+    <interface name="EvolutionPanel.render" kind="method">
+      <signature>def render(self, surface: pygame.Surface, x: int, y: int)</signature>
+      <description>
+        Renders horizontal evolution chain panel with sprites, names, dex numbers, arrows, and requirements.
+        Uses holographic blue styling. Highlights current Pokémon.
+      </description>
+      <path>src/ui/detail_screen.py (new class)</path>
+    </interface>
+    
+    <interface name="SpriteLoader.load_thumb" kind="function">
+      <signature>def load_thumb(pokemon_id: int) -> Optional[pygame.Surface]</signature>
+      <description>
+        Loads 64x64 thumbnail sprite with LRU caching. Returns None if sprite missing.
+        Existing function - no changes needed.
+      </description>
+      <path>src/ui/sprite_loader.py</path>
+    </interface>
+    
+    <interface name="DetailScreen.on_enter" kind="method">
+      <signature>def on_enter(self)</signature>
+      <description>
+        Extend to instantiate EvolutionPanel, call load_data() and load_sprites().
+        Existing method - add evolution panel initialization.
+      </description>
+      <path>src/ui/detail_screen.py</path>
+    </interface>
+    
+    <interface name="DetailScreen.render" kind="method">
+      <signature>def render(self, surface: pygame.Surface)</signature>
+      <description>
+        Extend to call evolution_panel.render(surface, x, y) below stats section.
+        Existing method - add evolution panel rendering call.
+      </description>
+      <path>src/ui/detail_screen.py</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Use pytest framework with fixtures from tests/conftest.py. Test files follow test_{module}.py naming.
+      Integration tests verify full workflow (database → panel → render). Unit tests verify individual methods.
+      Performance tests use time.perf_counter() and @pytest.mark.performance decorator.
+      Mock pygame.Surface for render tests when appropriate. Use real database with test data for integration tests.
+    </standards>
+    
+    <locations>
+      tests/test_database.py - Database method tests
+      tests/test_detail_screen.py - DetailScreen integration tests
+      tests/test_evolution_panel.py - EvolutionPanel unit tests (new file)
+    </locations>
+    
+    <ideas>
+      - test_get_evolution_chain_charmander: Verify 3-stage chain for Charmander (#4) returns stages [4, 5, 6] with evolutions [4→5, 5→6] and level requirements
+      - test_get_evolution_chain_pikachu: Verify 3-stage chain including pre-evolution Pichu (#172 → #25 → #26)
+      - test_get_evolution_chain_single_stage: Verify Pokémon with no evolutions (e.g., Ditto #132) returns empty evolutions list
+      - test_evolution_panel_load_data_calls_database: Mock Database.get_evolution_chain and verify it's called with correct pokemon_id
+      - test_evolution_panel_load_sprites_calls_sprite_loader: Mock sprite_loader.load_thumb and verify called for each stage
+      - test_evolution_panel_render_three_stages_layout: Verify sprites positioned horizontally with correct spacing
+      - test_evolution_panel_highlights_current_pokemon: Verify current stage has cyan glow and "Current" label
+      - test_evolution_panel_renders_arrows_and_requirements: Verify arrows drawn between stages with requirement text below
+      - test_evolution_panel_performance_under_200ms: Time full load_data + load_sprites + render cycle, assert < 200ms
+      - test_detail_screen_integrates_evolution_panel: Verify DetailScreen.on_enter creates EvolutionPanel and render calls its render method
+      - test_evolution_panel_missing_sprite_graceful: Verify panel renders with placeholder if sprite file missing
+      - test_evolution_panel_no_overflow_small_display: Verify panel fits within 480x320 boundaries without element truncation
+    </ideas>
+  </tests>
+</story-context>

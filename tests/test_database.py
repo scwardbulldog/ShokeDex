@@ -219,6 +219,136 @@ class TestDatabase(unittest.TestCase):
             # Query evolutions
             evolutions = db.get_evolutions(25)
             self.assertEqual(len(evolutions), 2)
+    
+    def test_get_evolution_chain_three_stages(self):
+        """Test get_evolution_chain for Charmander line (3-stage chain)"""
+        with self.db as db:
+            db.create_schema()
+            
+            # Insert Charmander, Charmeleon, Charizard
+            pokemon_data = [
+                (4, 'charmander', 4, 6, 85, 62, 1),
+                (5, 'charmeleon', 5, 11, 190, 142, 1),
+                (6, 'charizard', 6, 17, 905, 240, 1)
+            ]
+            db.executemany("""
+                INSERT INTO pokemon (id, name, species_id, height, weight, base_experience, generation)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, pokemon_data)
+            
+            # Create evolution chain
+            db.execute("INSERT INTO evolution_chains (id) VALUES (?)", (2,))
+            
+            # Add evolutions
+            evolutions = [
+                (2, 4, 5, 16, 'level-up', None, None, None),  # Charmander → Charmeleon at 16
+                (2, 5, 6, 36, 'level-up', None, None, None)   # Charmeleon → Charizard at 36
+            ]
+            db.executemany("""
+                INSERT INTO evolutions 
+                (evolution_chain_id, from_pokemon_id, to_pokemon_id, min_level, trigger, item, min_happiness, time_of_day)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, evolutions)
+            
+            db.commit()
+            
+            # Test from Charmander's perspective
+            chain = db.get_evolution_chain(4)
+            self.assertEqual(chain['chain_id'], 2)
+            self.assertEqual(len(chain['stages']), 3)
+            self.assertEqual(len(chain['evolutions']), 2)
+            self.assertEqual(chain['current_stage'], 1)
+            
+            # Verify stages are ordered correctly
+            self.assertEqual(chain['stages'][0]['pokemon_id'], 4)
+            self.assertEqual(chain['stages'][0]['name'], 'charmander')
+            self.assertEqual(chain['stages'][0]['stage'], 1)
+            
+            self.assertEqual(chain['stages'][1]['pokemon_id'], 5)
+            self.assertEqual(chain['stages'][1]['name'], 'charmeleon')
+            self.assertEqual(chain['stages'][1]['stage'], 2)
+            
+            self.assertEqual(chain['stages'][2]['pokemon_id'], 6)
+            self.assertEqual(chain['stages'][2]['name'], 'charizard')
+            self.assertEqual(chain['stages'][2]['stage'], 3)
+            
+            # Verify evolution relationships
+            self.assertEqual(chain['evolutions'][0]['from_id'], 4)
+            self.assertEqual(chain['evolutions'][0]['to_id'], 5)
+            self.assertEqual(chain['evolutions'][0]['level'], 16)
+            self.assertEqual(chain['evolutions'][0]['method'], 'level-up')
+            
+            self.assertEqual(chain['evolutions'][1]['from_id'], 5)
+            self.assertEqual(chain['evolutions'][1]['to_id'], 6)
+            self.assertEqual(chain['evolutions'][1]['level'], 36)
+            
+            # Test from Charmeleon's perspective (middle stage)
+            chain_middle = db.get_evolution_chain(5)
+            self.assertEqual(chain_middle['current_stage'], 2)
+            self.assertEqual(len(chain_middle['stages']), 3)
+            
+            # Test from Charizard's perspective (final stage)
+            chain_final = db.get_evolution_chain(6)
+            self.assertEqual(chain_final['current_stage'], 3)
+            self.assertEqual(len(chain_final['stages']), 3)
+    
+    def test_get_evolution_chain_single_stage(self):
+        """Test get_evolution_chain for Pokemon with no evolutions (Ditto)"""
+        with self.db as db:
+            db.create_schema()
+            
+            # Insert Ditto (no evolutions)
+            db.execute("""
+                INSERT INTO pokemon (id, name, species_id, height, weight, base_experience, generation)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (132, 'ditto', 132, 3, 40, 101, 1))
+            
+            db.commit()
+            
+            # Test single-stage Pokemon
+            chain = db.get_evolution_chain(132)
+            self.assertIsNone(chain['chain_id'])
+            self.assertEqual(len(chain['stages']), 1)
+            self.assertEqual(len(chain['evolutions']), 0)
+            self.assertEqual(chain['current_stage'], 1)
+            
+            self.assertEqual(chain['stages'][0]['pokemon_id'], 132)
+            self.assertEqual(chain['stages'][0]['name'], 'ditto')
+            self.assertEqual(chain['stages'][0]['stage'], 1)
+    
+    def test_get_evolution_chain_stone_evolution(self):
+        """Test get_evolution_chain with stone evolution (Pikachu)"""
+        with self.db as db:
+            db.create_schema()
+            
+            # Insert Pikachu and Raichu
+            pokemon_data = [
+                (25, 'pikachu', 25, 4, 60, 112, 1),
+                (26, 'raichu', 26, 8, 300, 243, 1)
+            ]
+            db.executemany("""
+                INSERT INTO pokemon (id, name, species_id, height, weight, base_experience, generation)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, pokemon_data)
+            
+            # Create evolution chain
+            db.execute("INSERT INTO evolution_chains (id) VALUES (?)", (10,))
+            
+            # Add stone evolution
+            db.execute("""
+                INSERT INTO evolutions 
+                (evolution_chain_id, from_pokemon_id, to_pokemon_id, min_level, trigger, item, min_happiness, time_of_day)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (10, 25, 26, None, 'use-item', 'thunder-stone', None, None))
+            
+            db.commit()
+            
+            # Test stone evolution
+            chain = db.get_evolution_chain(25)
+            self.assertEqual(len(chain['evolutions']), 1)
+            self.assertEqual(chain['evolutions'][0]['method'], 'use-item')
+            self.assertEqual(chain['evolutions'][0]['item'], 'thunder-stone')
+            self.assertIsNone(chain['evolutions'][0]['level'])
             
             
     def test_context_manager(self):

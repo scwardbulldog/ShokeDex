@@ -6,6 +6,7 @@ Story 3.2: Six base stats with visual progress bars, color-coded by value.
 Story 3.3: Type badges with holographic colors and rounded rectangle styling.
 Story 3.4: Physical measurements (height in meters, weight in kilograms) display.
 Story 3.6: L/R button navigation to adjacent Pokémon with fade transitions.
+Story 5.1: Three-stage evolution chain display with sprites and requirements.
 """
 
 import pygame
@@ -15,7 +16,7 @@ from typing import Optional, Dict, List
 from .screen import Screen
 from .colors import Colors, get_stat_color, TYPE_COLORS
 from ..input_manager import InputAction
-from .sprite_loader import load_detail
+from .sprite_loader import load_detail, load_thumb
 
 
 # Story 3.7: Stat label formatting map (AC #4)
@@ -42,6 +43,304 @@ def format_stat_label(db_stat_name: str) -> str:
     Story 3.7 AC #4: Labels use proper formatting like game conventions
     """
     return STAT_LABEL_MAP.get(db_stat_name.lower(), db_stat_name.title())
+
+
+class EvolutionPanel:
+    """
+    Component for displaying evolution chains on DetailScreen.
+    
+    Story 5.1 Implementation:
+    - Loads evolution chain data from Database.get_evolution_chain()
+    - Loads thumbnail sprites (64x64) for all chain members
+    - Renders horizontal evolution chain with sprites, names, dex numbers
+    - Shows evolution arrows with requirements (level, stone, etc.)
+    - Highlights current Pokémon with cyan glow
+    - Uses holographic blue styling consistent with DetailScreen
+    
+    AC #1: Three stages displayed horizontally with sprites, names, dex numbers
+    AC #2: Electric blue arrows between stages pointing evolution direction
+    AC #3: Requirements displayed below arrows (Level 16, Thunder Stone, etc.)
+    AC #4: Current Pokémon highlighted with bright cyan glow
+    AC #5: Holographic blue panel styling, electric blue border, dark blue background
+    AC #6: Database integration via get_evolution_chain()
+    AC #7: Sprite loading via SpriteLoader.load_thumb()
+    AC #8: Rendering performance < 200ms first load, < 50ms cached
+    """
+    
+    def __init__(self, screen_manager, pokemon_id: int):
+        """
+        Initialize EvolutionPanel for a Pokémon.
+        
+        Args:
+            screen_manager: ScreenManager instance providing database access
+            pokemon_id: National Dex number (1-386)
+        """
+        self.screen_manager = screen_manager
+        self.pokemon_id = pokemon_id
+        self.database = screen_manager.database if hasattr(screen_manager, 'database') else None
+        
+        # Evolution data
+        self.evolution_data: Optional[Dict] = None
+        self.sprites: Dict[int, pygame.Surface] = {}  # pokemon_id -> Surface
+        
+        # Fonts (initialized in load_data after pygame is guaranteed ready)
+        self.name_font: Optional[pygame.font.Font] = None
+        self.dex_font: Optional[pygame.font.Font] = None
+        self.requirement_font: Optional[pygame.font.Font] = None
+        self.label_font: Optional[pygame.font.Font] = None
+    
+    def load_data(self):
+        """
+        Load evolution chain data from database.
+        
+        AC #6: Calls Database.get_evolution_chain(pokemon_id)
+        Uses parameterized SQL, completes in < 50ms
+        """
+        if not self.database:
+            logging.warning("EvolutionPanel: No database available")
+            self.evolution_data = None
+            return
+        
+        try:
+            start_time = time.perf_counter()
+            
+            with self.database as db:
+                self.evolution_data = db.get_evolution_chain(self.pokemon_id)
+            
+            load_time = (time.perf_counter() - start_time) * 1000
+            logging.debug(f"Evolution data loaded in {load_time:.2f}ms")
+        except Exception as e:
+            logging.error(f"EvolutionPanel: Failed to load evolution data: {e}")
+            self.evolution_data = None
+            return
+        
+        # Initialize fonts now that pygame is ready
+        self.name_font = pygame.font.Font(None, 14)  # Rajdhani Bold 14px for names
+        self.dex_font = pygame.font.Font(None, 12)   # Share Tech Mono 12px for dex numbers
+        self.requirement_font = pygame.font.Font(None, 14)  # Rajdhani 14px for requirements
+        self.label_font = pygame.font.Font(None, 12)  # Small font for "Current" label
+    
+    def load_sprites(self):
+        """
+        Load thumbnail sprites for all Pokémon in evolution chain.
+        
+        AC #7: Calls SpriteLoader.load_thumb(pokemon_id) for each stage
+        Thumbnails are 64x64 pixels, loaded from LRU cache when available
+        Missing sprites handled gracefully with placeholder
+        """
+        if not self.evolution_data or not self.evolution_data['stages']:
+            return
+        
+        start_time = time.perf_counter()
+        
+        for stage in self.evolution_data['stages']:
+            pokemon_id = stage['pokemon_id']
+            sprite = load_thumb(pokemon_id)
+            
+            if sprite:
+                # Scale to 64x64 if not already (load_thumb returns 32x32)
+                # Story 5.1 AC #1: Thumbnails must be 64x64
+                if sprite.get_width() != 64:
+                    sprite = pygame.transform.scale(sprite, (64, 64))
+                self.sprites[pokemon_id] = sprite
+            else:
+                # Create placeholder surface for missing sprites
+                placeholder = pygame.Surface((64, 64))
+                placeholder.fill(Colors.DARK_BLUE)
+                pygame.draw.rect(placeholder, Colors.ELECTRIC_BLUE, 
+                               pygame.Rect(0, 0, 64, 64), 2)
+                self.sprites[pokemon_id] = placeholder
+        
+        load_time = (time.perf_counter() - start_time) * 1000
+        logging.debug(f"Evolution sprites loaded in {load_time:.2f}ms")
+    
+    def render(self, surface: pygame.Surface, x: int, y: int):
+        """
+        Render evolution panel at specified position.
+        
+        Args:
+            surface: pygame.Surface to draw on
+            x: X position (panel left edge)
+            y: Y position (panel top edge)
+            
+        AC #1: All three stages displayed horizontally with sprites, names, dex numbers
+        AC #2: Arrows shown between stages with electric blue color
+        AC #3: Requirements displayed below arrows (ice blue text)
+        AC #4: Current Pokémon highlighted with bright cyan glow (#4df7ff)
+        AC #5: Panel styling: dark blue background, electric blue border, 16px padding
+        AC #8: Rendering performance < 200ms first load, < 50ms cached
+        """
+        if not self.evolution_data or not self.evolution_data['stages']:
+            # No evolution data - render "No evolutions" message
+            self._render_no_evolutions(surface, x, y)
+            return
+        
+        start_time = time.perf_counter()
+        
+        stages = self.evolution_data['stages']
+        evolutions = self.evolution_data['evolutions']
+        current_stage = self.evolution_data['current_stage']
+        
+        # Panel dimensions (AC #5: holographic styling)
+        panel_width = surface.get_width() - (x * 2)  # Full width minus margins
+        panel_height = 120  # Height for sprites + text + arrows
+        
+        # Draw panel background (AC #5: dark blue rgba(26, 47, 74, 0.9))
+        panel_surface = pygame.Surface((panel_width, panel_height), pygame.SRCALPHA)
+        panel_surface.fill((*Colors.DARK_BLUE, 230))
+        
+        # Draw panel border (AC #5: electric blue 2px border)
+        pygame.draw.rect(panel_surface, Colors.ELECTRIC_BLUE,
+                        pygame.Rect(0, 0, panel_width, panel_height), 2)
+        
+        surface.blit(panel_surface, (x, y))
+        
+        # Calculate sprite positions (AC #1: horizontal layout with even spacing)
+        num_stages = len(stages)
+        sprite_spacing = panel_width // (num_stages + 1)  # Distribute evenly
+        sprite_y = y + 20  # Vertical position for sprites within panel
+        
+        # Render each evolution stage
+        for i, stage in enumerate(stages):
+            pokemon_id = stage['pokemon_id']
+            pokemon_name = stage['name'].capitalize()
+            stage_num = stage['stage']
+            is_current = (stage_num == current_stage)
+            
+            # Calculate X position for this stage
+            sprite_x = x + (i + 1) * sprite_spacing - 32  # Center 64px sprite
+            
+            # AC #4: Highlight current Pokémon with bright cyan glow
+            if is_current:
+                glow_rect = pygame.Rect(sprite_x - 4, sprite_y - 4, 72, 72)
+                pygame.draw.rect(surface, Colors.BRIGHT_CYAN, glow_rect, 3)
+            
+            # Render sprite (AC #1: 64x64 thumbnail size)
+            if pokemon_id in self.sprites:
+                surface.blit(self.sprites[pokemon_id], (sprite_x, sprite_y))
+            
+            # Render Pokémon name below sprite (AC #1: Rajdhani Bold 14px, white)
+            if self.name_font:
+                name_text = self.name_font.render(pokemon_name, True, Colors.HOLOGRAM_WHITE)
+                name_rect = name_text.get_rect(centerx=sprite_x + 32, top=sprite_y + 68)
+                surface.blit(name_text, name_rect)
+            
+            # Render Dex number below name (AC #1: "#NNN" format, Share Tech Mono 12px, ice blue)
+            if self.dex_font:
+                dex_text = self.dex_font.render(f"#{pokemon_id:03d}", True, Colors.ICE_BLUE)
+                dex_rect = dex_text.get_rect(centerx=sprite_x + 32, top=sprite_y + 84)
+                surface.blit(dex_text, dex_rect)
+            
+            # AC #4: "Current" label below current Pokémon (ice blue)
+            if is_current and self.label_font:
+                current_label = self.label_font.render("Current", True, Colors.ICE_BLUE)
+                current_rect = current_label.get_rect(centerx=sprite_x + 32, top=sprite_y + 98)
+                surface.blit(current_label, current_rect)
+        
+        # Render evolution arrows and requirements (AC #2, AC #3)
+        for i in range(len(stages) - 1):
+            from_stage = stages[i]
+            to_stage = stages[i + 1]
+            
+            # Find matching evolution relationship
+            evo_data = None
+            for evo in evolutions:
+                if evo['from_id'] == from_stage['pokemon_id'] and evo['to_id'] == to_stage['pokemon_id']:
+                    evo_data = evo
+                    break
+            
+            if not evo_data:
+                continue  # No evolution relationship (shouldn't happen but defensive)
+            
+            # Calculate arrow position (between sprites)
+            from_x = x + (i + 1) * sprite_spacing + 32  # Right edge of from sprite
+            to_x = x + (i + 2) * sprite_spacing - 32    # Left edge of to sprite
+            arrow_y = sprite_y + 32  # Middle of sprite height
+            
+            # Draw arrow (AC #2: electric blue color, clear direction indicator)
+            pygame.draw.line(surface, Colors.ELECTRIC_BLUE, 
+                           (from_x, arrow_y), (to_x, arrow_y), 3)
+            # Arrow head (simple triangle)
+            pygame.draw.polygon(surface, Colors.ELECTRIC_BLUE, [
+                (to_x, arrow_y),
+                (to_x - 8, arrow_y - 5),
+                (to_x - 8, arrow_y + 5)
+            ])
+            
+            # Format requirement text (AC #3)
+            requirement_text = self._format_requirement(evo_data)
+            
+            # Render requirement below arrow (AC #3: Rajdhani 14px, ice blue)
+            if requirement_text and self.requirement_font:
+                req_surface = self.requirement_font.render(requirement_text, True, Colors.ICE_BLUE)
+                req_rect = req_surface.get_rect(centerx=(from_x + to_x) // 2, top=arrow_y + 10)
+                surface.blit(req_surface, req_rect)
+        
+        # Performance logging (AC #8)
+        render_time = (time.perf_counter() - start_time) * 1000
+        if render_time > 200:
+            logging.warning(f"Evolution panel render took {render_time:.2f}ms (target: <200ms first load)")
+        else:
+            logging.debug(f"Evolution panel rendered in {render_time:.2f}ms")
+    
+    def _format_requirement(self, evo_data: Dict) -> str:
+        """
+        Format evolution requirement text for display.
+        
+        Args:
+            evo_data: Evolution relationship dict with method, level, item, trigger
+            
+        Returns:
+            Formatted requirement string (e.g., "Level 16", "Thunder Stone", "Trade")
+            
+        AC #3: Requirements displayed with proper formatting
+        """
+        method = evo_data.get('method', 'level-up')
+        level = evo_data.get('level')
+        item = evo_data.get('item')
+        trigger = evo_data.get('trigger')
+        
+        # Format based on evolution method
+        if method == 'level-up' and level:
+            return f"Level {level}"
+        elif method == 'use-item' and item:
+            # Format item name (e.g., "thunder-stone" → "Thunder Stone")
+            return item.replace('-', ' ').title()
+        elif method == 'trade':
+            if item:
+                return f"Trade + {item.replace('-', ' ').title()}"
+            return "Trade"
+        elif trigger == 'high-friendship':
+            return "High Friendship"
+        elif trigger in ('daytime', 'nighttime'):
+            return trigger.capitalize()
+        else:
+            return "Unknown"
+    
+    def _render_no_evolutions(self, surface: pygame.Surface, x: int, y: int):
+        """
+        Render "No evolutions" message for single-stage Pokémon.
+        
+        Args:
+            surface: pygame.Surface to draw on
+            x: X position
+            y: Y position
+        """
+        panel_width = surface.get_width() - (x * 2)
+        panel_height = 60
+        
+        # Draw panel background
+        panel_surface = pygame.Surface((panel_width, panel_height), pygame.SRCALPHA)
+        panel_surface.fill((*Colors.DARK_BLUE, 230))
+        pygame.draw.rect(panel_surface, Colors.ELECTRIC_BLUE,
+                        pygame.Rect(0, 0, panel_width, panel_height), 2)
+        surface.blit(panel_surface, (x, y))
+        
+        # Render message
+        if self.name_font:
+            message = self.name_font.render("No evolutions", True, Colors.ICE_BLUE)
+            message_rect = message.get_rect(center=(x + panel_width // 2, y + panel_height // 2))
+            surface.blit(message, message_rect)
 
 
 class DetailScreen(Screen):
@@ -115,6 +414,7 @@ class DetailScreen(Screen):
         self.weight: float = 0.0  # Story 3.4: Weight in kilograms (converted from hectograms)
         self.description: str = ""  # Story 3.5: Pokédex description text
         self.description_lines: List[pygame.Surface] = []  # Story 3.5: Pre-rendered text surfaces
+        self.evolution_panel: Optional[EvolutionPanel] = None  # Story 5.1: Evolution chain display
         
         # Fonts
         self.header_font: Optional[pygame.font.Font] = None
@@ -183,6 +483,11 @@ class DetailScreen(Screen):
             except Exception as e:
                 logging.error(f"Error loading sprite for Pokemon #{self.pokemon_id}: {e}")
                 self.sprite = self._create_text_placeholder(self.pokemon_data.get('name', f'Pokemon #{self.pokemon_id}'))
+        
+        # Story 5.1: Initialize and load evolution panel (AC #6, #7)
+        self.evolution_panel = EvolutionPanel(self.screen_manager, self.pokemon_id)
+        self.evolution_panel.load_data()
+        self.evolution_panel.load_sprites()
         
         # Update StateManager with last viewed Pokémon (Story 4.2: AC #2)
         if self.state_manager:
@@ -508,10 +813,17 @@ class DetailScreen(Screen):
         elements that depend on pokemon_id (description lines, stat bars, etc.)
         
         Story 3.6 AC #7: Clear stale data, regenerate cached surfaces
+        Story 5.1: Reload evolution panel for new Pokemon
         """
         # Clear description line cache and re-render (Story 3.5)
         self.description_lines = []
         self._render_description_lines()
+        
+        # Story 5.1: Reload evolution panel for new Pokemon
+        if self.evolution_panel:
+            self.evolution_panel = EvolutionPanel(self.screen_manager, self.pokemon_id)
+            self.evolution_panel.load_data()
+            self.evolution_panel.load_sprites()
     
     def _reload_sprite(self):
         """
@@ -594,6 +906,14 @@ class DetailScreen(Screen):
         
         # Story 3.4: Render physical measurements (height, weight)
         self._render_physical_data(surface)
+        
+        # Story 5.1: Render evolution panel (between physical measurements and description)
+        if self.evolution_panel:
+            # Position below physical measurements with 16px spacing
+            screen_height = surface.get_height()
+            is_small_screen = surface.get_width() <= 480
+            evolution_y = screen_height - (220 if is_small_screen else 280)
+            self.evolution_panel.render(surface, x=10 if is_small_screen else 20, y=evolution_y)
         
         # Story 3.5: Render description panel
         self._render_description_panel(surface)
