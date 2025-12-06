@@ -1040,6 +1040,60 @@ So that I can explore the evolution chain interactively.
 
 ---
 
+### Story 5.7: Tab-Based Detail View for Information Organization
+
+As a user,
+I want to navigate between different information tabs on the DetailScreen using L/R buttons,
+So that I can view stats, evolution, and description information without a cramped layout.
+
+**Acceptance Criteria:**
+
+**Given** user is viewing DetailScreen  
+**When** screen loads  
+**Then** three tabs are available: "Stats", "Evolution", "Info"  
+**And** "Stats" tab is shown by default  
+**And** each tab fits within 320px vertical space without overflow  
+
+**Given** user is on "Stats" tab  
+**When** tab renders  
+**Then** Pokémon sprite (128x128), six stat bars, type badges, and physical measurements are displayed  
+**And** all content fits within viewport  
+
+**Given** user is on "Evolution" tab  
+**When** tab renders  
+**Then** Pokémon sprite (96x96), evolution chain panel with 3-stage layout is displayed  
+**And** all content fits within viewport  
+
+**Given** user is on "Info" tab  
+**When** tab renders  
+**Then** Pokémon sprite (128x128) and full Pokédex description text is displayed  
+**And** all content fits within viewport  
+
+**Given** user is viewing any tab  
+**When** user presses L/R button  
+**Then** view switches to previous/next tab with smooth transition (< 100ms)  
+**And** Up/Down buttons continue to navigate between Pokémon  
+**And** current tab selection is preserved when switching Pokémon  
+
+**And** tab indicator at bottom shows "Stats | Evolution | Info"  
+**And** current tab is highlighted with electric blue (#00d4ff)  
+**And** B button exits to HomeScreen and resets tab to "Stats"
+
+**Prerequisites:** Story 5.1 (Evolution Panel), Epic 3 (Detail View Complete)
+
+**Background:** After implementing Story 5.1, DetailScreen has ~635px of vertical content competing for only 320px of screen space. This tab-based approach organizes information into focused views that fit comfortably within the viewport.
+
+**Technical Notes:**
+- Add `current_tab` enum to DetailScreen: STATS, EVOLUTION, INFO
+- Implement `_render_stats_tab()`, `_render_evolution_tab()`, `_render_info_tab()` methods
+- L/R buttons call `_switch_tab(direction)` with wrapping logic
+- `_render_tab_indicator()` shows current tab at bottom
+- Preserve tab state in session memory (not persisted to disk)
+- Tab switching should be instant (< 100ms, no data reload needed)
+- Test on both 480x320 and 800x480 displays
+
+---
+
 ### Story 5.6: Evolution System Performance and Data Accuracy
 
 As a user,
