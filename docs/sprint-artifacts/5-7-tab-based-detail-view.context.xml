@@ -1,0 +1,239 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>5</epicId>
+    <storyId>7</storyId>
+    <title>Tab-Based Detail View for Information Organization</title>
+    <status>drafted</status>
+    <generatedAt>2025-12-08</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/5-7-tab-based-detail-view.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>a user</asA>
+    <iWant>to navigate between different information tabs on the DetailScreen using L/R buttons</iWant>
+    <soThat>I can view stats, evolution, and description information without a cramped layout</soThat>
+    <tasks>
+- Task 1: Add Tab State Management to DetailScreen (AC: #1, #5, #8)
+- Task 2: Refactor Rendering into Tab Methods (AC: #2, #3, #4)
+- Task 3: Implement Tab Indicator UI (AC: #7)
+- Task 4: Update Input Handling (AC: #5, #6, #9)
+- Task 5: Optimize Layout for Each Tab (AC: #2, #3, #4)
+- Task 6: Write Unit and Integration Tests (AC: #5, #6, #10)
+- Task 7: Visual Testing and Polish (AC: #1, #7, #10)
+- Task 8: Documentation and Code Comments (AC: ALL)
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+AC #1: Three Tab Structure - Given user is viewing DetailScreen, when screen loads, then three tabs are available: "Info", "Stats", "Evolution", and "Info" tab is shown by default, and each tab fits within 320px vertical space without overflow
+
+AC #2: Info Tab Content - Given user is on "Info" tab, when tab renders, then Pokémon sprite (128x128) is displayed, and full Pokédex description text is shown, and description uses proper text wrapping and formatting, and all content fits within viewport without scrolling
+
+AC #3: Stats Tab Content - Given user is on "Stats" tab, when tab renders, then Pokémon sprite (128x128) is displayed, and six stat bars with values are shown (HP, Attack, Defense, Sp.Atk, Sp.Def, Speed), and type badges (1-2) are displayed, and physical measurements (height, weight) are shown, and all content fits within viewport without scrolling
+
+AC #4: Evolution Tab Content - Given user is on "Evolution" tab, when tab renders, then Pokémon sprite (96x96, smaller to make room) is displayed, and evolution chain panel shows 3-stage horizontal layout, and evolution requirements are displayed (from Story 5.1), and current Pokémon is highlighted with cyan glow, and all content fits within viewport without scrolling
+
+AC #5: L/R Button Tab Switching - Given user is viewing any tab, when user presses L button, then view switches to previous tab (wraps around: Info ← Evolution), and tab transition is smooth (< 100ms), when user presses R button, then view switches to next tab (wraps around: Evolution → Info), and tab transition is smooth (< 100ms)
+
+AC #6: Up/Down Pokémon Navigation - Given user is viewing any tab, when user presses Up button, then DetailScreen navigates to next Pokémon (existing behavior), and current tab selection is preserved, when user presses Down button, then DetailScreen navigates to previous Pokémon (existing behavior), and current tab selection is preserved
+
+AC #7: Tab Indicator Display - Given user is viewing any tab, when tab indicator renders, then three tab labels are shown at bottom: "Info | Stats | Evolution", and current tab is highlighted with electric blue color (#00d4ff), and inactive tabs use ice blue color (#a8e6ff), and indicator uses holographic styling consistent with UI
+
+AC #8: State Persistence Across Tabs - Given user switches from Pokémon A to Pokémon B, when returning to Pokémon A, then last viewed tab for Pokémon A is preserved, and tab state is maintained in session memory (not persisted to disk)
+
+AC #9: B Button Behavior - Given user is on any tab, when user presses B button, then DetailScreen exits and returns to HomeScreen, and tab state is reset to "Info" for next viewing
+
+AC #10: Rendering Performance - Given user switches tabs, when new tab renders, then render completes within 100ms, and frame rate maintains 30+ FPS during transition, and no visual stuttering or lag occurs
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/PRD.md" title="Product Requirements Document" section="MVP - Minimum Viable Product">
+        DetailScreen is core to browsing experience. Must show Pokémon details with large sprite (50-60% screen), type badges, stats, evolution chains. Navigation efficiency: any Pokémon reachable in ≤3 button presses. Input responsiveness: button latency < 100ms. Runs on resource-constrained Raspberry Pi 3B+ at 30+ FPS.
+      </doc>
+      <doc path="docs/architecture.md" title="Architecture" section="Screen-based UI pattern">
+        ShokeDex uses screen-based navigation with ScreenManager coordinator. Screen base class provides lifecycle: on_enter(), on_exit(), update(), render(), handle_input(). DetailScreen extends Screen, uses manager injection pattern for database, state_manager, sprite_loader access.
+      </doc>
+      <doc path="docs/ux-design-specification.md" title="UX Design Specification" section="Holographic Blue Color System">
+        DetailScreen uses holographic blue aesthetic from anime Season 1 Dexter. Electric Blue (#00d4ff) for primary UI elements, borders, active states. Ice Blue (#a8e6ff) for secondary information, inactive elements. Dark Blue (#1a2f4a) for panel backgrounds. Hologram White (#e8f4f8) for primary text.
+      </doc>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-5-evolution-system.md" title="Epic 5 Tech Spec" section="Evolution Display Integration">
+        Evolution system extends DetailScreen with EvolutionPanel component. Panel renders below stats section with horizontal evolution chain (max 6 stages). Uses 64x64 thumbnail sprites via SpriteLoader. Database method get_evolution_chain() returns complete family data. No new architecture components needed.
+      </doc>
+      <doc path="docs/sprint-artifacts/3-1-detail-screen-layout-and-sprite-display.md" title="Story 3.1 - DetailScreen Foundation" section="Screen Lifecycle Pattern">
+        DetailScreen follows established Screen lifecycle: on_enter() loads data/sprites, on_exit() saves state, render() draws panels, handle_input() processes buttons. Manager injection pattern via screen_manager: database, state_manager, sprite_loader. Holographic blue styling applied to all panels (dark blue bg, electric blue borders).
+      </doc>
+      <doc path="docs/sprint-artifacts/5-1-three-stage-evolution-chain-display.md" title="Story 5.1 - Evolution Chain" section="EvolutionPanel Component">
+        EvolutionPanel is inner class within DetailScreen. Lifecycle: __init__() → load_data() → load_sprites() → render(). Optimized: &lt;200ms first render, &lt;5ms cached. Horizontal 3-stage layout with sprites, names, dex numbers, arrows, requirements. Current Pokémon highlighted with cyan glow.
+      </doc>
+      <doc path="docs/sprint-artifacts/3-7-detail-view-performance-and-visual-polish.md" title="Story 3.7 - Performance Standards" section="Holographic Styling and Performance">
+        Holographic styling: Panel background rgba(26, 47, 74, 0.9), Border 2px solid #00d4ff, Text colors #e8f4f8 (white), #a8e6ff (ice blue). Fonts: Rajdhani for UI text, Share Tech Mono for numeric data. Performance: DetailScreen total render &lt;300ms, individual panel &lt;50ms cached. Pre-render static text surfaces for efficiency.
+      </doc>
+    </docs>
+    <code>
+      <artifact path="src/ui/detail_screen.py" kind="screen-class" symbol="DetailScreen" lines="524-1695" reason="Core class to extend with tab system. Currently renders all panels in single view. Need to refactor into _render_info_tab(), _render_stats_tab(), _render_evolution_tab() methods with conditional rendering based on current_tab enum.">
+      </artifact>
+      <artifact path="src/ui/detail_screen.py" kind="component-class" symbol="EvolutionPanel" lines="50-518" reason="Evolution chain panel component already implemented (Story 5.1). Will be called from _render_evolution_tab() method. No changes to EvolutionPanel itself needed, just conditional rendering.">
+      </artifact>
+      <artifact path="src/ui/detail_screen.py" kind="method" symbol="DetailScreen.render" lines="1036-1095" reason="Main render method that currently renders all panels. Will be refactored to conditionally render only current tab's content. Pattern: if current_tab == INFO: _render_info_tab(), elif STATS: _render_stats_tab(), etc.">
+      </artifact>
+      <artifact path="src/ui/detail_screen.py" kind="method" symbol="DetailScreen.handle_input" lines="834-849" reason="Input handler currently processes BACK, LEFT, RIGHT for Pokémon navigation. Will extend to intercept LEFT/RIGHT for tab switching when implementing tab system. Preserve existing UP/DOWN Pokémon navigation.">
+      </artifact>
+      <artifact path="src/ui/detail_screen.py" kind="method" symbol="DetailScreen._render_stat_bars" lines="1184-1330" reason="Stats rendering logic to move into _render_stats_tab(). Shows 6 stat bars with color-coded progress bars, uses holographic blue styling. Example of panel rendering pattern to follow.">
+      </artifact>
+      <artifact path="src/ui/detail_screen.py" kind="method" symbol="DetailScreen._render_type_badges" lines="1332-1430" reason="Type badge rendering to include in _render_stats_tab(). Shows 1-2 type badges with rounded rectangles, type-specific colors. Part of Stats tab content.">
+      </artifact>
+      <artifact path="src/ui/detail_screen.py" kind="method" symbol="DetailScreen._render_physical_data" lines="1432-1535" reason="Physical measurements (height, weight) rendering to include in _render_stats_tab(). Shows measurements with unit conversion. Part of Stats tab content.">
+      </artifact>
+      <artifact path="src/ui/detail_screen.py" kind="method" symbol="DetailScreen._render_description_panel" lines="1644-1695" reason="Description panel rendering to move into _render_info_tab(). Shows Pokédex description with text wrapping. Uses pre-rendered description_lines for performance.">
+      </artifact>
+      <artifact path="src/ui/detail_screen.py" kind="method" symbol="DetailScreen._render_sprite" lines="1138-1182" reason="Sprite rendering currently used on all views. Will be included in all three tabs but with different sizes: 128x128 for Info/Stats tabs, 96x96 for Evolution tab to save vertical space.">
+      </artifact>
+      <artifact path="src/ui/screen.py" kind="base-class" symbol="Screen" lines="1-69" reason="Base class defining lifecycle methods: on_enter(), on_exit(), update(), render(), handle_input(). DetailScreen extends this pattern. Tab system will fit within existing lifecycle.">
+      </artifact>
+      <artifact path="src/input_manager.py" kind="enum" symbol="InputAction" lines="13-22" reason="Input action enum defining UP, DOWN, LEFT, RIGHT, SELECT, BACK, START. LEFT/RIGHT currently used for Pokémon navigation in DetailScreen, will be repurposed for tab switching while preserving navigation.">
+      </artifact>
+      <artifact path="src/ui/colors.py" kind="module" symbol="Colors" reason="Color constants for holographic blue styling: ELECTRIC_BLUE (#00d4ff) for active tab, ICE_BLUE (#a8e6ff) for inactive tabs, DARK_BLUE for panels, HOLOGRAM_WHITE for text. Used throughout UI.">
+      </artifact>
+      <artifact path="tests/test_detail_screen.py" kind="test-suite" reason="Existing test suite with 19+ tests for DetailScreen. Will extend with tab switching tests: test_tab_enum, test_tab_switching_right, test_tab_switching_left, test_tab_wrapping, test_pokemon_navigation_preserves_tab, test_tab_state_cache, test_tab_indicator_rendering.">
+      </artifact>
+    </code>
+    <dependencies>
+      <python>
+        <package name="pygame" version="2.5.0+" reason="Graphics rendering, Surface objects, font rendering, event handling, display management for tab indicators and transitions">
+        </package>
+        <package name="Pillow" version="10.0.0+" reason="Image processing for sprite loading (already used via sprite_loader module)">
+        </package>
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint>Tab switching must complete in &lt;100ms (faster than full panel render at &lt;300ms)</constraint>
+    <constraint>Only render current tab content to optimize performance - skip rendering other tabs</constraint>
+    <constraint>Maintain 30+ FPS during tab transitions (render must complete in &lt;33ms per frame)</constraint>
+    <constraint>All three tabs must fit within 320px vertical space on small displays (480x320 target)</constraint>
+    <constraint>Preserve existing Up/Down Pokémon navigation behavior - tab state maintained across navigation</constraint>
+    <constraint>L/R buttons repurposed from Pokémon navigation to tab switching - this is a breaking change from Story 3.6</constraint>
+    <constraint>Tab state cache stored in session memory only - not persisted to disk (ephemeral state)</constraint>
+    <constraint>B button behavior unchanged - exits DetailScreen and returns to HomeScreen</constraint>
+    <constraint>No changes to EvolutionPanel component - just conditional rendering based on current_tab</constraint>
+    <constraint>Holographic blue styling must be consistent across all tabs and tab indicator</constraint>
+    <constraint>Tab indicator always visible at bottom of screen regardless of current tab</constraint>
+    <constraint>Pre-render tab indicator labels for performance optimization (cache static surfaces)</constraint>
+    <constraint>Evolution tab uses smaller sprite (96x96 vs 128x128) to make room for evolution panel</constraint>
+  </constraints>
+  <interfaces>
+    <interface name="DetailTab enum" kind="enum">
+      <signature>class DetailTab(Enum): INFO = 0, STATS = 1, EVOLUTION = 2</signature>
+      <description>
+        New enum to define available tabs in DetailScreen. Three tabs: Info (description), Stats (bars/types/physical), Evolution (chain display). Numeric values determine tab order for cycling.
+      </description>
+      <path>src/ui/detail_screen.py (new enum at top of file)</path>
+    </interface>
+    <interface name="DetailScreen.current_tab" kind="property">
+      <signature>self.current_tab: DetailTab</signature>
+      <description>
+        Instance variable tracking currently displayed tab. Defaults to DetailTab.INFO. Updated by _switch_tab() method when L/R buttons pressed. Used in render() for conditional rendering.
+      </description>
+      <path>src/ui/detail_screen.py (new property in __init__)</path>
+    </interface>
+    <interface name="DetailScreen.tab_state_cache" kind="property">
+      <signature>self.tab_state_cache: Dict[int, DetailTab]</signature>
+      <description>
+        Session-only memory of last viewed tab per Pokémon ID. Key: pokemon_id (1-386), Value: DetailTab enum. Updated in on_exit(), restored in on_enter(). Not persisted to disk.
+      </description>
+      <path>src/ui/detail_screen.py (new property in __init__)</path>
+    </interface>
+    <interface name="DetailScreen._switch_tab" kind="method">
+      <signature>def _switch_tab(self, direction: int)</signature>
+      <description>
+        Switches to next/previous tab with wrapping. direction=1 cycles forward (INFO→STATS→EVOLUTION→INFO), direction=-1 cycles backward. Uses modulo for wrap-around. Updates current_tab property.
+      </description>
+      <path>src/ui/detail_screen.py (new method)</path>
+    </interface>
+    <interface name="DetailScreen._render_info_tab" kind="method">
+      <signature>def _render_info_tab(self, surface: pygame.Surface)</signature>
+      <description>
+        Renders Info tab content: sprite (128x128) + description panel. Moves _render_sprite() and _render_description_panel() calls into this method. Called from render() when current_tab == INFO.
+      </description>
+      <path>src/ui/detail_screen.py (new method)</path>
+    </interface>
+    <interface name="DetailScreen._render_stats_tab" kind="method">
+      <signature>def _render_stats_tab(self, surface: pygame.Surface)</signature>
+      <description>
+        Renders Stats tab content: sprite (128x128) + stat bars + type badges + physical measurements. Calls _render_sprite(), _render_stat_bars(), _render_type_badges(), _render_physical_data(). Called from render() when current_tab == STATS.
+      </description>
+      <path>src/ui/detail_screen.py (new method)</path>
+    </interface>
+    <interface name="DetailScreen._render_evolution_tab" kind="method">
+      <signature>def _render_evolution_tab(self, surface: pygame.Surface)</signature>
+      <description>
+        Renders Evolution tab content: smaller sprite (96x96) + evolution panel. Calls _render_sprite() with reduced size, then evolution_panel.render(). Called from render() when current_tab == EVOLUTION.
+      </description>
+      <path>src/ui/detail_screen.py (new method)</path>
+    </interface>
+    <interface name="DetailScreen._render_tab_indicator" kind="method">
+      <signature>def _render_tab_indicator(self, surface: pygame.Surface)</signature>
+      <description>
+        Renders tab indicator at bottom of screen: "Info | Stats | Evolution". Highlights current tab with ELECTRIC_BLUE (#00d4ff), inactive tabs with ICE_BLUE (#a8e6ff). Uses Rajdhani font. Always visible on all tabs.
+      </description>
+      <path>src/ui/detail_screen.py (new method)</path>
+    </interface>
+    <interface name="Screen.on_enter" kind="lifecycle">
+      <signature>def on_enter(self)</signature>
+      <description>
+        Lifecycle hook called when screen becomes active. DetailScreen will extend to restore tab state from cache: self.current_tab = self.tab_state_cache.get(pokemon_id, DetailTab.INFO). Existing data loading logic preserved.
+      </description>
+      <path>src/ui/screen.py (base class), src/ui/detail_screen.py (override)</path>
+    </interface>
+    <interface name="Screen.on_exit" kind="lifecycle">
+      <signature>def on_exit(self)</signature>
+      <description>
+        Lifecycle hook called when screen becomes inactive. DetailScreen will extend to save current tab to cache AND reset to INFO: self.tab_state_cache[pokemon_id] = current_tab; self.current_tab = DetailTab.INFO. Existing state save preserved.
+      </description>
+      <path>src/ui/screen.py (base class), src/ui/detail_screen.py (override)</path>
+    </interface>
+    <interface name="Screen.handle_input" kind="lifecycle">
+      <signature>def handle_input(self, action: InputAction)</signature>
+      <description>
+        Input handler. DetailScreen will extend to intercept LEFT/RIGHT for tab switching: if LEFT: _switch_tab(-1), if RIGHT: _switch_tab(1). UP/DOWN preserved for Pokémon navigation. BACK unchanged (exit to HomeScreen).
+      </description>
+      <path>src/ui/screen.py (base class), src/ui/detail_screen.py (override)</path>
+    </interface>
+    <interface name="Colors constants" kind="color-palette">
+      <signature>ELECTRIC_BLUE, ICE_BLUE, DARK_BLUE, HOLOGRAM_WHITE</signature>
+      <description>
+        Holographic blue color palette used for tab indicator. ELECTRIC_BLUE (#00d4ff) highlights active tab, ICE_BLUE (#a8e6ff) for inactive tabs, DARK_BLUE for panel backgrounds, HOLOGRAM_WHITE for text.
+      </description>
+      <path>src/ui/colors.py (existing constants)</path>
+    </interface>
+  </interfaces>
+  <tests>
+    <standards>
+ShokeDex uses pytest for all testing. Tests organized in tests/ directory mirroring src/ structure. Integration tests focus on user interactions and visual output validation. Performance tests marked with @pytest.mark.performance. Mock objects used for managers (StateManager, Database, ScreenManager). Test fixtures in conftest.py provide pygame initialization, mock managers, and sample data. Tests must validate acceptance criteria explicitly with descriptive names matching AC numbers.
+    </standards>
+    <locations>
+tests/test_detail_screen.py - Integration and performance tests for DetailScreen
+tests/conftest.py - Shared fixtures (pygame_init, mock_screen_manager, mock_database)
+    </locations>
+    <ideas>
+      <test id="AC#1" name="test_detail_tab_enum_values">Verify DetailTab enum has INFO, STATS, EVOLUTION values with correct numeric assignments (0, 1, 2)</test>
+      <test id="AC#5" name="test_tab_switching_right_cycles_forward">Press RIGHT (R button) multiple times, verify tab cycles: INFO→STATS→EVOLUTION→INFO. Assert current_tab updated correctly.</test>
+      <test id="AC#5" name="test_tab_switching_left_cycles_backward">Press LEFT (L button) multiple times, verify tab cycles: INFO→EVOLUTION→STATS→INFO. Assert current_tab updated correctly.</test>
+      <test id="AC#5" name="test_tab_wrapping_forward">Start on EVOLUTION tab, press RIGHT, verify wraps to INFO tab.</test>
+      <test id="AC#5" name="test_tab_wrapping_backward">Start on INFO tab, press LEFT, verify wraps to EVOLUTION tab.</test>
+      <test id="AC#6" name="test_pokemon_navigation_preserves_current_tab">Set current_tab to STATS, navigate to different Pokémon with UP button, verify current_tab still STATS.</test>
+      <test id="AC#8" name="test_tab_state_cache_remembers_per_pokemon">View Pikachu on STATS tab, switch to Bulbasaur on INFO tab, return to Pikachu, verify STATS tab restored from cache.</test>
+      <test id="AC#9" name="test_tab_resets_to_info_on_exit">Set current_tab to EVOLUTION, press BACK to exit DetailScreen, re-enter, verify current_tab reset to INFO.</test>
+      <test id="AC#7" name="test_tab_indicator_highlights_current_tab">Render screen, verify tab indicator shows current tab in ELECTRIC_BLUE, inactive tabs in ICE_BLUE. Check text rendering and positioning.</test>
+      <test id="AC#2" name="test_info_tab_renders_sprite_and_description">Set current_tab to INFO, render screen, verify _render_sprite() and _render_description_panel() called, sprite 128x128 size.</test>
+      <test id="AC#3" name="test_stats_tab_renders_all_components">Set current_tab to STATS, render screen, verify _render_stat_bars(), _render_type_badges(), _render_physical_data() called.</test>
+      <test id="AC#4" name="test_evolution_tab_renders_evolution_panel">Set current_tab to EVOLUTION, render screen, verify evolution_panel.render() called, sprite size 96x96.</test>
+      <test id="AC#10" name="test_tab_switch_completes_under_100ms" performance="true">Time tab switch operation from LEFT/RIGHT input to render completion. Assert total time &lt; 100ms. Use time.perf_counter() for measurement.</test>
+      <test id="AC#1,AC#7" name="test_all_tabs_fit_within_320px_vertical">Render each tab on 480x320 surface, verify no content overflow or cutoff. Measure total vertical space used per tab.</test>
+      <test id="AC#5" name="test_rapid_tab_switching">Simulate rapid L/R button presses (10+ in quick succession), verify smooth handling without lag or skipped inputs.</test>
+    </ideas>
+  </tests>
+</story-context>

@@ -93,12 +93,12 @@ development_status:
   # Tech Spec: tech-spec-epic-5-evolution-system.md
   epic-5-evolution-system: contexted
   5-1-three-stage-evolution-chain-display: done
-  5-2-branching-evolution-display: review
+  5-2-branching-evolution-display: Done
   5-3-single-stage-pokemon-handling: drafted
   5-4-evolution-requirement-display-level-stone-trade: backlog
   5-5-navigation-to-evolution-relatives: backlog
   5-6-evolution-system-performance-and-data-accuracy: backlog
-  5-7-tab-based-detail-view: drafted
+  5-7-tab-based-detail-view: ready-for-dev
   epic-5-retrospective: optional
 
   # ==========================================
