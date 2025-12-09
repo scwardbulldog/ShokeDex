@@ -110,10 +110,12 @@ class MockScreenManager:
         self.state_manager = state_manager
         self.sprite_loader = None
         self.popped = False
+        self.pop_called = False  # Story 5.7: Track pop() calls for B button test
         self.pushed_screen = None
     
     def pop(self):
         self.popped = True
+        self.pop_called = True  # Story 5.7: Mark pop as called
     
     def push(self, screen):
         self.pushed_screen = screen
@@ -2306,7 +2308,37 @@ class TestDetailScreenInputHandling:
     """Test Story 3.6: Input handling for L/R navigation (AC #1, #2, #10)"""
     
     def test_left_button_calls_navigate_previous(self, pygame_init, mock_screen_manager):
-        """Test AC #1: LEFT action triggers navigation to previous Pokémon"""
+        """Test Story 5.7: LEFT button now switches to previous tab (not Pokémon navigation)"""
+        from src.ui.detail_screen import DetailTab
+        
+        db = MockDatabase()
+        screen_manager = MockScreenManager(database=db, state_manager=MockStateManager())
+        detail = DetailScreen(screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        # Press LEFT to switch tab (Story 5.7 AC #5)
+        detail.handle_input(InputAction.LEFT)
+        
+        # Should switch tab to EVOLUTION (wraps backward from INFO)
+        assert detail.current_tab == DetailTab.EVOLUTION
+    
+    def test_right_button_calls_navigate_next(self, pygame_init, mock_screen_manager):
+        """Test Story 5.7: RIGHT button now switches to next tab (not Pokémon navigation)"""
+        from src.ui.detail_screen import DetailTab
+        
+        db = MockDatabase()
+        screen_manager = MockScreenManager(database=db, state_manager=MockStateManager())
+        detail = DetailScreen(screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        # Press RIGHT to switch tab (Story 5.7 AC #5)
+        detail.handle_input(InputAction.RIGHT)
+        
+        # Should switch tab to STATS
+        assert detail.current_tab == DetailTab.STATS
+    
+    def test_up_button_navigates_to_next_pokemon(self, pygame_init):
+        """Test Story 5.7 AC #6: UP button navigates to next Pokémon"""
         # Create a mock database that returns different Pokémon for different IDs
         class FlexibleMockDatabase(MockDatabase):
             def get_pokemon_by_id(self, pokemon_id):
@@ -2330,14 +2362,15 @@ class TestDetailScreenInputHandling:
         detail = DetailScreen(screen_manager, pokemon_id=25)
         detail.on_enter()
         
-        # Press LEFT to navigate to previous
-        detail.handle_input(InputAction.LEFT)
+        # Press UP to navigate to next Pokémon (Story 5.7 AC #6)
+        detail.handle_input(InputAction.UP)
         
-        # Should now be on Pokémon #24
-        assert detail.pokemon_id == 24
+        # Should now be on Pokémon #26
+        assert detail.pokemon_id == 26
     
-    def test_right_button_calls_navigate_next(self, pygame_init, mock_screen_manager):
-        """Test AC #2: RIGHT action triggers navigation to next Pokémon"""
+    def test_down_button_navigates_to_previous_pokemon(self, pygame_init):
+        """Test Story 5.7 AC #6: DOWN button navigates to previous Pokémon"""
+        # Create a mock database that returns different Pokémon for different IDs
         class FlexibleMockDatabase(MockDatabase):
             def get_pokemon_by_id(self, pokemon_id):
                 return {
@@ -2360,11 +2393,11 @@ class TestDetailScreenInputHandling:
         detail = DetailScreen(screen_manager, pokemon_id=25)
         detail.on_enter()
         
-        # Press RIGHT to navigate to next
-        detail.handle_input(InputAction.RIGHT)
+        # Press DOWN to navigate to previous Pokémon (Story 5.7 AC #6)
+        detail.handle_input(InputAction.DOWN)
         
-        # Should now be on Pokémon #26
-        assert detail.pokemon_id == 26
+        # Should now be on Pokémon #24
+        assert detail.pokemon_id == 24
     
     def test_back_button_still_pops_screen(self, pygame_init, mock_screen_manager):
         """Test AC #10: B button still returns to HomeScreen after navigation"""
@@ -2414,7 +2447,7 @@ class TestDetailScreenStatePersistence:
     """Test Story 3.6: State persistence during navigation (AC #5)"""
     
     def test_navigate_updates_state_manager(self, pygame_init):
-        """Test AC #5: StateManager.set_last_viewed() called on L/R navigation"""
+        """Test AC #5: StateManager.set_last_viewed() called on UP/DOWN navigation (Story 5.7 AC #6)"""
         class FlexibleMockDatabase(MockDatabase):
             def get_pokemon_by_id(self, pokemon_id):
                 return {
@@ -2441,14 +2474,14 @@ class TestDetailScreenStatePersistence:
         # Initial state should be set
         assert state_manager.last_viewed_id == 25
         
-        # Navigate right
-        detail.handle_input(InputAction.RIGHT)
+        # Navigate UP to next Pokémon (Story 5.7: UP button for next)
+        detail.handle_input(InputAction.UP)
         
         # State should be updated to new Pokémon
         assert state_manager.last_viewed_id == 26
     
     def test_navigate_left_updates_state(self, pygame_init):
-        """Test AC #5: LEFT navigation updates StateManager"""
+        """Test AC #5: DOWN navigation updates StateManager (Story 5.7 AC #6)"""
         class FlexibleMockDatabase(MockDatabase):
             def get_pokemon_by_id(self, pokemon_id):
                 return {
@@ -2472,14 +2505,14 @@ class TestDetailScreenStatePersistence:
         detail = DetailScreen(screen_manager, pokemon_id=25)
         detail.on_enter()
         
-        # Navigate left
-        detail.handle_input(InputAction.LEFT)
+        # Navigate DOWN to previous Pokémon (Story 5.7: DOWN button for previous)
+        detail.handle_input(InputAction.DOWN)
         
         # State should be updated to previous Pokémon
         assert state_manager.last_viewed_id == 24
     
     def test_wrap_around_updates_state(self, pygame_init):
-        """Test AC #5: State updated correctly on wrap-around navigation"""
+        """Test AC #5: State updated correctly on wrap-around navigation (Story 5.7: DOWN from #1 wraps to #386)"""
         class FlexibleMockDatabase(MockDatabase):
             def get_pokemon_by_id(self, pokemon_id):
                 return {
@@ -2505,8 +2538,8 @@ class TestDetailScreenStatePersistence:
         detail = DetailScreen(screen_manager, pokemon_id=1)
         detail.on_enter()
         
-        # Navigate left (wrap to #386)
-        detail.handle_input(InputAction.LEFT)
+        # Navigate DOWN to previous (wrap to #386) - Story 5.7: DOWN for previous
+        detail.handle_input(InputAction.DOWN)
         
         # State should reflect wrap-around
         assert detail.pokemon_id == 386
@@ -2575,8 +2608,8 @@ class TestDetailScreenDataIntegrity:
         assert detail.weight == 6.0  # 60 hg = 6.0 kg
         assert detail.stats[0]['base_stat'] == 35  # HP
         
-        # Navigate to next Pokémon
-        detail.handle_input(InputAction.RIGHT)
+        # Navigate to next Pokémon (Story 5.7: UP button for next)
+        detail.handle_input(InputAction.UP)
         
         # Verify all data refreshed correctly
         assert detail.pokemon_id == 26
@@ -2620,10 +2653,10 @@ class TestDetailScreenDataIntegrity:
         # Store initial values
         initial_stats = detail.stats[0]['base_stat']
         
-        # Navigate multiple times
-        detail.handle_input(InputAction.RIGHT)  # 25 → 26
-        detail.handle_input(InputAction.RIGHT)  # 26 → 27
-        detail.handle_input(InputAction.LEFT)   # 27 → 26
+        # Navigate multiple times (Story 5.7: UP for next, DOWN for previous)
+        detail.handle_input(InputAction.UP)    # 25 → 26
+        detail.handle_input(InputAction.UP)    # 26 → 27
+        detail.handle_input(InputAction.DOWN)  # 27 → 26
         
         # Verify final data is for Pokémon #26
         assert detail.pokemon_id == 26
@@ -3060,9 +3093,14 @@ class TestTypeBadgePositioning:
     """Test Story 3.7: Type badge positioning (AC #8)"""
     
     def test_type_badge_stores_bottom_y(self, pygame_init, mock_screen_manager):
-        """Test type badge rendering stores _badges_bottom_y for measurements"""
+        """Test type badge rendering stores _badges_bottom_y for measurements (Story 5.7: rendered in STATS tab)"""
+        from src.ui.detail_screen import DetailTab
+        
         detail = DetailScreen(mock_screen_manager, pokemon_id=25)
         detail.on_enter()
+        
+        # Switch to STATS tab (Story 5.7: type badges shown in STATS tab)
+        detail.current_tab = DetailTab.STATS
         
         # Create test surface
         surface = pygame.Surface((480, 320))
@@ -3073,9 +3111,14 @@ class TestTypeBadgePositioning:
         assert detail._badges_bottom_y > 0
     
     def test_type_badge_below_sprite(self, pygame_init, mock_screen_manager):
-        """Test type badges positioned below sprite (8px margin)"""
+        """Test type badges positioned below sprite (8px margin) (Story 5.7: in STATS tab)"""
+        from src.ui.detail_screen import DetailTab
+        
         detail = DetailScreen(mock_screen_manager, pokemon_id=25)
         detail.on_enter()
+        
+        # Switch to STATS tab (Story 5.7: type badges shown in STATS tab)
+        detail.current_tab = DetailTab.STATS
         
         # Create test surface
         surface = pygame.Surface((480, 320))
@@ -3106,9 +3149,14 @@ class TestPhysicalMeasurementsPositioning:
         assert detail.weight > 0
     
     def test_measurements_below_badges(self, pygame_init, mock_screen_manager):
-        """Test measurements positioned below type badges (12px margin)"""
+        """Test measurements positioned below type badges (12px margin) (Story 5.7: in STATS tab)"""
+        from src.ui.detail_screen import DetailTab
+        
         detail = DetailScreen(mock_screen_manager, pokemon_id=25)
         detail.on_enter()
+        
+        # Switch to STATS tab (Story 5.7: physical measurements shown in STATS tab)
+        detail.current_tab = DetailTab.STATS
         
         # Create test surface
         surface = pygame.Surface((480, 320))
@@ -3278,6 +3326,416 @@ class TestDualTypeDisplay:
         # Should have 2 types
         assert len(detail.types) == 2
         assert detail.types == ['Fire', 'Flying']
+
+
+# =============================================================================
+# Story 5.7: Tab-Based Detail View Tests
+# =============================================================================
+
+
+class TestDetailTabEnum:
+    """Test DetailTab enum (AC #1)"""
+    
+    def test_detail_tab_enum_values(self, pygame_init):
+        """Verify DetailTab enum has INFO, STATS, EVOLUTION values."""
+        from src.ui.detail_screen import DetailTab
+        
+        assert DetailTab.INFO.value == 0
+        assert DetailTab.STATS.value == 1
+        assert DetailTab.EVOLUTION.value == 2
+    
+    def test_detail_tab_enum_ordering(self, pygame_init):
+        """Verify tab enum values determine cycling order."""
+        from src.ui.detail_screen import DetailTab
+        
+        tab_order = [DetailTab.INFO, DetailTab.STATS, DetailTab.EVOLUTION]
+        values = [tab.value for tab in tab_order]
+        
+        # Values should be sequential 0, 1, 2
+        assert values == [0, 1, 2]
+
+
+class TestTabSwitching:
+    """Test L/R button tab switching (AC #5)"""
+    
+    def test_tab_switching_right_cycles_forward(self, pygame_init):
+        """Press RIGHT (R button), verify tab cycles: INFO→STATS→EVOLUTION→INFO."""
+        from src.ui.detail_screen import DetailTab
+        
+        db = MockDatabase()
+        screen_manager = MockScreenManager(database=db)
+        detail = DetailScreen(screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        # Start on INFO tab (default)
+        assert detail.current_tab == DetailTab.INFO
+        
+        # Press RIGHT → STATS
+        detail.handle_input(InputAction.RIGHT)
+        assert detail.current_tab == DetailTab.STATS
+        
+        # Press RIGHT → EVOLUTION
+        detail.handle_input(InputAction.RIGHT)
+        assert detail.current_tab == DetailTab.EVOLUTION
+        
+        # Press RIGHT → INFO (wrap around)
+        detail.handle_input(InputAction.RIGHT)
+        assert detail.current_tab == DetailTab.INFO
+    
+    def test_tab_switching_left_cycles_backward(self, pygame_init):
+        """Press LEFT (L button), verify tab cycles: INFO→EVOLUTION→STATS→INFO."""
+        from src.ui.detail_screen import DetailTab
+        
+        db = MockDatabase()
+        screen_manager = MockScreenManager(database=db)
+        detail = DetailScreen(screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        # Start on INFO tab
+        assert detail.current_tab == DetailTab.INFO
+        
+        # Press LEFT → EVOLUTION (wrap backward)
+        detail.handle_input(InputAction.LEFT)
+        assert detail.current_tab == DetailTab.EVOLUTION
+        
+        # Press LEFT → STATS
+        detail.handle_input(InputAction.LEFT)
+        assert detail.current_tab == DetailTab.STATS
+        
+        # Press LEFT → INFO (wrap around)
+        detail.handle_input(InputAction.LEFT)
+        assert detail.current_tab == DetailTab.INFO
+    
+    def test_tab_wrapping_forward(self, pygame_init):
+        """Start on EVOLUTION tab, press RIGHT, verify wraps to INFO tab."""
+        from src.ui.detail_screen import DetailTab
+        
+        db = MockDatabase()
+        screen_manager = MockScreenManager(database=db)
+        detail = DetailScreen(screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        # Set to EVOLUTION tab
+        detail.current_tab = DetailTab.EVOLUTION
+        
+        # Press RIGHT → wrap to INFO
+        detail.handle_input(InputAction.RIGHT)
+        assert detail.current_tab == DetailTab.INFO
+    
+    def test_tab_wrapping_backward(self, pygame_init):
+        """Start on INFO tab, press LEFT, verify wraps to EVOLUTION tab."""
+        from src.ui.detail_screen import DetailTab
+        
+        db = MockDatabase()
+        screen_manager = MockScreenManager(database=db)
+        detail = DetailScreen(screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        # Start on INFO tab (default)
+        assert detail.current_tab == DetailTab.INFO
+        
+        # Press LEFT → wrap to EVOLUTION
+        detail.handle_input(InputAction.LEFT)
+        assert detail.current_tab == DetailTab.EVOLUTION
+    
+    def test_rapid_tab_switching(self, pygame_init):
+        """Simulate rapid L/R presses, verify smooth handling."""
+        from src.ui.detail_screen import DetailTab
+        
+        db = MockDatabase()
+        screen_manager = MockScreenManager(database=db)
+        detail = DetailScreen(screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        # Rapidly press RIGHT 10 times
+        for _ in range(10):
+            detail.handle_input(InputAction.RIGHT)
+        
+        # Should end on INFO (10 % 3 = 1, so STATS)
+        assert detail.current_tab == DetailTab.STATS
+        
+        # Rapidly press LEFT 7 times
+        for _ in range(7):
+            detail.handle_input(InputAction.LEFT)
+        
+        # From STATS (1), go back 7: (1 - 7) % 3 = -6 % 3 = 0 → INFO
+        assert detail.current_tab == DetailTab.INFO
+
+
+class TestPokemonNavigationPreservesTab:
+    """Test Up/Down Pokémon navigation preserves tab (AC #6)"""
+    
+    def test_pokemon_navigation_preserves_current_tab(self, pygame_init):
+        """Navigate to different Pokémon with UP/DOWN, verify tab preserved."""
+        from src.ui.detail_screen import DetailTab
+        
+        db = MockDatabase()
+        screen_manager = MockScreenManager(database=db)
+        detail = DetailScreen(screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        # Switch to STATS tab
+        detail.current_tab = DetailTab.STATS
+        
+        # Navigate to next Pokémon (UP button)
+        detail.handle_input(InputAction.UP)
+        
+        # Tab should still be STATS
+        assert detail.current_tab == DetailTab.STATS
+        
+        # Navigate to previous Pokémon (DOWN button)
+        detail.handle_input(InputAction.DOWN)
+        
+        # Tab should still be STATS
+        assert detail.current_tab == DetailTab.STATS
+    
+    def test_tab_preserved_across_multiple_pokemon_navigations(self, pygame_init):
+        """Navigate through multiple Pokémon, verify tab stays on EVOLUTION."""
+        from src.ui.detail_screen import DetailTab
+        
+        db = MockDatabase()
+        screen_manager = MockScreenManager(database=db)
+        detail = DetailScreen(screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        # Switch to EVOLUTION tab
+        detail.current_tab = DetailTab.EVOLUTION
+        
+        # Navigate forward 5 times
+        for _ in range(5):
+            detail.handle_input(InputAction.UP)
+            assert detail.current_tab == DetailTab.EVOLUTION
+        
+        # Navigate backward 3 times
+        for _ in range(3):
+            detail.handle_input(InputAction.DOWN)
+            assert detail.current_tab == DetailTab.EVOLUTION
+
+
+class TestTabStateCache:
+    """Test tab state persistence across tabs (AC #8)"""
+    
+    def test_tab_state_cache_remembers_per_pokemon(self, pygame_init):
+        """View Pikachu on STATS, Bulbasaur on INFO, return to Pikachu shows STATS."""
+        from src.ui.detail_screen import DetailTab
+        
+        db = MockDatabase()
+        screen_manager = MockScreenManager(database=db)
+        detail = DetailScreen(screen_manager, pokemon_id=25)  # Pikachu
+        detail.on_enter()
+        
+        # Switch Pikachu to STATS tab
+        detail.current_tab = DetailTab.STATS
+        
+        # Exit DetailScreen (saves to cache)
+        detail.on_exit()
+        
+        # Simulate viewing Bulbasaur (pokemon_id=1)
+        detail2 = DetailScreen(screen_manager, pokemon_id=1)
+        detail2.on_enter()
+        
+        # Bulbasaur should start on INFO (default)
+        assert detail2.current_tab == DetailTab.INFO
+        
+        # Switch Bulbasaur to EVOLUTION tab
+        detail2.current_tab = DetailTab.EVOLUTION
+        detail2.on_exit()
+        
+        # Return to Pikachu
+        detail3 = DetailScreen(screen_manager, pokemon_id=25)
+        detail3.on_enter()
+        
+        # Pikachu should restore STATS tab from cache
+        assert detail3.current_tab == DetailTab.STATS
+    
+    def test_tab_reset_to_info_on_exit(self, pygame_init):
+        """Set current_tab to EVOLUTION, press B to exit, verify reset to INFO."""
+        from src.ui.detail_screen import DetailTab
+        
+        db = MockDatabase()
+        screen_manager = MockScreenManager(database=db)
+        detail = DetailScreen(screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        # Switch to EVOLUTION tab
+        detail.current_tab = DetailTab.EVOLUTION
+        
+        # Exit DetailScreen
+        detail.on_exit()
+        
+        # current_tab should be reset to INFO
+        assert detail.current_tab == DetailTab.INFO
+    
+    def test_new_pokemon_defaults_to_info_tab(self, pygame_init):
+        """View a Pokémon never seen before, verify defaults to INFO tab."""
+        from src.ui.detail_screen import DetailTab
+        
+        db = MockDatabase()
+        screen_manager = MockScreenManager(database=db)
+        detail = DetailScreen(screen_manager, pokemon_id=150)  # Mewtwo
+        detail.on_enter()
+        
+        # Should default to INFO tab (not in cache)
+        assert detail.current_tab == DetailTab.INFO
+
+
+class TestTabContentRendering:
+    """Test each tab renders correct content (AC #2, #3, #4)"""
+    
+    def test_info_tab_renders_sprite_and_description(self, pygame_init):
+        """Set current_tab to INFO, render, verify sprite and description."""
+        from src.ui.detail_screen import DetailTab
+        
+        db = MockDatabase()
+        screen_manager = MockScreenManager(database=db)
+        detail = DetailScreen(screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        # Ensure INFO tab active
+        detail.current_tab = DetailTab.INFO
+        
+        surface = pygame.Surface((480, 320))
+        detail.render(surface)
+        
+        # Verify sprite and description data loaded
+        assert detail.sprite is not None
+        assert detail.description != ""
+    
+    def test_stats_tab_renders_all_components(self, pygame_init):
+        """Set current_tab to STATS, render, verify stats/types/physical."""
+        from src.ui.detail_screen import DetailTab
+        
+        db = MockDatabase()
+        screen_manager = MockScreenManager(database=db)
+        detail = DetailScreen(screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        # Switch to STATS tab
+        detail.current_tab = DetailTab.STATS
+        
+        surface = pygame.Surface((480, 320))
+        detail.render(surface)
+        
+        # Verify stats, types, and physical data loaded
+        assert len(detail.stats) == 6
+        assert len(detail.types) > 0
+        assert detail.height > 0
+        assert detail.weight > 0
+    
+    def test_evolution_tab_renders_evolution_panel(self, pygame_init):
+        """Set current_tab to EVOLUTION, render, verify evolution panel."""
+        from src.ui.detail_screen import DetailTab
+        
+        db = MockDatabase()
+        screen_manager = MockScreenManager(database=db)
+        detail = DetailScreen(screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        # Switch to EVOLUTION tab
+        detail.current_tab = DetailTab.EVOLUTION
+        
+        surface = pygame.Surface((480, 320))
+        detail.render(surface)
+        
+        # Verify evolution panel initialized
+        assert detail.evolution_panel is not None
+
+
+class TestTabIndicator:
+    """Test tab indicator rendering (AC #7)"""
+    
+    def test_tab_indicator_highlights_current_tab(self, pygame_init):
+        """Render screen, verify tab indicator shows current tab highlighted."""
+        from src.ui.detail_screen import DetailTab
+        
+        db = MockDatabase()
+        screen_manager = MockScreenManager(database=db)
+        detail = DetailScreen(screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        # Switch to STATS tab
+        detail.current_tab = DetailTab.STATS
+        
+        surface = pygame.Surface((480, 320))
+        detail.render(surface)
+        
+        # Verify current_tab is STATS (indicator should highlight it)
+        assert detail.current_tab == DetailTab.STATS
+        # Note: Visual verification would require pixel checking,
+        # but we verify the state is correct for rendering
+
+
+class TestTabPerformance:
+    """Test tab switching performance (AC #10)"""
+    
+    @pytest.mark.performance
+    def test_tab_switch_completes_under_100ms(self, pygame_init):
+        """Time tab switch operation, assert total time < 100ms."""
+        from src.ui.detail_screen import DetailTab
+        
+        db = MockDatabase()
+        screen_manager = MockScreenManager(database=db)
+        detail = DetailScreen(screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        surface = pygame.Surface((480, 320))
+        
+        # Measure tab switch + render time
+        start = time.perf_counter()
+        detail.handle_input(InputAction.RIGHT)  # Switch tab
+        detail.render(surface)  # Render new tab
+        end = time.perf_counter()
+        
+        elapsed_ms = (end - start) * 1000
+        
+        # AC #10: Tab switch + render should complete in < 100ms
+        assert elapsed_ms < 100, f"Tab switch took {elapsed_ms:.2f}ms (target: <100ms)"
+    
+    @pytest.mark.performance
+    def test_all_tabs_render_under_100ms(self, pygame_init):
+        """Verify each tab renders within performance target."""
+        from src.ui.detail_screen import DetailTab
+        
+        db = MockDatabase()
+        screen_manager = MockScreenManager(database=db)
+        detail = DetailScreen(screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        surface = pygame.Surface((480, 320))
+        
+        for tab in [DetailTab.INFO, DetailTab.STATS, DetailTab.EVOLUTION]:
+            detail.current_tab = tab
+            
+            start = time.perf_counter()
+            detail.render(surface)
+            end = time.perf_counter()
+            
+            elapsed_ms = (end - start) * 1000
+            
+            assert elapsed_ms < 100, f"{tab.name} tab render took {elapsed_ms:.2f}ms (target: <100ms)"
+
+
+class TestBButtonBehavior:
+    """Test B button exits DetailScreen (AC #9)"""
+    
+    def test_b_button_exits_detail_screen(self, pygame_init):
+        """Press B button on any tab, verify exits to HomeScreen."""
+        from src.ui.detail_screen import DetailTab
+        
+        db = MockDatabase()
+        screen_manager = MockScreenManager(database=db)
+        detail = DetailScreen(screen_manager, pokemon_id=25)
+        detail.on_enter()
+        
+        # Switch to EVOLUTION tab
+        detail.current_tab = DetailTab.EVOLUTION
+        
+        # Press B button
+        detail.handle_input(InputAction.BACK)
+        
+        # Should have called screen_manager.pop()
+        assert screen_manager.pop_called
+
 
 
 

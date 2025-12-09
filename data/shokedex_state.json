@@ -1,28 +1,28 @@
 {
   "version": "1.0.0",
   "last_viewed": {
-    "pokemon_id": 161,
-    "generation": 2
+    "pokemon_id": 132,
+    "generation": 1
   },
   "favorites": [],
   "recent": [
+    132,
+    133,
+    25,
     161,
     160,
     159,
     158,
     157,
     156,
-    155,
-    154,
-    153,
-    152
+    155
   ],
   "preferences": {
     "input_mode": "keyboard",
     "volume": 0.7
   },
   "stats": {
-    "total_views": 783,
+    "total_views": 799,
     "unique_viewed": 0,
     "sessions": 50
   }

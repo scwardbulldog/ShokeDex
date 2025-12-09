@@ -7,12 +7,14 @@ Story 3.3: Type badges with holographic colors and rounded rectangle styling.
 Story 3.4: Physical measurements (height in meters, weight in kilograms) display.
 Story 3.6: L/R button navigation to adjacent Pokémon with fade transitions.
 Story 5.1: Three-stage evolution chain display with sprites and requirements.
+Story 5.7: Tab-based navigation (Info/Stats/Evolution) using L/R buttons.
 """
 
 import pygame
 import logging
 import time
 import math
+from enum import Enum
 from typing import Optional, Dict, List
 from .screen import Screen
 from .colors import Colors, get_stat_color, TYPE_COLORS
@@ -30,6 +32,23 @@ STAT_LABEL_MAP = {
     'special-defense': 'Sp.Def',
     'speed': 'Speed'
 }
+
+
+# Story 5.7: Tab enum for DetailScreen navigation (AC #1)
+class DetailTab(Enum):
+    """
+    Tabs available on DetailScreen for organizing information.
+    
+    INFO = Description and Pokédex entry (default tab)
+    STATS = Base stats, type badges, physical measurements
+    EVOLUTION = Evolution chain display
+    
+    Story 5.7 AC #1: Three tabs available - Info (default), Stats, Evolution
+    Numeric values determine tab cycling order for L/R button navigation
+    """
+    INFO = 0
+    STATS = 1
+    EVOLUTION = 2
 
 
 def format_stat_label(db_stat_name: str) -> str:
@@ -566,6 +585,11 @@ class DetailScreen(Screen):
     - Performance target: total navigation < 300ms
     """
     
+    # Story 5.7: Class-level tab state cache (AC #8)
+    # Shared across all DetailScreen instances to persist tab state per Pokémon
+    # Key: pokemon_id (1-386), Value: DetailTab enum
+    _tab_state_cache: Dict[int, 'DetailTab'] = {}
+    
     def __init__(self, screen_manager, pokemon_id: int):
         """
         Initialize DetailScreen for a specific Pokémon.
@@ -581,6 +605,11 @@ class DetailScreen(Screen):
         self.database = screen_manager.database if hasattr(screen_manager, 'database') else None
         self.state_manager = screen_manager.state_manager if hasattr(screen_manager, 'state_manager') else None
         self.sprite_loader = screen_manager.sprite_loader if hasattr(screen_manager, 'sprite_loader') else None
+        
+        # Story 5.7: Tab state management (AC #1, #5)
+        # current_tab is instance-level, defaults to INFO
+        # _tab_state_cache is class-level (shared across instances) for AC #8
+        self.current_tab: DetailTab = DetailTab.INFO  # Default to Info tab
         
         # Pokémon data
         self.pokemon_data: Optional[Dict] = None
@@ -608,8 +637,14 @@ class DetailScreen(Screen):
         
         Lifecycle hook from Screen base class. Loads Pokémon data, sprite,
         and updates StateManager with last viewed Pokémon.
+        
+        Story 5.7 AC #8: Restore last viewed tab for this Pokémon from class-level cache
         """
         super().on_enter()
+        
+        # Story 5.7: Restore tab state from class-level cache (AC #8)
+        self.current_tab = DetailScreen._tab_state_cache.get(self.pokemon_id, DetailTab.INFO)
+        logging.debug(f"DetailScreen.on_enter(): restored tab={self.current_tab.name} for Pokemon #{self.pokemon_id}")
         
         # Initialize fonts (Orbitron Bold 24px for headers per UX spec, fallback to system)
         try:
@@ -676,11 +711,20 @@ class DetailScreen(Screen):
     
     def on_exit(self):
         """
-        Called when screen becomes inactive - save state (Story 4.2: AC #2).
+        Called when screen becomes inactive - save state.
         
         Lifecycle hook from Screen base class. Persists last viewed Pokémon
         to state file via StateManager using atomic write pattern.
+        
+        Story 5.7 AC #8, #9: Save current tab to class-level cache AND reset to INFO for next viewing
         """
+        # Story 5.7: Save current tab to class-level cache for this Pokémon (AC #8)
+        DetailScreen._tab_state_cache[self.pokemon_id] = self.current_tab
+        logging.debug(f"DetailScreen.on_exit(): saved tab={self.current_tab.name} for Pokemon #{self.pokemon_id}")
+        
+        # Story 5.7: Reset to INFO tab for next viewing (AC #9)
+        self.current_tab = DetailTab.INFO
+        
         if self.state_manager:
             try:
                 # Ensure current pokemon_id is saved before persisting (Story 4.2: AC #2)
@@ -837,21 +881,48 @@ class DetailScreen(Screen):
         Handle button press actions.
         
         Args:
-            action: InputAction enum value (BACK, LEFT, RIGHT, etc.)
+            action: InputAction enum value (BACK, LEFT, RIGHT, UP, DOWN, etc.)
             
         Story 3.1 AC #1: B button returns to HomeScreen (pop navigation stack)
-        Story 3.6 AC #1: L button (LEFT) navigates to previous Pokémon
-        Story 3.6 AC #2: R button (RIGHT) navigates to next Pokémon
+        Story 5.7 AC #5: L button (LEFT) switches to previous tab
+        Story 5.7 AC #5: R button (RIGHT) switches to next tab
+        Story 5.7 AC #6: UP button navigates to next Pokémon (preserves tab)
+        Story 5.7 AC #6: DOWN button navigates to previous Pokémon (preserves tab)
         """
         if action == InputAction.BACK:
             # Pop screen stack to return to HomeScreen
             self.screen_manager.pop()
         elif action == InputAction.LEFT:
-            # Story 3.6: Navigate to previous Pokémon
-            self._navigate_adjacent(-1)
+            # Story 5.7: Switch to previous tab (AC #5)
+            self._switch_tab(-1)
         elif action == InputAction.RIGHT:
-            # Story 3.6: Navigate to next Pokémon
+            # Story 5.7: Switch to next tab (AC #5)
+            self._switch_tab(1)
+        elif action == InputAction.UP:
+            # Story 5.7: Navigate to next Pokémon, preserve tab (AC #6)
             self._navigate_adjacent(1)
+        elif action == InputAction.DOWN:
+            # Story 5.7: Navigate to previous Pokémon, preserve tab (AC #6)
+            self._navigate_adjacent(-1)
+    
+    def _switch_tab(self, direction: int):
+        """
+        Switch to next/previous tab with wrapping.
+        
+        Args:
+            direction: 1 for next tab (R button), -1 for previous tab (L button)
+            
+        Story 5.7 AC #5: Tab switching with wrapping
+        - direction=1: INFO → STATS → EVOLUTION → INFO (wrap forward)
+        - direction=-1: INFO → EVOLUTION → STATS → INFO (wrap backward)
+        - Transition completes in < 100ms (just updates current_tab, no data reload)
+        """
+        tab_order = [DetailTab.INFO, DetailTab.STATS, DetailTab.EVOLUTION]
+        current_index = tab_order.index(self.current_tab)
+        new_index = (current_index + direction) % len(tab_order)
+        self.current_tab = tab_order[new_index]
+        
+        logging.debug(f"Tab switched to {self.current_tab.name} (direction={direction})")
     
     def _calculate_adjacent_id(self, current_id: int, direction: int) -> int:
         """
@@ -1039,11 +1110,11 @@ class DetailScreen(Screen):
         Args:
             surface: pygame.Surface to render to
             
-        AC #2: Large sprite display centered in left area
-        AC #3: Header with name (title case) and dex number (#025 format)
-        AC #4: Layout with header, sprite, placeholder panels
-        AC #5: Holographic blue styling (dark blue panels, electric blue borders)
-        AC #7: Render must complete in < 33ms for 30+ FPS
+        Story 5.7 Implementation:
+        AC #1: Conditionally render current tab content (Info/Stats/Evolution)
+        AC #2-#4: Each tab has specific content layout
+        AC #7: Tab indicator always visible at bottom
+        AC #10: Render must complete in < 100ms for smooth tab switching
         """
         # Handle error state
         if not self.pokemon_data:
@@ -1069,31 +1140,19 @@ class DetailScreen(Screen):
         # Fill background with deep space black
         surface.fill(Colors.DEEP_SPACE_BLACK)
         
-        # AC #3: Render header with name and dex number
+        # Render header with name and dex number (always visible)
         self._render_header(surface)
         
-        # AC #2: Render large sprite (center-left positioning)
-        self._render_sprite(surface)
+        # Story 5.7: Conditionally render current tab content (AC #1)
+        if self.current_tab == DetailTab.INFO:
+            self._render_info_tab(surface)
+        elif self.current_tab == DetailTab.STATS:
+            self._render_stats_tab(surface)
+        elif self.current_tab == DetailTab.EVOLUTION:
+            self._render_evolution_tab(surface)
         
-        # Story 3.2: Render stat bars (replaces placeholder from 3.1)
-        self._render_stat_bars(surface)
-        
-        # Story 3.3: Render type badges (replaces placeholder from 3.1)
-        self._render_type_badges(surface)
-        
-        # Story 3.4: Render physical measurements (height, weight)
-        self._render_physical_data(surface)
-        
-        # Story 5.1: Render evolution panel (between physical measurements and description)
-        if self.evolution_panel:
-            # Position below physical measurements with 16px spacing
-            screen_height = surface.get_height()
-            is_small_screen = surface.get_width() <= 480
-            evolution_y = screen_height - (220 if is_small_screen else 280)
-            self.evolution_panel.render(surface, x=10 if is_small_screen else 20, y=evolution_y)
-        
-        # Story 3.5: Render description panel
-        self._render_description_panel(surface)
+        # Story 5.7: Render tab indicator (always visible at bottom) (AC #7)
+        self._render_tab_indicator(surface)
     
     def _render_header(self, surface: pygame.Surface):
         """
@@ -1120,20 +1179,148 @@ class DetailScreen(Screen):
         dex_rect = dex_text.get_rect(right=surface.get_width() - 20, top=16)
         surface.blit(dex_text, dex_rect)
     
-    def _render_sprite(self, surface: pygame.Surface):
+    def _render_info_tab(self, surface: pygame.Surface):
         """
-        Render large Pokémon sprite in center-left area.
+        Render Info tab content: sprite (128x128) + description panel.
         
         Args:
             surface: pygame.Surface to draw on
             
-        AC #2: 128x128 sprite, 50-60% screen real estate, center-left position
-        Sprite has electric blue border for holographic effect
+        Story 5.7 AC #2: Info tab displays sprite and full Pokédex description
+        - Sprite: 128x128 pixels, center-left positioning
+        - Description: Full text with wrapping, fits viewport
+        - Total vertical: ~290px (header 40px + sprite 140px + description 80px + indicator 30px)
+        """
+        # Render sprite (128x128)
+        self._render_sprite(surface, size=128)
         
-        Story 3.7: Store sprite bounds for type badge and physical measurements positioning
+        # Render description panel
+        self._render_description_panel(surface)
+    
+    def _render_stats_tab(self, surface: pygame.Surface):
+        """
+        Render Stats tab content: sprite (128x128) + stat bars + type badges + physical measurements.
+        
+        Args:
+            surface: pygame.Surface to draw on
+            
+        Story 5.7 AC #3: Stats tab displays complete stat information
+        - Sprite: 128x128 pixels, left side
+        - Stat bars: 6 bars with values (HP, Attack, Defense, Sp.Atk, Sp.Def, Speed)
+        - Type badges: 1-2 type badges with holographic styling
+        - Physical measurements: Height (m), Weight (kg)
+        - Total vertical: ~280px (optimized side-by-side layout)
+        """
+        # Render sprite (128x128)
+        self._render_sprite(surface, size=128)
+        
+        # Render stat bars
+        self._render_stat_bars(surface)
+        
+        # Render type badges
+        self._render_type_badges(surface)
+        
+        # Render physical measurements (height, weight)
+        self._render_physical_data(surface)
+    
+    def _render_evolution_tab(self, surface: pygame.Surface):
+        """
+        Render Evolution tab content: smaller sprite (96x96) + evolution panel.
+        
+        Args:
+            surface: pygame.Surface to draw on
+            
+        Story 5.7 AC #4: Evolution tab displays evolution chain
+        - Sprite: 96x96 pixels (smaller to make room for evolution panel)
+        - Evolution panel: 3-stage horizontal layout with requirements
+        - Current Pokémon highlighted with cyan glow
+        - Total vertical: ~270px (saves space with smaller sprite)
+        """
+        # Render smaller sprite (96x96 to save vertical space)
+        self._render_sprite(surface, size=96)
+        
+        # Render evolution panel
+        if self.evolution_panel:
+            # Position below sprite with spacing
+            screen_height = surface.get_height()
+            is_small_screen = surface.get_width() <= 480
+            evolution_y = screen_height - (220 if is_small_screen else 280)
+            self.evolution_panel.render(surface, x=10 if is_small_screen else 20, y=evolution_y)
+    
+    def _render_tab_indicator(self, surface: pygame.Surface):
+        """
+        Render tab indicator at bottom of screen showing current tab.
+        
+        Args:
+            surface: pygame.Surface to draw on
+            
+        Story 5.7 AC #7: Tab indicator display
+        - Three tab labels: "Info | Stats | Evolution"
+        - Current tab highlighted with ELECTRIC_BLUE (#00d4ff)
+        - Inactive tabs with ICE_BLUE (#a8e6ff)
+        - Positioned at bottom with holographic styling
+        - Always visible regardless of current tab
+        """
+        screen_width = surface.get_width()
+        screen_height = surface.get_height()
+        
+        # Position at bottom with padding
+        y = screen_height - 25
+        
+        # Tab labels and spacing
+        tab_labels = ["Info", "Stats", "Evolution"]
+        tab_spacing = 80
+        
+        # Calculate starting x position to center all tabs
+        total_width = len(tab_labels) * tab_spacing
+        start_x = (screen_width - total_width) // 2
+        
+        for i, label in enumerate(tab_labels):
+            x = start_x + (i * tab_spacing)
+            
+            # Determine color based on current tab
+            if i == self.current_tab.value:
+                color = Colors.ELECTRIC_BLUE  # Active tab
+                font = self.body_font  # Could use bold if available
+            else:
+                color = Colors.ICE_BLUE  # Inactive tab
+                font = self.small_font
+            
+            # Render tab label
+            text_surface = font.render(label, True, color)
+            text_rect = text_surface.get_rect(center=(x, y))
+            surface.blit(text_surface, text_rect)
+            
+            # Draw separator line between tabs (not after last tab)
+            if i < len(tab_labels) - 1:
+                separator_x = x + tab_spacing // 2
+                pygame.draw.line(
+                    surface,
+                    Colors.ICE_BLUE,
+                    (separator_x, y - 10),
+                    (separator_x, y + 10),
+                    1
+                )
+    
+    def _render_sprite(self, surface: pygame.Surface, size: int = 128):
+        """
+        Render Pokémon sprite with configurable size.
+        
+        Args:
+            surface: pygame.Surface to draw on
+            size: Sprite size in pixels (128 for Info/Stats tabs, 96 for Evolution tab)
+            
+        Story 3.1 AC #2: 128x128 sprite, 50-60% screen real estate, center-left position
+        Story 5.7 AC #4: Evolution tab uses smaller 96x96 sprite to save vertical space
+        Sprite has electric blue border for holographic effect
         """
         if not self.sprite:
             return
+        
+        # Scale sprite if size differs from loaded sprite size
+        sprite_to_render = self.sprite
+        if self.sprite.get_width() != size:
+            sprite_to_render = pygame.transform.scale(self.sprite, (size, size))
         
         # Calculate center-left position (50-60% width allocation)
         screen_width = surface.get_width()
@@ -1147,34 +1334,34 @@ class DetailScreen(Screen):
         left_zone_width = screen_width // 2 + (10 if is_small_screen else 20)
         
         # Center sprite horizontally within left zone
-        sprite_x = (left_zone_width - self.sprite.get_width()) // 2
+        sprite_x = (left_zone_width - size) // 2
         
         # Vertical positioning - keep sprite higher to leave room below
         # For small screen: position higher to leave room for badges + measurements
         if is_small_screen:
             sprite_y = 50  # Fixed top position for small screens
         else:
-            sprite_y = screen_height // 2 - self.sprite.get_height() // 2 - 20
+            sprite_y = screen_height // 2 - size // 2 - 20
         
         # Story 3.7: Store sprite bounds for type badge and measurements positioning
         self._sprite_x = sprite_x
         self._sprite_y = sprite_y
-        self._sprite_width = self.sprite.get_width()
-        self._sprite_height = self.sprite.get_height()
-        self._sprite_bottom_y = sprite_y + self.sprite.get_height()
+        self._sprite_width = size
+        self._sprite_height = size
+        self._sprite_bottom_y = sprite_y + size
         self._left_zone_width = left_zone_width  # Store for centering other elements
         
         # Draw holographic border around sprite (AC #5: electric blue)
         border_rect = pygame.Rect(
             sprite_x - 4,
             sprite_y - 4,
-            self.sprite.get_width() + 8,
-            self.sprite.get_height() + 8
+            size + 8,
+            size + 8
         )
         pygame.draw.rect(surface, Colors.ELECTRIC_BLUE, border_rect, 2)
         
         # Blit sprite to surface
-        surface.blit(self.sprite, (sprite_x, sprite_y))
+        surface.blit(sprite_to_render, (sprite_x, sprite_y))
     
     def _render_stat_bars(self, surface: pygame.Surface):
         """
