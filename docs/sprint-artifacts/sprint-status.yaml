@@ -92,8 +92,8 @@ development_status:
   # Value: Displays evolution chains showing Pokémon transformations
   # Tech Spec: tech-spec-epic-5-evolution-system.md
   epic-5-evolution-system: contexted
-  5-1-three-stage-evolution-chain-display: review
-  5-2-branching-evolution-display: drafted
+  5-1-three-stage-evolution-chain-display: done
+  5-2-branching-evolution-display: ready-for-dev
   5-3-single-stage-pokemon-handling: backlog
   5-4-evolution-requirement-display-level-stone-trade: backlog
   5-5-navigation-to-evolution-relatives: backlog

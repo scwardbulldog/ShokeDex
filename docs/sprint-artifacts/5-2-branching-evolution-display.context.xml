@@ -1,0 +1,384 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>5</epicId>
+    <storyId>2</storyId>
+    <title>Branching Evolution Display</title>
+    <status>drafted</status>
+    <generatedAt>2025-12-08</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/5-2-branching-evolution-display.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>user</asA>
+    <iWant>to see all branching evolution paths</iWant>
+    <soThat>I understand all possible evolution options (like Eevee's multiple forms)</soThat>
+    <tasks>
+- Task 1: Extend Database Method for Branching Detection (AC: #1, #7)
+  - 1.1: Modify get_evolution_chain(pokemon_id) to detect branching evolutions
+  - 1.2: Add SQL query using GROUP BY from_pokemon_id with COUNT(to_pokemon_id) > 1
+  - 1.3: Update data structure to include is_branching: bool flag
+  - 1.4: For branching chains, include all evolution branches in evolutions list
+  - 1.5: Test with Eevee (#133), Tyrogue (#236), Wurmple (#265)
+  - 1.6: Add database test: test_get_evolution_chain_branching()
+
+- Task 2: Design Branching Layout Algorithm (AC: #2, #3)
+  - 2.1: Implement vertical branching layout for 2-5 branches
+  - 2.2: Calculate sprite positions: root at center-left, branches spread vertically on right
+  - 2.3: Define spacing formula: vertical_spacing = panel_height / (num_branches + 1)
+  - 2.4: Test layout fits within panel boundaries for 2, 3, 5 branch scenarios
+  - 2.5: Document layout algorithm in code comments
+
+- Task 3: Render Branching Evolution Sprites (AC: #2, #6)
+  - 3.1: Render root Pokémon (pre-evolution) on left side of panel
+  - 3.2: Render all branch evolution sprites vertically aligned on right side
+  - 3.3: Use SpriteLoader.load_thumbnail() for all sprites (root + branches)
+  - 3.4: Render Pokémon names below each sprite (Rajdhani Bold, 14px, white)
+  - 3.5: Render Dex numbers below names (Share Tech Mono, 12px, ice blue #a8e6ff)
+  - 3.6: Test with Eevee (6 total sprites: 1 root + 5 branches)
+
+- Task 4: Render Branch Arrows and Indicators (AC: #3, #4)
+  - 4.1: Draw arrows from root Pokémon to each branch evolution
+  - 4.2: Style arrows with electric blue (#00d4ff) and appropriate thickness
+  - 4.3: Use branching indicator (split point or tree-like structure) to show divergence
+  - 4.4: Position requirement text along each arrow path
+  - 4.5: Format requirement text: "Water Stone", "Happiness (Day)", etc.
+  - 4.6: Render requirement text (Rajdhani, 14px, ice blue #a8e6ff)
+  - 4.7: Verify arrows and text don't overlap with sprites
+
+- Task 5: Implement Current Pokémon Highlighting for Branches (AC: #5, #6)
+  - 5.1: Determine which sprite is current Pokémon from evolution data
+  - 5.2: If current is root (e.g., Eevee): highlight root, show all branches normal
+  - 5.3: If current is branch (e.g., Vaporeon): show root normal, highlight current branch, show other branches normal
+  - 5.4: Draw bright cyan glow (#4df7ff) border around current sprite
+  - 5.5: Render "Current" label below current Pokémon (ice blue #a8e6ff)
+  - 5.6: Test highlighting with root Pokémon and each branch evolution
+
+- Task 6: Integrate Branching Layout into EvolutionPanel (AC: #2, #8)
+  - 6.1: Add conditional logic in EvolutionPanel.render() to detect branching vs linear chains
+  - 6.2: If is_branching == True, use branching layout algorithm
+  - 6.3: If is_branching == False, use existing three-stage horizontal layout from Story 5.1
+  - 6.4: Ensure consistent panel styling regardless of layout type
+  - 6.5: Verify panel background, border, and padding match Story 5.1
+
+- Task 7: Write Unit and Integration Tests (AC: #1, #7, #9)
+  - 7.1: Test test_get_evolution_chain_eevee() verifies 5 branches detected
+  - 7.2: Test test_evolution_panel_render_branching() verifies all sprites rendered
+  - 7.3: Test test_evolution_panel_branch_layout() verifies vertical positioning
+  - 7.4: Test test_evolution_panel_highlights_branch() verifies correct highlighting
+  - 7.5: Test test_branching_arrows_and_requirements() verifies all requirement text
+  - 7.6: Performance test: test_branching_panel_renders_under_250ms()
+  - 7.7: Edge case test: test_two_branch_evolution() for Wurmple
+
+- Task 8: Visual Testing and Polish (AC: #8, #9, #10)
+  - 8.1: Test rendering on both 480x320 and 800x480 displays
+  - 8.2: Verify branching layout is clear and not cluttered with 5 branches
+  - 8.3: Verify requirement text is legible for all branches
+  - 8.4: Compare styling with Story 5.1 three-stage panel (consistency check)
+  - 8.5: Profile rendering performance on Raspberry Pi 3B+ if available
+  - 8.6: Test with Eevee, Tyrogue, Wurmple for visual accuracy
+</tasks>
+  </story>
+
+  <acceptanceCriteria>
+AC #1: Branching Evolution Detection
+- Given: Pokémon with multiple evolution paths (e.g., Eevee → Vaporeon/Jolteon/Flareon/Espeon/Umbreon)
+- When: viewing DetailScreen
+- Then: Database.get_evolution_chain() identifies branching evolutions
+- And: all evolution branches are loaded into evolution data structure
+- And: database query uses COUNT() to detect multiple evolutions from same pre-evolution
+
+AC #2: Branching Layout Rendering
+- Given: evolution panel displays a Pokémon with branching evolutions
+- When: the panel renders
+- Then: current Pokémon is shown as the root/center position
+- And: all evolution branches spread from the root with clear visual separation
+- And: layout accommodates up to 5 branches (Eevee has 5 in Gen 1-3)
+- And: each branch shows sprite (64x64), name, and Dex number
+- And: all branches fit within panel boundaries without overflow
+
+AC #3: Branch Visual Separation
+- Given: multiple evolution branches are displayed
+- When: rendering the branching layout
+- Then: each branch is visually distinct from others
+- And: branching indicator (split arrows or tree structure) clearly shows relationship
+- And: arrows from root to each branch use electric blue (#00d4ff)
+- And: spacing between branches prevents visual cluttering
+- And: vertical or radial layout used for clarity (not just horizontal)
+
+AC #4: Evolution Requirements per Branch
+- Given: each evolution branch has different requirements
+- When: displaying requirement text
+- Then: each branch shows its specific requirement (e.g., "Water Stone", "Thunder Stone", "Fire Stone", "Happiness (Day)", "Happiness (Night)")
+- And: requirement text uses ice blue color (#a8e6ff)
+- And: requirement text is positioned below or beside each branch arrow
+- And: all requirement text is readable and not truncated
+
+AC #5: Current Pokémon Highlighting in Branches
+- Given: user is viewing a Pokémon that is one of the branching evolutions
+- When: the evolution panel renders
+- Then: current Pokémon sprite is highlighted with bright cyan glow (#4df7ff)
+- And: "Current" label is displayed underneath current Pokémon's sprite
+- And: root Pokémon (pre-evolution) is shown without highlighting
+- And: other branch options are shown at normal brightness
+
+AC #6: Pre-Evolution Display with Branches
+- Given: user views one of Eevee's evolutions (e.g., Vaporeon)
+- When: the evolution panel renders
+- Then: Eevee is shown as the pre-evolution (not highlighted)
+- And: all 5 evolution options are shown as branches
+- And: Vaporeon is highlighted as "Current"
+- And: other 4 evolutions (Jolteon, Flareon, Espeon, Umbreon) are shown at normal brightness
+
+AC #7: Database Query for Branching
+- Given: Database.get_evolution_chain() is called for a branching Pokémon
+- When: the query executes
+- Then: the evolutions table is queried with GROUP BY from_pokemon_id
+- And: parameterized SQL prevents injection
+- And: query returns all evolution branches with requirements
+- And: query completes in < 50ms (per performance requirements)
+- And: data structure includes: from_pokemon_id, list of to_pokemon_ids with methods/items
+
+AC #8: Panel Styling Consistency
+- Given: branching evolution panel is rendered
+- When: comparing with three-stage evolution panel (Story 5.1)
+- Then: panel uses same holographic blue styling
+- And: panel has electric blue (#00d4ff) 2px border
+- And: panel background uses dark blue rgba(26, 47, 74, 0.9)
+- And: font choices match: Rajdhani Bold for names, Share Tech Mono for Dex numbers
+- And: 16px padding and consistent spacing maintained
+
+AC #9: Rendering Performance with Branches
+- Given: user navigates to DetailScreen showing Eevee (5 branches, worst case)
+- When: evolution panel renders for the first time
+- Then: rendering completes within 250ms (database query + 6 sprites: Eevee + 5 evolutions)
+- And: frame rate maintains 30+ FPS during render
+- And: no visual stuttering or lag
+
+AC #10: Edge Case: Two-Branch Evolution
+- Given: Pokémon with only 2 evolution branches (e.g., Wurmple → Silcoon/Cascoon)
+- When: viewing the evolution panel
+- Then: layout adapts to show 2 branches clearly
+- And: visual layout is balanced and not skewed
+- And: same branching indicator pattern applies
+</acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/PRD.md" title="Product Requirements Document" section="FR4: Evolution Chain Display">
+        Functional requirement FR4.1 specifies evolution information display including pre-evolutions, evolutions, and evolution requirements. FR4.2 covers navigation between evolution relatives. Branching chains like Eevee must show all evolution options clearly with visual indicators.
+      </doc>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-5-evolution-system.md" title="Epic 5 Technical Specification" section="Branching Evolution Display">
+        Covers branching evolution cases in Gen 1-3: Eevee (5 branches worst case), Tyrogue (3 branches), Wurmple (2 branches), Poliwhirl, Slowpoke, Oddish. Vertical branching layout algorithm defined with spacing formula: vertical_spacing = (panel_height - 40) / (num_branches + 1). Database query pattern using COUNT() to detect branching.
+      </doc>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-5-evolution-system.md" title="Epic 5 Technical Specification" section="Database Method Contract">
+        Defines get_evolution_chain(pokemon_id) return structure with 'chain_id', 'stages' list (pokemon_id, name, stage), 'evolutions' list (from_id, to_id, method, level, item, trigger), and 'current_stage'. Evolution method text mapping for level, stone, trade, trade-item, happiness, time-day, time-night.
+      </doc>
+      <doc path="docs/ux-design-specification.md" title="UX Design Specification" section="Holographic Blue Color Palette">
+        Electric blue (#00d4ff) for arrows and borders, ice blue (#a8e6ff) for requirement text, bright cyan (#4df7ff) for current Pokémon highlight glow. Dark blue rgba(26, 47, 74, 0.9) for panel backgrounds. Rajdhani Bold for names, Share Tech Mono for Dex numbers, 16px padding standard.
+      </doc>
+      <doc path="docs/architecture.md" title="Architecture Document" section="Screen Lifecycle & Navigation">
+        Screen base class pattern with on_enter(), on_exit(), update(), render(), handle_input() methods. ScreenManager navigation via push(), pop(), replace(). Component pattern for reusable UI elements like EvolutionPanel within DetailScreen.
+      </doc>
+      <doc path="docs/database_schema.md" title="Database Schema" section="evolutions table">
+        Evolutions table structure: evolution_chain_id (FK), from_pokemon_id (FK), to_pokemon_id (FK), min_level, trigger, item, min_happiness, time_of_day fields. Indexes on evolution_chain_id, from_pokemon_id, to_pokemon_id for fast queries. Parameterized SQL required for all queries.
+      </doc>
+      <doc path="docs/sprint-artifacts/5-1-three-stage-evolution-chain-display.md" title="Story 5.1 - Three-Stage Evolution" section="Dev Notes">
+        Establishes EvolutionPanel component pattern in src/ui/detail_screen.py. Database.get_evolution_chain() method already implemented for linear chains. SpriteLoader.load_thumbnail() integration working with LRU cache. Holographic blue styling applied. This story extends Story 5.1 with branching layout logic.
+      </doc>
+    </docs>
+    <code>
+      <artifact path="src/data/database.py" kind="method" symbol="get_evolution_chain" lines="396-547" reason="Database method that returns evolution chain data. Already implemented for linear chains in Story 5.1. Needs extension to detect branching via is_branching flag in return data structure. Uses parameterized SQL queries.">
+      </artifact>
+      <artifact path="src/ui/detail_screen.py" kind="component-class" symbol="EvolutionPanel" lines="59-370" reason="Evolution panel component established in Story 5.1. Has load_data(), load_sprites(), render() methods. Currently implements horizontal layout for linear chains. Needs conditional branching layout logic added to render() method based on is_branching flag.">
+      </artifact>
+      <artifact path="src/ui/detail_screen.py" kind="render-method" symbol="EvolutionPanel.render" lines="177-334" reason="Main render method for evolution panel. Contains horizontal layout algorithm for 3-stage chains. Needs branching layout algorithm added with vertical positioning for 2-5 branches. Current highlighting and styling patterns to be maintained for branching.">
+      </artifact>
+      <artifact path="src/ui/detail_screen.py" kind="helper-method" symbol="EvolutionPanel._format_requirement" lines="336-363" reason="Formats evolution requirement text (Level 16, Thunder Stone, Trade). Already handles level, stone, trade, friendship, time-of-day. Works for both linear and branching evolutions without modification.">
+      </artifact>
+      <artifact path="src/ui/sprite_loader.py" kind="function" symbol="load_thumb" lines="101-124" reason="Loads 32x32 thumbnail sprites with LRU caching (50 max). EvolutionPanel scales to 64x64. Handles missing sprites gracefully. Supports loading multiple sprites for branching (Eevee needs 6 total: 1 root + 5 branches).">
+      </artifact>
+      <artifact path="src/ui/colors.py" kind="constants" symbol="Colors" lines="8-65" reason="Holographic blue color palette constants. ELECTRIC_BLUE (#00d4ff) for arrows/borders, ICE_BLUE (#a8e6ff) for requirement text, BRIGHT_CYAN (#4df7ff) for current glow, DARK_BLUE (26,47,74) for panel backgrounds.">
+      </artifact>
+      <artifact path="tests/test_evolution_panel.py" kind="test-class" symbol="TestEvolutionPanel" lines="24-200" reason="Existing tests for EvolutionPanel from Story 5.1. Tests load_data(), load_sprites(), render(), requirement formatting. Foundation for adding branching evolution tests (test_get_evolution_chain_branching, test_branching_layout, etc.).">
+      </artifact>
+      <artifact path="tests/test_database.py" kind="test-class" symbol="TestDatabase" lines="12-200" reason="Database tests including evolution chain queries. Tests insert and query patterns. Foundation for adding branching detection tests with Eevee, Tyrogue, Wurmple test cases.">
+      </artifact>
+    </code>
+    <dependencies>
+      <python version="3.11+">
+        <package name="pygame" version="2.5.0+">Graphics rendering, Surface operations, sprite blitting, font rendering for evolution panel</package>
+        <package name="Pillow" version="10.0.0+">Image loading and processing (used by sprite_loader.py)</package>
+        <package name="sqlite3" version="stdlib">Database queries for evolution chains and relationships</package>
+      </python>
+      <internal>
+        <module name="src.data.database.Database">get_evolution_chain() method provides evolution data structure</module>
+        <module name="src.ui.sprite_loader">load_thumb() for 32x32 sprites, scaled to 64x64 in panel</module>
+        <module name="src.ui.colors.Colors">Holographic blue palette constants for styling</module>
+        <module name="src.ui.screen.Screen">Base Screen class lifecycle pattern (on_enter, render, handle_input)</module>
+        <module name="src.input_manager.InputAction">Input action enums for A button navigation</module>
+      </internal>
+      <database>
+        <table name="evolution_chains">Groups Pokemon by evolution family, provides chain_id</table>
+        <table name="evolutions">Evolution relationships with from_pokemon_id, to_pokemon_id, trigger, min_level, item, time_of_day</table>
+        <table name="pokemon">Pokemon basic data (id, name) for all chain members</table>
+      </database>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    - Maximum 5 evolution branches per Pokemon (Eevee worst case in Gen 1-3)
+    - Panel must fit within 480x320 display resolution (minimum supported screen)
+    - All 6 sprites (1 root + 5 branches) must render within 250ms performance target
+    - Vertical spacing formula: (panel_height - 40) / (num_branches + 1) ensures branches fit
+    - Sprites must be 64x64 pixels (scaled from 32x32 thumbnails)
+    - Database queries must use parameterized SQL (security requirement)
+    - Query performance must be < 50ms (Story 5.1 AC #6 established target)
+    - Holographic blue styling must match Story 5.1 exactly (consistency requirement)
+    - Electric blue (#00d4ff) for arrows and borders (2px width)
+    - Ice blue (#a8e6ff) for requirement text (Rajdhani 14px)
+    - Bright cyan (#4df7ff) for current Pokemon glow effect
+    - Dark blue rgba(26, 47, 74, 0.9) for panel backgrounds
+    - 16px padding standard from Story 5.1 must be maintained
+    - SpriteLoader LRU cache has 50 sprite capacity (6 sprites for Eevee is well within limit)
+    - Must handle 2-branch edge cases (Wurmple) without visual skew
+    - Branching layout must not overlap with linear layout (conditional rendering)
+    - Text must be readable and not truncated on small displays
+    - Frame rate must maintain 30+ FPS during rendering
+  </constraints>
+  
+  <interfaces>
+    <interface name="Database.get_evolution_chain" kind="method">
+      <signature>def get_evolution_chain(self, pokemon_id: int) -> Dict[str, Any]</signature>
+      <description>
+        Returns evolution chain data structure. For branching evolutions, stages list contains all Pokemon in family, evolutions list contains all relationships.
+        
+        Return structure:
+        {
+          'chain_id': int,
+          'stages': [{'pokemon_id': int, 'name': str, 'stage': int}, ...],
+          'evolutions': [{'from_id': int, 'to_id': int, 'method': str, 'level': int|None, 'item': str|None, 'trigger': str|None}, ...],
+          'current_stage': int
+        }
+        
+        Extension needed: Add 'is_branching': bool flag to detect multiple evolutions from same pre-evolution.
+        Detection: COUNT(to_pokemon_id) > 1 GROUP BY from_pokemon_id in SQL query.
+      </description>
+      <path>src/data/database.py</path>
+    </interface>
+    
+    <interface name="EvolutionPanel.render" kind="method">
+      <signature>def render(self, surface: pygame.Surface, x: int, y: int)</signature>
+      <description>
+        Renders evolution panel at specified position. Needs conditional logic:
+        
+        if evolution_data['is_branching']:
+            # Use vertical branching layout
+            # Root sprite on left (x + 50, y + panel_center_y)
+            # Branch sprites vertically on right (x + 300, y positions via spacing formula)
+            # Arrows from root to each branch
+        else:
+            # Use existing horizontal layout (Story 5.1)
+        
+        Vertical spacing: vertical_spacing = (panel_height - 40) / (num_branches + 1)
+        Branch Y positions: y + 20 + (i + 1) * vertical_spacing for i in 0..num_branches-1
+      </description>
+      <path>src/ui/detail_screen.py</path>
+    </interface>
+    
+    <interface name="SpriteLoader.load_thumb" kind="function">
+      <signature>def load_thumb(pokemon_id: int) -> Optional[pygame.Surface]</signature>
+      <description>
+        Loads 32x32 thumbnail sprite from assets/sprites/thumb/{id:03d}.png with LRU caching.
+        EvolutionPanel scales to 64x64 for display.
+        Returns None if sprite missing (panel creates placeholder).
+        Cache capacity: 50 sprites (sufficient for branching chains).
+      </description>
+      <path>src/ui/sprite_loader.py</path>
+    </interface>
+  </interfaces>
+  
+  <tests>
+    <standards>
+      Testing framework: pytest (version 7.4.0+)
+      Test file naming: test_{module_name}.py
+      Test class naming: Test{ClassName}
+      Test method naming: test_{method_name}_{scenario}
+      
+      Coverage requirements:
+      - Unit tests: 90%+ code coverage for new/modified code
+      - Database queries: Test with Eevee (#133), Tyrogue (#236), Wurmple (#265)
+      - Edge cases: Single-stage (Ditto), two-branch, five-branch scenarios
+      - Performance tests: Measure render time, assert < 250ms for Eevee worst case
+      
+      Test data patterns:
+      - Use temporary in-memory database (:memory:) for fast tests
+      - Insert minimal test data (only Pokemon/evolutions needed for test)
+      - Clean up with tearDown() methods
+      - Mock ScreenManager for EvolutionPanel isolation
+      
+      From Story 5.1 established patterns:
+      - MockScreenManager class provides database to EvolutionPanel
+      - pygame.init() in setUp(), pygame.quit() in tearDown()
+      - Temporary database with tempfile.mkstemp()
+    </standards>
+    <locations>
+      tests/test_database.py - Database query tests (get_evolution_chain with branching)
+      tests/test_evolution_panel.py - EvolutionPanel component tests (rendering, layout, highlighting)
+      tests/test_detail_screen.py - Integration tests (DetailScreen with branching evolution panel)
+      tests/test_performance.py - Performance benchmarks (250ms render target for Eevee)
+    </locations>
+    <ideas>
+      AC #1 - Branching Detection:
+      - test_get_evolution_chain_eevee(): Verify 6 stages (Eevee + 5 evolutions), is_branching=True
+      - test_get_evolution_chain_tyrogue(): Verify 4 stages (Tyrogue + 3 evolutions), 3 branches
+      - test_get_evolution_chain_wurmple(): Verify 3 stages (Wurmple + 2 evolutions), 2 branches
+      - test_branching_detection_sql(): Verify COUNT() GROUP BY query returns correct counts
+      
+      AC #2 - Branching Layout:
+      - test_branching_layout_sprite_positions(): Verify root on left, branches vertically on right
+      - test_branching_layout_eevee_all_fit(): Verify all 6 sprites within panel boundaries
+      - test_branching_layout_spacing_formula(): Verify vertical_spacing calculation correct
+      
+      AC #3 - Visual Separation:
+      - test_branching_arrows_drawn(): Verify arrows from root to each branch
+      - test_branching_arrows_electric_blue(): Verify arrow color #00d4ff
+      - test_branching_no_overlap(): Verify arrows and text don't overlap sprites
+      
+      AC #4 - Requirements per Branch:
+      - test_branching_requirements_eevee(): Verify "Water Stone", "Thunder Stone", "Fire Stone", "Happiness (Day)", "Happiness (Night)"
+      - test_requirement_text_positioning(): Verify text below/beside arrows, ice blue color
+      - test_requirement_text_not_truncated(): Verify full text visible on 480x320 display
+      
+      AC #5 - Current Highlighting:
+      - test_highlight_branch_vaporeon(): When viewing Vaporeon, verify it's highlighted, others normal
+      - test_highlight_root_eevee(): When viewing Eevee, verify root highlighted, branches normal
+      - test_current_label_displayed(): Verify "Current" label appears below highlighted sprite
+      
+      AC #6 - Pre-Evolution Display:
+      - test_vaporeon_shows_all_branches(): View Vaporeon, verify Eevee shown with all 5 evolution options
+      - test_branch_relative_highlighting(): Verify correct sprite highlighted based on current_stage
+      
+      AC #7 - Database Performance:
+      - test_branching_query_performance(): Assert get_evolution_chain(133) < 50ms
+      - test_branching_query_parameterized(): Verify no string formatting in SQL
+      
+      AC #8 - Styling Consistency:
+      - test_branching_panel_styling(): Compare border, background, padding with Story 5.1 panel
+      - test_branching_fonts_match(): Verify Rajdhani Bold for names, Share Tech Mono for dex numbers
+      
+      AC #9 - Performance:
+      - test_branching_first_render_eevee(): Measure time from load_data() to render complete, assert < 250ms
+      - test_branching_frame_rate(): Verify 30+ FPS maintained during panel display
+      
+      AC #10 - Edge Cases:
+      - test_two_branch_wurmple(): Verify balanced layout for 2 branches, not skewed
+      - test_three_branch_tyrogue(): Verify 3 branches display clearly
+      
+      Integration Tests:
+      - test_detail_screen_branching_integration(): Full flow from DetailScreen.on_enter() through render
+      - test_navigation_between_branches(): Press A on branch sprite, navigate to that Pokemon
+      - test_branching_to_linear_transition(): View Eevee (branching) then Pikachu (linear), verify layouts switch
+    </ideas>
+  </tests>
+</story-context>
