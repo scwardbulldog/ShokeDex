@@ -3,7 +3,8 @@
 Visual demonstration of evolution chain display.
 
 Story 5.1: Three-Stage Evolution Chain Display
-This demo shows the evolution panel integrated into the DetailScreen.
+Story 5.2: Branching Evolution Display
+This demo shows both linear and branching evolution panels in DetailScreen.
 """
 
 import pygame
@@ -41,7 +42,7 @@ class DemoScreenManager:
 
 def main():
     """Run evolution panel demo."""
-    print("Evolution Panel Demo - Story 5.1")
+    print("Evolution Panel Demo - Stories 5.1 & 5.2")
     print("=" * 50)
     print()
     
@@ -60,15 +61,21 @@ def main():
     
     screen_size = SMALL_SCREEN if choice == "1" else LARGE_SCREEN
     screen = pygame.display.set_mode(screen_size)
-    pygame.display.set_caption("Evolution Panel Demo")
+    pygame.display.set_caption("Evolution Panel Demo - Linear & Branching")
     
-    # Pokemon to display (with different evolution chains)
+    # Pokemon to display (linear and branching evolution chains)
     test_pokemon = [
-        (4, "Charmander (3-stage chain: Charmander → Charmeleon → Charizard)"),
-        (1, "Bulbasaur (3-stage chain: Bulbasaur → Ivysaur → Venusaur)"),
-        (7, "Squirtle (3-stage chain: Squirtle → Wartortle → Blastoise)"),
-        (25, "Pikachu (2-stage chain: Pikachu → Raichu)"),
+        # Linear chains (Story 5.1)
+        (4, "Charmander (3-stage linear: Charmander → Charmeleon → Charizard)"),
+        (1, "Bulbasaur (3-stage linear: Bulbasaur → Ivysaur → Venusaur)"),
+        (7, "Squirtle (3-stage linear: Squirtle → Wartortle → Blastoise)"),
+        (25, "Pikachu (2-stage linear: Pikachu → Raichu)"),
         (132, "Ditto (single stage, no evolutions)"),
+        # Branching chains (Story 5.2)
+        (133, "Eevee (5 branches: Vaporeon/Jolteon/Flareon/Espeon/Umbreon) ⭐"),
+        (134, "Vaporeon (view from branch, shows all Eevee evolutions)"),
+        (236, "Tyrogue (3 branches: Hitmonlee/Hitmonchan/Hitmontop)"),
+        (265, "Wurmple (2 branches: Silcoon/Cascoon)"),
     ]
     
     print()
@@ -81,9 +88,9 @@ def main():
         idx = int(choice) - 1
         pokemon_id, description = test_pokemon[idx]
     except (ValueError, IndexError):
-        print("Invalid choice, using Charmander (#4)")
-        pokemon_id = 4
-        description = test_pokemon[0][1]
+        print("Invalid choice, using Eevee (#133)")
+        pokemon_id = 133
+        description = test_pokemon[5][1]
     
     print(f"\nDisplaying: {description}")
     print("Press Q to quit, or click X to close window")

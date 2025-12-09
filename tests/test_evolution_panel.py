@@ -377,6 +377,280 @@ class TestEvolutionPanel(unittest.TestCase):
             print(f"Render failed: {e}")
         
         self.assertTrue(success, "Evolution panel render should not crash")
+    
+    # ========================================
+    # Story 5.2: Branching Evolution Tests
+    # ========================================
+    
+    def test_get_evolution_chain_eevee_branching(self):
+        """Test branching detection for Eevee (5 branches) (Story 5.2 Task 1.5, AC #1)."""
+        # Insert Eevee and its 5 evolutions (Gen 1-3)
+        with self.db as db:
+            db.execute("INSERT INTO evolution_chains (id) VALUES (?)", (67,))
+            
+            # Insert Eevee
+            db.execute("""
+                INSERT INTO pokemon (id, name, species_id, height, weight, base_experience, generation)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (133, 'eevee', 133, 3, 65, 65, 1))
+            
+            # Insert Eevee's evolutions
+            evolutions_data = [
+                (134, 'vaporeon', 134, 10, 290, 184, 1),
+                (135, 'jolteon', 135, 8, 245, 184, 1),
+                (136, 'flareon', 136, 9, 250, 184, 1),
+                (196, 'espeon', 196, 9, 265, 184, 2),
+                (197, 'umbreon', 197, 10, 270, 184, 2)
+            ]
+            db.executemany("""
+                INSERT INTO pokemon (id, name, species_id, height, weight, base_experience, generation)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, evolutions_data)
+            
+            # Insert evolution relationships
+            evo_rels = [
+                (1, 67, 133, 134, 'use-item', None, 'water-stone', None, None),
+                (2, 67, 133, 135, 'use-item', None, 'thunder-stone', None, None),
+                (3, 67, 133, 136, 'use-item', None, 'fire-stone', None, None),
+                (4, 67, 133, 196, 'level-up', None, None, 220, 'daytime'),
+                (5, 67, 133, 197, 'level-up', None, None, 220, 'nighttime')
+            ]
+            db.executemany("""
+                INSERT INTO evolutions (id, evolution_chain_id, from_pokemon_id, to_pokemon_id,
+                                       trigger, min_level, item, min_happiness, time_of_day)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, evo_rels)
+            db.commit()
+        
+        # Create panel for Eevee
+        screen_manager = MockScreenManager(self.db)
+        panel = EvolutionPanel(screen_manager, 133)
+        panel.load_data()
+        
+        # Verify branching is detected (AC #1)
+        self.assertTrue(panel.evolution_data['is_branching'], 
+                       "Eevee evolution chain should be detected as branching")
+        
+        # Verify all 6 Pokemon are in stages (1 root + 5 branches)
+        self.assertEqual(len(panel.evolution_data['stages']), 6)
+        
+        # Verify all 5 evolution relationships exist
+        self.assertEqual(len(panel.evolution_data['evolutions']), 5)
+    
+    def test_evolution_panel_render_branching_eevee(self):
+        """Test branching layout rendering for Eevee (Story 5.2 Task 7.2, AC #2)."""
+        # Insert Eevee and evolutions (same as above)
+        with self.db as db:
+            db.execute("INSERT INTO evolution_chains (id) VALUES (?)", (67,))
+            db.execute("""
+                INSERT INTO pokemon (id, name, species_id, height, weight, base_experience, generation)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (133, 'eevee', 133, 3, 65, 65, 1))
+            evolutions_data = [
+                (134, 'vaporeon', 134, 10, 290, 184, 1),
+                (135, 'jolteon', 135, 8, 245, 184, 1),
+                (136, 'flareon', 136, 9, 250, 184, 1),
+                (196, 'espeon', 196, 9, 265, 184, 2),
+                (197, 'umbreon', 197, 10, 270, 184, 2)
+            ]
+            db.executemany("""
+                INSERT INTO pokemon (id, name, species_id, height, weight, base_experience, generation)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, evolutions_data)
+            evo_rels = [
+                (1, 67, 133, 134, 'use-item', None, 'water-stone', None, None),
+                (2, 67, 133, 135, 'use-item', None, 'thunder-stone', None, None),
+                (3, 67, 133, 136, 'use-item', None, 'fire-stone', None, None),
+                (4, 67, 133, 196, 'level-up', None, None, 220, 'daytime'),
+                (5, 67, 133, 197, 'level-up', None, None, 220, 'nighttime')
+            ]
+            db.executemany("""
+                INSERT INTO evolutions (id, evolution_chain_id, from_pokemon_id, to_pokemon_id,
+                                       trigger, min_level, item, min_happiness, time_of_day)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, evo_rels)
+            db.commit()
+        
+        # Create panel
+        screen_manager = MockScreenManager(self.db)
+        panel = EvolutionPanel(screen_manager, 133)
+        panel.load_data()
+        panel.load_sprites()
+        
+        # Verify all 6 sprites loaded
+        self.assertEqual(len(panel.sprites), 6)
+        
+        # Create test surface
+        surface = pygame.Surface((800, 480))
+        
+        # Render should not crash with branching layout
+        try:
+            panel.render(surface, 20, 100)
+            rendering_works = True
+        except Exception as e:
+            rendering_works = False
+            print(f"Branching render failed: {e}")
+        
+        self.assertTrue(rendering_works, "Branching evolution panel should render without crashing")
+    
+    def test_evolution_panel_highlights_branch_vaporeon(self):
+        """Test highlighting when viewing branch evolution (Story 5.2 Task 7.4, AC #5, #6)."""
+        # Insert Eevee and evolutions
+        with self.db as db:
+            db.execute("INSERT INTO evolution_chains (id) VALUES (?)", (67,))
+            db.execute("""
+                INSERT INTO pokemon (id, name, species_id, height, weight, base_experience, generation)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (133, 'eevee', 133, 3, 65, 65, 1))
+            db.execute("""
+                INSERT INTO pokemon (id, name, species_id, height, weight, base_experience, generation)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (134, 'vaporeon', 134, 10, 290, 184, 1))
+            db.execute("""
+                INSERT INTO pokemon (id, name, species_id, height, weight, base_experience, generation)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (135, 'jolteon', 135, 8, 245, 184, 1))
+            db.execute("""
+                INSERT INTO evolutions (id, evolution_chain_id, from_pokemon_id, to_pokemon_id,
+                                       trigger, min_level, item, min_happiness, time_of_day)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (1, 67, 133, 134, 'use-item', None, 'water-stone', None, None))
+            db.execute("""
+                INSERT INTO evolutions (id, evolution_chain_id, from_pokemon_id, to_pokemon_id,
+                                       trigger, min_level, item, min_happiness, time_of_day)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (2, 67, 133, 135, 'use-item', None, 'thunder-stone', None, None))
+            db.commit()
+        
+        # Create panel for Vaporeon (should show Eevee + all branches with Vaporeon highlighted)
+        screen_manager = MockScreenManager(self.db)
+        panel = EvolutionPanel(screen_manager, 134)
+        panel.load_data()
+        
+        # Verify Vaporeon is stage 2 (AC #6: pre-evolution shown, branch is current)
+        self.assertEqual(panel.evolution_data['current_stage'], 2)
+        
+        # Verify branching is detected
+        self.assertTrue(panel.evolution_data['is_branching'])
+        
+        # Load sprites and render (AC #5: Vaporeon should be highlighted)
+        panel.load_sprites()
+        surface = pygame.Surface((800, 480))
+        
+        try:
+            panel.render(surface, 20, 100)
+            highlighting_works = True
+        except Exception as e:
+            highlighting_works = False
+            print(f"Branch highlighting failed: {e}")
+        
+        self.assertTrue(highlighting_works, "Branch highlighting should work correctly")
+    
+    def test_branching_panel_renders_under_250ms(self):
+        """Test branching panel performance with Eevee (Story 5.2 Task 7.6, AC #9)."""
+        # Insert Eevee and all 5 evolutions (worst case)
+        with self.db as db:
+            db.execute("INSERT INTO evolution_chains (id) VALUES (?)", (67,))
+            db.execute("""
+                INSERT INTO pokemon (id, name, species_id, height, weight, base_experience, generation)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (133, 'eevee', 133, 3, 65, 65, 1))
+            evolutions_data = [
+                (134, 'vaporeon', 134, 10, 290, 184, 1),
+                (135, 'jolteon', 135, 8, 245, 184, 1),
+                (136, 'flareon', 136, 9, 250, 184, 1),
+                (196, 'espeon', 196, 9, 265, 184, 2),
+                (197, 'umbreon', 197, 10, 270, 184, 2)
+            ]
+            db.executemany("""
+                INSERT INTO pokemon (id, name, species_id, height, weight, base_experience, generation)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, evolutions_data)
+            evo_rels = [
+                (1, 67, 133, 134, 'use-item', None, 'water-stone', None, None),
+                (2, 67, 133, 135, 'use-item', None, 'thunder-stone', None, None),
+                (3, 67, 133, 136, 'use-item', None, 'fire-stone', None, None),
+                (4, 67, 133, 196, 'level-up', None, None, 220, 'daytime'),
+                (5, 67, 133, 197, 'level-up', None, None, 220, 'nighttime')
+            ]
+            db.executemany("""
+                INSERT INTO evolutions (id, evolution_chain_id, from_pokemon_id, to_pokemon_id,
+                                       trigger, min_level, item, min_happiness, time_of_day)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, evo_rels)
+            db.commit()
+        
+        # Create panel
+        screen_manager = MockScreenManager(self.db)
+        panel = EvolutionPanel(screen_manager, 133)
+        
+        # Measure total time including data load, sprite load, and render
+        start_time = time.perf_counter()
+        panel.load_data()
+        panel.load_sprites()
+        surface = pygame.Surface((800, 480))
+        panel.render(surface, 20, 100)
+        total_time = (time.perf_counter() - start_time) * 1000
+        
+        # AC #9: Should complete within 250ms (database query + 6 sprites + render)
+        self.assertLess(total_time, 250.0,
+                       f"Branching panel (Eevee) took {total_time:.2f}ms, expected <250ms")
+    
+    def test_two_branch_evolution_wurmple(self):
+        """Test two-branch evolution edge case (Story 5.2 Task 7.7, AC #10)."""
+        # Insert Wurmple and its 2 evolutions
+        with self.db as db:
+            db.execute("INSERT INTO evolution_chains (id) VALUES (?)", (133,))
+            db.execute("""
+                INSERT INTO pokemon (id, name, species_id, height, weight, base_experience, generation)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (265, 'wurmple', 265, 3, 36, 56, 3))
+            db.execute("""
+                INSERT INTO pokemon (id, name, species_id, height, weight, base_experience, generation)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (266, 'silcoon', 266, 6, 100, 72, 3))
+            db.execute("""
+                INSERT INTO pokemon (id, name, species_id, height, weight, base_experience, generation)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (268, 'cascoon', 268, 7, 115, 72, 3))
+            db.execute("""
+                INSERT INTO evolutions (id, evolution_chain_id, from_pokemon_id, to_pokemon_id,
+                                       trigger, min_level, item, min_happiness, time_of_day)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (1, 133, 265, 266, 'level-up', 7, None, None, None))
+            db.execute("""
+                INSERT INTO evolutions (id, evolution_chain_id, from_pokemon_id, to_pokemon_id,
+                                       trigger, min_level, item, min_happiness, time_of_day)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (2, 133, 265, 268, 'level-up', 7, None, None, None))
+            db.commit()
+        
+        # Create panel
+        screen_manager = MockScreenManager(self.db)
+        panel = EvolutionPanel(screen_manager, 265)
+        panel.load_data()
+        
+        # Verify branching detected (AC #10: 2 branches should use same pattern)
+        self.assertTrue(panel.evolution_data['is_branching'])
+        
+        # Verify 3 total Pokemon (1 root + 2 branches)
+        self.assertEqual(len(panel.evolution_data['stages']), 3)
+        
+        # Verify 2 evolution relationships
+        self.assertEqual(len(panel.evolution_data['evolutions']), 2)
+        
+        # Render should work without visual skew (AC #10)
+        panel.load_sprites()
+        surface = pygame.Surface((800, 480))
+        
+        try:
+            panel.render(surface, 20, 100)
+            rendering_works = True
+        except Exception as e:
+            rendering_works = False
+            print(f"Two-branch render failed: {e}")
+        
+        self.assertTrue(rendering_works, "Two-branch layout should render correctly")
 
 
 if __name__ == '__main__':

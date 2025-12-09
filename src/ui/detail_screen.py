@@ -12,6 +12,7 @@ Story 5.1: Three-stage evolution chain display with sprites and requirements.
 import pygame
 import logging
 import time
+import math
 from typing import Optional, Dict, List
 from .screen import Screen
 from .colors import Colors, get_stat_color, TYPE_COLORS
@@ -180,11 +181,36 @@ class EvolutionPanel:
         stages = self.evolution_data['stages']
         evolutions = self.evolution_data['evolutions']
         current_stage = self.evolution_data['current_stage']
+        is_branching = self.evolution_data.get('is_branching', False)  # Story 5.2
         
         # Panel dimensions (AC #5: holographic styling)
         panel_width = surface.get_width() - (x * 2)  # Full width minus margins
-        panel_height = 120  # Height for sprites + text + arrows
+        panel_height = 120  # Height for sprites + text + arrows (linear layout)
         
+        # Story 5.2 AC #6: Conditional layout based on branching
+        if is_branching:
+            # Use vertical branching layout (Story 5.2 Tasks 2-6)
+            self._render_branching_layout(surface, x, y, stages, evolutions, current_stage)
+        else:
+            # Use existing horizontal layout (Story 5.1)
+            self._render_linear_layout(surface, x, y, panel_width, panel_height, 
+                                      stages, evolutions, current_stage)
+        
+        # Performance logging (AC #8)
+        render_time = (time.perf_counter() - start_time) * 1000
+        if render_time > 200:
+            logging.warning(f"Evolution panel render took {render_time:.2f}ms (target: <200ms first load)")
+        else:
+            logging.debug(f"Evolution panel rendered in {render_time:.2f}ms")
+    
+    def _render_linear_layout(self, surface: pygame.Surface, x: int, y: int,
+                              panel_width: int, panel_height: int,
+                              stages: list, evolutions: list, current_stage: int):
+        """
+        Render linear (horizontal) evolution chain layout.
+        
+        Story 5.1: Three-stage horizontal layout with arrows between stages
+        """
         # Draw panel background (AC #5: dark blue rgba(26, 47, 74, 0.9))
         panel_surface = pygame.Surface((panel_width, panel_height), pygame.SRCALPHA)
         panel_surface.fill((*Colors.DARK_BLUE, 230))
@@ -275,13 +301,164 @@ class EvolutionPanel:
                 req_surface = self.requirement_font.render(requirement_text, True, Colors.ICE_BLUE)
                 req_rect = req_surface.get_rect(centerx=(from_x + to_x) // 2, top=arrow_y + 10)
                 surface.blit(req_surface, req_rect)
+    
+    def _render_branching_layout(self, surface: pygame.Surface, x: int, y: int,
+                                 stages: list, evolutions: list, current_stage: int):
+        """
+        Render branching evolution layout with vertical branch distribution.
         
-        # Performance logging (AC #8)
-        render_time = (time.perf_counter() - start_time) * 1000
-        if render_time > 200:
-            logging.warning(f"Evolution panel render took {render_time:.2f}ms (target: <200ms first load)")
-        else:
-            logging.debug(f"Evolution panel rendered in {render_time:.2f}ms")
+        Story 5.2: Branching evolution display (Eevee, Tyrogue, Wurmple, etc.)
+        AC #2: Root on left, branches spread vertically on right
+        AC #3: Visual separation with tree-like arrows
+        AC #4: Requirements displayed per branch
+        AC #5: Current highlighting maintained
+        AC #8: Consistent holographic blue styling
+        """
+        # Build branching structure: find root and branches
+        # Root = stage 1 Pokemon, Branches = stage 2+ Pokemon
+        root_pokemon = [s for s in stages if s['stage'] == 1]
+        branch_pokemon = [s for s in stages if s['stage'] > 1]
+        
+        if not root_pokemon:
+            # Fallback: shouldn't happen but defensive
+            self._render_linear_layout(surface, x, y, surface.get_width() - (x * 2), 
+                                      120, stages, evolutions, current_stage)
+            return
+        
+        root = root_pokemon[0]  # Only one root for branching chains
+        num_branches = len(branch_pokemon)
+        
+        # Panel dimensions (Story 5.2 AC #2: accommodate vertical branches)
+        panel_width = surface.get_width() - (x * 2)
+        panel_height = max(150, 40 + num_branches * 30)  # Dynamic height based on branches
+        
+        # Draw panel background (AC #8: same styling as Story 5.1)
+        panel_surface = pygame.Surface((panel_width, panel_height), pygame.SRCALPHA)
+        panel_surface.fill((*Colors.DARK_BLUE, 230))
+        
+        # Draw panel border (AC #8: electric blue 2px border)
+        pygame.draw.rect(panel_surface, Colors.ELECTRIC_BLUE,
+                        pygame.Rect(0, 0, panel_width, panel_height), 2)
+        
+        surface.blit(panel_surface, (x, y))
+        
+        # Story 5.2 Task 2.3: Vertical spacing formula
+        vertical_spacing = (panel_height - 40) / (num_branches + 1) if num_branches > 0 else 0
+        
+        # Root Pokemon position (Story 5.2 AC #2: left side, vertically centered)
+        root_x = x + 50
+        root_y = y + (panel_height // 2) - 32  # Center vertically within panel
+        root_id = root['pokemon_id']
+        root_is_current = (root['stage'] == current_stage)
+        
+        # Render root Pokemon (Story 5.2 Task 3.1)
+        if root_is_current:
+            glow_rect = pygame.Rect(root_x - 4, root_y - 4, 72, 72)
+            pygame.draw.rect(surface, Colors.BRIGHT_CYAN, glow_rect, 3)
+        
+        if root_id in self.sprites:
+            surface.blit(self.sprites[root_id], (root_x, root_y))
+        
+        # Root name and dex number (Story 5.2 Task 3.4, 3.5)
+        if self.name_font:
+            name_text = self.name_font.render(root['name'].capitalize(), True, Colors.HOLOGRAM_WHITE)
+            name_rect = name_text.get_rect(centerx=root_x + 32, top=root_y + 68)
+            surface.blit(name_text, name_rect)
+        
+        if self.dex_font:
+            dex_text = self.dex_font.render(f"#{root_id:03d}", True, Colors.ICE_BLUE)
+            dex_rect = dex_text.get_rect(centerx=root_x + 32, top=root_y + 84)
+            surface.blit(dex_text, dex_rect)
+        
+        if root_is_current and self.label_font:
+            current_label = self.label_font.render("Current", True, Colors.ICE_BLUE)
+            current_rect = current_label.get_rect(centerx=root_x + 32, top=root_y + 98)
+            surface.blit(current_label, current_rect)
+        
+        # Branch Pokemon positions (Story 5.2 AC #2: right side, vertically distributed)
+        branch_x = x + panel_width - 114  # Right side with margin (64px sprite + 50px margin)
+        
+        for i, branch in enumerate(branch_pokemon):
+            # Story 5.2 Task 2.2: Calculate vertical position using spacing formula
+            branch_y = y + 20 + int((i + 1) * vertical_spacing) - 32  # Center sprite on position
+            branch_id = branch['pokemon_id']
+            branch_is_current = (branch['stage'] == current_stage)
+            
+            # Story 5.2 Task 5: Highlight current branch (AC #5)
+            if branch_is_current:
+                glow_rect = pygame.Rect(branch_x - 4, branch_y - 4, 72, 72)
+                pygame.draw.rect(surface, Colors.BRIGHT_CYAN, glow_rect, 3)
+            
+            # Render branch sprite (Story 5.2 Task 3.2)
+            if branch_id in self.sprites:
+                surface.blit(self.sprites[branch_id], (branch_x, branch_y))
+            
+            # Render branch name and dex number (Story 5.2 Task 3.4, 3.5)
+            if self.name_font:
+                name_text = self.name_font.render(branch['name'].capitalize(), True, Colors.HOLOGRAM_WHITE)
+                name_rect = name_text.get_rect(centerx=branch_x + 32, top=branch_y + 68)
+                surface.blit(name_text, name_rect)
+            
+            if self.dex_font:
+                dex_text = self.dex_font.render(f"#{branch_id:03d}", True, Colors.ICE_BLUE)
+                dex_rect = dex_text.get_rect(centerx=branch_x + 32, top=branch_y + 84)
+                surface.blit(dex_text, dex_rect)
+            
+            if branch_is_current and self.label_font:
+                current_label = self.label_font.render("Current", True, Colors.ICE_BLUE)
+                current_rect = current_label.get_rect(centerx=branch_x + 32, top=branch_y + 98)
+                surface.blit(current_label, current_rect)
+            
+            # Story 5.2 Task 4: Draw arrow from root to this branch (AC #3)
+            # Find evolution data for this branch
+            evo_data = None
+            for evo in evolutions:
+                if evo['from_id'] == root_id and evo['to_id'] == branch_id:
+                    evo_data = evo
+                    break
+            
+            if evo_data:
+                # Arrow start: right edge of root sprite, vertically centered
+                arrow_start_x = root_x + 64
+                arrow_start_y = root_y + 32
+                
+                # Arrow end: left edge of branch sprite, vertically centered
+                arrow_end_x = branch_x
+                arrow_end_y = branch_y + 32
+                
+                # Story 5.2 Task 4.2: Electric blue arrow (AC #3)
+                pygame.draw.line(surface, Colors.ELECTRIC_BLUE,
+                               (arrow_start_x, arrow_start_y), 
+                               (arrow_end_x, arrow_end_y), 3)
+                
+                # Arrow head pointing to branch
+                angle = math.atan2(arrow_end_y - arrow_start_y, arrow_end_x - arrow_start_x)
+                arrow_len = 8
+                pygame.draw.polygon(surface, Colors.ELECTRIC_BLUE, [
+                    (arrow_end_x, arrow_end_y),
+                    (arrow_end_x - arrow_len * math.cos(angle - math.pi/6),
+                     arrow_end_y - arrow_len * math.sin(angle - math.pi/6)),
+                    (arrow_end_x - arrow_len * math.cos(angle + math.pi/6),
+                     arrow_end_y - arrow_len * math.sin(angle + math.pi/6))
+                ])
+                
+                # Story 5.2 Task 4.4, 4.5, 4.6: Requirement text along arrow (AC #4)
+                requirement_text = self._format_requirement(evo_data)
+                if requirement_text and self.requirement_font:
+                    # Position text at midpoint of arrow
+                    mid_x = (arrow_start_x + arrow_end_x) // 2
+                    mid_y = (arrow_start_y + arrow_end_y) // 2
+                    
+                    req_surface = self.requirement_font.render(requirement_text, True, Colors.ICE_BLUE)
+                    req_rect = req_surface.get_rect(center=(mid_x, mid_y - 10))
+                    
+                    # Draw small background for readability
+                    bg_rect = req_rect.inflate(8, 4)
+                    bg_surface = pygame.Surface(bg_rect.size, pygame.SRCALPHA)
+                    bg_surface.fill((*Colors.DARK_BLUE, 200))
+                    surface.blit(bg_surface, bg_rect.topleft)
+                    
+                    surface.blit(req_surface, req_rect)
     
     def _format_requirement(self, evo_data: Dict) -> str:
         """

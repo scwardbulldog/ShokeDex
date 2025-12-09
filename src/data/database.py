@@ -422,10 +422,12 @@ class Database:
                     },
                     ...
                 ],
-                'current_stage': int  # Which stage the queried Pokémon is at
+                'current_stage': int,  # Which stage the queried Pokémon is at
+                'is_branching': bool  # True if any Pokémon has multiple evolutions (Story 5.2)
             }
             
         Story 5.1 AC #6: Parameterized SQL, <50ms target, returns complete chain data
+        Story 5.2 AC #1: Detects branching evolutions (e.g., Eevee with 5 branches)
         """
         # Step 1: Find the evolution chain ID for this Pokemon
         cursor = self.execute("""
@@ -448,9 +450,10 @@ class Database:
                         'stage': 1
                     }],
                     'evolutions': [],
-                    'current_stage': 1
+                    'current_stage': 1,
+                    'is_branching': False  # Story 5.2: Single-stage = not branching
                 }
-            return {'chain_id': None, 'stages': [], 'evolutions': [], 'current_stage': 0}
+            return {'chain_id': None, 'stages': [], 'evolutions': [], 'current_stage': 0, 'is_branching': False}
         
         chain_id = row['evolution_chain_id']
         
@@ -543,9 +546,18 @@ class Database:
         # Step 7: Determine current Pokemon's stage
         current_stage = pokemon_to_stage.get(pokemon_id, 1)
         
+        # Step 8: Detect branching evolutions (Story 5.2 AC #1, #7)
+        # A chain is branching if any Pokemon has multiple evolutions
+        is_branching = False
+        for from_id in children_map:
+            if len(children_map[from_id]) > 1:
+                is_branching = True
+                break
+        
         return {
             'chain_id': chain_id,
             'stages': sorted(stages, key=lambda s: (s['stage'], s['pokemon_id'])),
             'evolutions': evolutions,
-            'current_stage': current_stage
+            'current_stage': current_stage,
+            'is_branching': is_branching  # Story 5.2: Flag for branching evolution chains
         }
