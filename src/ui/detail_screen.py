@@ -1225,82 +1225,141 @@ class DetailScreen(Screen):
     
     def _render_evolution_tab(self, surface: pygame.Surface):
         """
-        Render Evolution tab content: smaller sprite (96x96) + evolution panel.
+        Render Evolution tab content: evolution panel only (no separate sprite).
         
         Args:
             surface: pygame.Surface to draw on
             
         Story 5.7 AC #4: Evolution tab displays evolution chain
-        - Sprite: 96x96 pixels (smaller to make room for evolution panel)
         - Evolution panel: 3-stage horizontal layout with requirements
-        - Current Pokémon highlighted with cyan glow
-        - Total vertical: ~270px (saves space with smaller sprite)
+        - Current Pokémon highlighted with cyan glow in evolution panel
+        - No separate sprite needed (evolution panel shows all sprites)
+        - Story 5.7 Fix: Removed redundant sprite display for cleaner layout
         """
-        # Render smaller sprite (96x96 to save vertical space)
-        self._render_sprite(surface, size=96)
-        
-        # Render evolution panel
+        # Render evolution panel (no separate sprite - panel shows all Pokemon)
         if self.evolution_panel:
-            # Position below sprite with spacing
+            # Position higher without sprite taking up space
             screen_height = surface.get_height()
             is_small_screen = surface.get_width() <= 480
-            evolution_y = screen_height - (220 if is_small_screen else 280)
+            # Story 5.7 Fix: Position evolution panel higher, leave 45px for tab indicator
+            evolution_y = 60 if is_small_screen else 80
             self.evolution_panel.render(surface, x=10 if is_small_screen else 20, y=evolution_y)
     
     def _render_tab_indicator(self, surface: pygame.Surface):
         """
-        Render tab indicator at bottom of screen showing current tab.
+        Render tab indicator at bottom of screen with holographic badge styling.
         
         Args:
             surface: pygame.Surface to draw on
             
-        Story 5.7 AC #7: Tab indicator display
-        - Three tab labels: "Info | Stats | Evolution"
-        - Current tab highlighted with ELECTRIC_BLUE (#00d4ff)
-        - Inactive tabs with ICE_BLUE (#a8e6ff)
-        - Positioned at bottom with holographic styling
+        Story 5.7 AC #7: Tab indicator display with holographic styling
+        - Three tab badges: "Info", "Stats", "Evolution"
+        - Active tab: ELECTRIC_BLUE border/glow, HOLOGRAM_WHITE text, glowing effect
+        - Inactive tabs: ICE_BLUE border, ICE_BLUE text, subtle background
+        - Positioned at bottom center with badge containers
+        - Holographic styling: rounded rectangles, glow effects, semi-transparent backgrounds
         - Always visible regardless of current tab
+        
+        UX Review (2025-12-08): Enhanced with badge design for better holographic aesthetic
+        - Replaces plain text-and-pipes with rounded badge containers
+        - Active badge has glowing border and semi-transparent blue background
+        - Inactive badges have subtle styling for clear visual hierarchy
         """
         screen_width = surface.get_width()
         screen_height = surface.get_height()
         
-        # Position at bottom with padding
-        y = screen_height - 25
-        
-        # Tab labels and spacing
+        # Tab badge configuration
         tab_labels = ["Info", "Stats", "Evolution"]
-        tab_spacing = 80
+        badge_padding_x = 12
+        badge_padding_y = 6
+        badge_gap = 12
+        badge_radius = 4
+        badge_height = 24
         
-        # Calculate starting x position to center all tabs
-        total_width = len(tab_labels) * tab_spacing
+        # Calculate badge widths based on text
+        badge_widths = []
+        for label in tab_labels:
+            text_surface = self.body_font.render(label, True, Colors.HOLOGRAM_WHITE)
+            badge_widths.append(text_surface.get_width() + badge_padding_x * 2)
+        
+        # Center all badges horizontally
+        total_width = sum(badge_widths) + badge_gap * (len(tab_labels) - 1)
         start_x = (screen_width - total_width) // 2
+        y = screen_height - 35
         
-        for i, label in enumerate(tab_labels):
-            x = start_x + (i * tab_spacing)
+        current_x = start_x
+        
+        for i, (label, width) in enumerate(zip(tab_labels, badge_widths)):
+            is_active = (i == self.current_tab.value)
             
-            # Determine color based on current tab
-            if i == self.current_tab.value:
-                color = Colors.ELECTRIC_BLUE  # Active tab
-                font = self.body_font  # Could use bold if available
+            # Create badge rectangle
+            badge_rect = pygame.Rect(current_x, y, width, badge_height)
+            
+            if is_active:
+                # Active tab: glowing electric blue styling
+                border_color = Colors.ELECTRIC_BLUE
+                border_width = 2
+                text_color = Colors.HOLOGRAM_WHITE
+                
+                # Draw glow effect layers (outer to inner)
+                for glow_size in range(3, 0, -1):
+                    glow_rect = badge_rect.inflate(glow_size * 2, glow_size * 2)
+                    glow_surface = pygame.Surface(glow_rect.size, pygame.SRCALPHA)
+                    glow_color = pygame.Color(Colors.ELECTRIC_BLUE)
+                    glow_alpha = 20  # Subtle glow
+                    pygame.draw.rect(
+                        glow_surface,
+                        (glow_color.r, glow_color.g, glow_color.b, glow_alpha),
+                        glow_surface.get_rect(),
+                        border_radius=badge_radius + glow_size
+                    )
+                    surface.blit(glow_surface, glow_rect.topleft)
+                
+                # Draw semi-transparent blue background
+                badge_surface = pygame.Surface(badge_rect.size, pygame.SRCALPHA)
+                bg_color = pygame.Color(Colors.ELECTRIC_BLUE)
+                bg_alpha = 51  # 20% opacity
+                pygame.draw.rect(
+                    badge_surface,
+                    (bg_color.r, bg_color.g, bg_color.b, bg_alpha),
+                    badge_surface.get_rect(),
+                    border_radius=badge_radius
+                )
+                surface.blit(badge_surface, badge_rect.topleft)
             else:
-                color = Colors.ICE_BLUE  # Inactive tab
-                font = self.small_font
+                # Inactive tab: subtle ice blue styling
+                border_color = Colors.ICE_BLUE
+                border_width = 1
+                text_color = Colors.ICE_BLUE
+                
+                # Draw very subtle background
+                badge_surface = pygame.Surface(badge_rect.size, pygame.SRCALPHA)
+                bg_color = pygame.Color(Colors.ICE_BLUE)
+                bg_alpha = 13  # 5% opacity
+                pygame.draw.rect(
+                    badge_surface,
+                    (bg_color.r, bg_color.g, bg_color.b, bg_alpha),
+                    badge_surface.get_rect(),
+                    border_radius=badge_radius
+                )
+                surface.blit(badge_surface, badge_rect.topleft)
             
-            # Render tab label
-            text_surface = font.render(label, True, color)
-            text_rect = text_surface.get_rect(center=(x, y))
+            # Draw badge border (rounded rectangle)
+            pygame.draw.rect(
+                surface,
+                border_color,
+                badge_rect,
+                border_width,
+                border_radius=badge_radius
+            )
+            
+            # Draw text centered in badge
+            text_surface = self.body_font.render(label, True, text_color)
+            text_rect = text_surface.get_rect(center=badge_rect.center)
             surface.blit(text_surface, text_rect)
             
-            # Draw separator line between tabs (not after last tab)
-            if i < len(tab_labels) - 1:
-                separator_x = x + tab_spacing // 2
-                pygame.draw.line(
-                    surface,
-                    Colors.ICE_BLUE,
-                    (separator_x, y - 10),
-                    (separator_x, y + 10),
-                    1
-                )
+            # Move to next badge position
+            current_x += width + badge_gap
     
     def _render_sprite(self, surface: pygame.Surface, size: int = 128):
         """
@@ -1523,10 +1582,11 @@ class DetailScreen(Screen):
         AC #1, #2: Single and dual type badge rendering
         AC #3: Rounded rectangle (8px radius), 2px border, type-specific colors
         AC #5: Rajdhani Bold 14px, white text, uppercase, centered
-        AC #9: Fixed 32px height, auto width (80-120px), padding
+        AC #9: Fixed height, auto width (80-120px), padding
+        Story 5.7 Fix: Reduced height from 32px to 28px for better vertical spacing
         """
         # Badge dimension constants
-        HEIGHT = 32
+        HEIGHT = 28  # Story 5.7 Fix: Reduced from 32px to save vertical space
         PADDING_X = 16
         PADDING_Y = 6
         BORDER_RADIUS = 8
@@ -1597,7 +1657,8 @@ class DetailScreen(Screen):
         left_zone_width = getattr(self, '_left_zone_width', screen_width // 2 + 10)
         
         BADGE_SPACING = 8  # AC #2: 8px spacing between dual-type badges
-        BADGE_MARGIN_TOP = 8  # Story 3.7: 8px margin below sprite
+        # Story 5.7 Fix: Increase margin to prevent overlap with height/weight below
+        BADGE_MARGIN_TOP = 12 if is_small_screen else 8  # Story 3.7: margin below sprite
         
         # Calculate total width of badges for centering
         badge_widths = []
@@ -1615,7 +1676,8 @@ class DetailScreen(Screen):
         TYPES_Y = sprite_bottom + BADGE_MARGIN_TOP
         
         # Store badge bottom for physical measurements positioning
-        self._badges_bottom_y = TYPES_Y + 32  # Badge height is 32px
+        # Story 5.7 Fix: Updated from 32px to 28px to match new badge height
+        self._badges_bottom_y = TYPES_Y + 28  # Badge height is 28px
         
         # Render badges
         x = badges_start_x
@@ -1666,8 +1728,11 @@ class DetailScreen(Screen):
         badges_bottom = getattr(self, '_badges_bottom_y', 220)
         left_zone_width = getattr(self, '_left_zone_width', screen_width // 2 + 10)
         
-        # Calculate description panel top to avoid overlap
-        desc_panel_top = screen_height - (100 if is_small_screen else 140)
+        # Story 5.7 Fix: On Stats tab there's no description panel below
+        # Leave room for tab indicator at bottom (35px from bottom)
+        # Plus safety margin of 10px = 45px total
+        tab_indicator_space = 45
+        max_y_position = screen_height - tab_indicator_space
         
         # Use body_font (16px) for physical data - matches Rajdhani 16px spec
         if not self.body_font:
@@ -1680,12 +1745,15 @@ class DetailScreen(Screen):
         LINE_SPACING = 4 if is_small_screen else 8  # Tighter on small screens
         required_height = (font_height * 2) + LINE_SPACING
         
-        # Position measurements to fit between badges and description panel
-        # Start from badges_bottom + small margin, but ensure we don't overlap description
-        MARGIN_BELOW_BADGE = 8 if is_small_screen else 12
-        max_measurements_y = desc_panel_top - required_height - 4  # 4px safety margin
+        # Position measurements below badges with adequate spacing
+        # Story 5.7 Fix: Ensure measurements don't overlap badges OR tab indicator
+        MARGIN_BELOW_BADGE = 20 if is_small_screen else 24  # Increased for better separation
         
-        PHYSICAL_DATA_Y = min(badges_bottom + MARGIN_BELOW_BADGE, max_measurements_y)
+        # Calculate Y position: start from badges + margin, but don't go below tab indicator
+        ideal_y = badges_bottom + MARGIN_BELOW_BADGE
+        max_allowed_y = max_y_position - required_height - 4  # 4px safety margin
+        
+        PHYSICAL_DATA_Y = min(ideal_y, max_allowed_y)
         
         # Format values with placeholders for invalid data (AC #6, #7, #8)
         height_str = f"{self.height:.1f}m" if self.height > 0 else "???"
@@ -1853,7 +1921,8 @@ class DetailScreen(Screen):
         is_small_screen = screen_width <= 480
         
         DESC_PANEL_X = 10 if is_small_screen else 20
-        DESC_PANEL_Y = screen_height - (100 if is_small_screen else 140)
+        # Story 5.7 Fix: Leave 45px at bottom for tab indicator to prevent overlap
+        DESC_PANEL_Y = screen_height - (145 if is_small_screen else 185)
         DESC_PANEL_WIDTH = screen_width - (20 if is_small_screen else 40)
         DESC_PANEL_HEIGHT = 80 if is_small_screen else 120
         DESC_TEXT_X = DESC_PANEL_X + (8 if is_small_screen else 16)  # padding
