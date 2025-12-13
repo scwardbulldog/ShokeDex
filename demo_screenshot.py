@@ -75,11 +75,15 @@ def main():
         test_pokemon = [
             (25, "pikachu", "Linear evolution - Happiness + Thunder Stone requirements", True),
             (133, "eevee", "Branching evolution - Stones + Happiness Day/Night requirements", True),
-            (132, "ditto", "Single-stage - No evolutions", True),
+            (132, "ditto", "Single-stage - No evolutions (Gen 1)", True),
             (64, "kadabra", "Trade evolution - Simple trade requirement", False),
             (95, "onix", "Trade with item - Trade holding Metal Coat requirement", False),
             (42, "golbat", "Happiness evolution - High Friendship requirement", False),
             (236, "tyrogue", "Conditional stats - Atk>Def, Def>Atk, Atk=Def branching", False),
+            # Story 5.3: Additional single-stage Pokémon for cross-generation testing
+            (83, "farfetchd", "Single-stage - No evolutions (Gen 1)", False),
+            (201, "unown", "Single-stage - No evolutions (Gen 2)", False),
+            (359, "absol", "Single-stage - No evolutions (Gen 3)", False),
         ]
         
         screenshot_num = 3
