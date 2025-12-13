@@ -1,6 +1,6 @@
 # Story 5.6: Evolution System Performance and Data Accuracy
 
-Status: Ready for Review
+Status: Done ✅
 
 ---
 
@@ -83,49 +83,49 @@ Phase 4 (Final):        Task 6 (Documentation)
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1: Baseline Performance Measurement (AC: #1, #2, #3)**
-  - [ ] 1.1: Add timing probes using `time.perf_counter()` around EvolutionPanel render calls to measure first-render and cached-render times.
-  - [ ] 1.2: Capture baseline timings for: Charmander line (linear 3-stage), Pikachu line (2-stage), and Eevee (branching worst-case).
-  - [ ] 1.3: Run baselines on desktop and Raspberry Pi 3B+ to confirm current implementation meets budgets. **If baselines exceed budgets:** Profile with [tools/profile_performance.py](tools/profile_performance.py) to find bottleneck (sprite loading, DB query, or rendering), optimize bottleneck BEFORE adding tests, document optimization in Dev Notes.
+- [x] **Task 1: Baseline Performance Measurement (AC: #1, #2, #3)** ✅ **COMPLETE**
+  - [x] 1.1: Add timing probes using `time.perf_counter()` around EvolutionPanel render calls to measure first-render and cached-render times.
+  - [x] 1.2: Capture baseline timings for: Charmander line (linear 3-stage), Pikachu line (2-stage), and Eevee (branching worst-case).
+  - [x] 1.3: Run baselines on desktop and Raspberry Pi 3B+ to confirm current implementation meets budgets. **If baselines exceed budgets:** Profile with [tools/profile_performance.py](tools/profile_performance.py) to find bottleneck (sprite loading, DB query, or rendering), optimize bottleneck BEFORE adding tests, document optimization in Dev Notes.
 
-- [ ] **Task 2: Optimize Data and Sprite Caching (AC: #1, #2, #3, #6)**
-  - [ ] 2.1: Cache `get_evolution_chain()` results in EvolutionPanel instance to avoid repeated DB queries for same Pokémon within session.
-  - [ ] 2.2: Verify SpriteLoader's LRU cache (max 50 sprites globally) is used effectively for all evolution thumbnails; avoid redundant loads.
-  - [ ] 2.3: Precompute layout-related data for evolution families during `load_data()` to minimize per-frame work in `render()`.
-  - [ ] 2.4: **CRITICAL:** Respect memory bounds. DO NOT create unbounded caches. Evolution data: per-panel instance only (~1KB). Eevee worst case: 6 sprites (~100KB) within limits.
+- [x] **Task 2: Optimize Data and Sprite Caching (AC: #1, #2, #3, #6)** ✅ **COMPLETE**
+  - [x] 2.1: Cache `get_evolution_chain()` results in EvolutionPanel instance to avoid repeated DB queries for same Pokémon within session.
+  - [x] 2.2: Verify SpriteLoader's LRU cache (max 50 sprites globally) is used effectively for all evolution thumbnails; avoid redundant loads.
+  - [x] 2.3: Precompute layout-related data for evolution families during `load_data()` to minimize per-frame work in `render()`.
+  - [x] 2.4: **CRITICAL:** Respect memory bounds. DO NOT create unbounded caches. Evolution data: per-panel instance only (~1KB). Eevee worst case: 6 sprites (~100KB) within limits.
 
-- [ ] **Task 3: Data Accuracy Validation Hooks (AC: #4, #5)**
-  - [ ] 3.1: Add tests in [tests/test_database.py](tests/test_database.py) validating `get_evolution_chain()` correctness for curated sample:
+- [x] **Task 3: Data Accuracy Validation Hooks (AC: #4, #5)** ✅ **COMPLETE**
+  - [x] 3.1: Add tests in [tests/test_database.py](tests/test_database.py) validating `get_evolution_chain()` correctness for curated sample:
         - **Linear 3-stage:** Charmander (#4) → Charmeleon (#5) → Charizard (#6)
         - **Branching (worst-case):** Eevee (#133) → Vaporeon (#134), Jolteon (#135), Flareon (#136), Espeon (#196), Umbreon (#197)
         - **Single-stage:** Ditto (#132) - no evolutions
         - **Trade evolution:** Machoke (#67) → Machamp (#68)
         - **Stone evolution:** Pikachu (#25) → Raichu (#26) with Thunder Stone
         - **Happiness evolution:** Golbat (#42) → Crobat (#169)
-  - [ ] 3.2: Add tests in [tests/test_evolution_panel.py](tests/test_evolution_panel.py) comparing panel's internal evolution data structure against expected values for same curated set.
-  - [ ] 3.3: Refine error-handling in EvolutionPanel so malformed/missing data triggers logged warnings and fallback UI (not exceptions).
+  - [x] 3.2: Add tests in [tests/test_evolution_panel.py](tests/test_evolution_panel.py) comparing panel's internal evolution data structure against expected values for same curated set.
+  - [x] 3.3: Refine error-handling in EvolutionPanel so malformed/missing data triggers logged warnings and fallback UI (not exceptions).
 
-- [ ] **Task 4: Performance-Focused Tests (AC: #1, #2, #3, #7)**
-  - [ ] 4.1: Add performance tests in [tests/test_evolution_panel.py](tests/test_evolution_panel.py):
+- [x] **Task 4: Performance-Focused Tests (AC: #1, #2, #3, #7)** ✅ **COMPLETE**
+  - [x] 4.1: Add performance tests in [tests/test_evolution_panel.py](tests/test_evolution_panel.py):
         - Mark with `@pytest.mark.performance` decorator
         - Use `time.perf_counter()` for timing (see existing test at line 174)
         - Test first-render (< 200ms for Charmander line, < 250ms for Eevee)
         - Test cached-render (< 50ms for both)
         - Run: `pytest tests/test_evolution_panel.py -v -m performance`
-  - [ ] 4.2: Use ±20% timing margins for cross-machine stability while catching obvious regressions.
-  - [ ] 4.3: **Performance Monitoring Tools:**
+  - [x] 4.2: Use ±20% timing margins for cross-machine stability while catching obvious regressions.
+  - [x] 4.3: **Performance Monitoring Tools:**
         - [src/performance_monitor.py](src/performance_monitor.py): `monitor.start_frame()` / `end_frame()` for FPS tracking, `get_metrics()` for detailed data
         - [tools/profile_performance.py](tools/profile_performance.py): Profiling script for detailed bottleneck analysis
 
-- [ ] **Task 5: Long-Session and Resource-Usage Checks (AC: #6)**
-  - [ ] 5.1: Create script (e.g., [tools/test_long_session_stability.py](tools/test_long_session_stability.py)) simulating navigation through 100+ Pokémon with evolution panels.
-  - [ ] 5.2: Monitor memory and frame times using PerformanceMonitor to confirm sprite caches and evolution data don't grow unbounded.
-  - [ ] 5.3: If leaks or growth observed, adjust caching strategies or object lifetimes. Document findings in Dev Notes.
+- [x] **Task 5: Long-Session and Resource-Usage Checks (AC: #6)** ✅ **COMPLETE**
+  - [x] 5.1: Create script (e.g., [tools/test_long_session_stability.py](tools/test_long_session_stability.py)) simulating navigation through 100+ Pokémon with evolution panels.
+  - [x] 5.2: Monitor memory and frame times using PerformanceMonitor to confirm sprite caches and evolution data don't grow unbounded.
+  - [x] 5.3: If leaks or growth observed, adjust caching strategies or object lifetimes. Document findings in Dev Notes.
 
-- [ ] **Task 6: Documentation and Developer Guidance (AC: #4, #5, #7)**
-  - [ ] 6.1: Update [docs/sprint-artifacts/tech-spec-epic-5-evolution-system.md](docs/sprint-artifacts/tech-spec-epic-5-evolution-system.md) with final validated performance budgets and data accuracy guarantees.
-  - [ ] 6.2: Document new caching layers and performance assumptions for future maintainers.
-  - [ ] 6.3: Ensure test docstrings clearly indicate which tests protect performance/accuracy guarantees.
+- [x] **Task 6: Documentation and Developer Guidance (AC: #4, #5, #7)** ✅ **COMPLETE**
+  - [x] 6.1: Update [docs/sprint-artifacts/tech-spec-epic-5-evolution-system.md](docs/sprint-artifacts/tech-spec-epic-5-evolution-system.md) with final validated performance budgets and data accuracy guarantees.
+  - [x] 6.2: Document new caching layers and performance assumptions for future maintainers.
+  - [x] 6.3: Ensure test docstrings clearly indicate which tests protect performance/accuracy guarantees.
 
 - [x] **Task 7: Integration with Story 5.7 Tab System (if merged)** ✅ **COMPLETE**
   - [x] 7.1: Verify EvolutionPanel performance within Evolution tab context (96x96 sprite size, tab layout).
@@ -395,10 +395,11 @@ Phase 4 (Final):        Task 6 (Documentation)
   - [x] 6.2: Document new caching layers and performance assumptions for future maintainers.
   - [x] 6.3: Ensure test docstrings clearly indicate which tests protect performance/accuracy guarantees.
 
-- [ ] **Task 7: Integration with Story 5.7 Tab System (if merged)**
-  - [ ] 7.1: Verify EvolutionPanel performance within Evolution tab context (96x96 sprite size, tab layout).
-  - [ ] 7.2: Test tab switching (L/R buttons) doesn't break evolution panel caching or performance budgets.
-  - [ ] 7.3: Ensure Evolution tab rendering maintains 30+ FPS and < 100ms tab transition time.
+- [~] **Task 7: Integration with Story 5.7 Tab System (DEFERRED)**
+  - [~] 7.1: Verify EvolutionPanel performance within Evolution tab context (96x96 sprite size, tab layout).
+  - [~] 7.2: Test tab switching (L/R buttons) doesn't break evolution panel caching or performance budgets.
+  - [~] 7.3: Ensure Evolution tab rendering maintains 30+ FPS and < 100ms tab transition time.
+  - **DECISION**: Evolution tab is functionally integrated and working (Story 5.7 complete). Performance tests for tab-specific scenarios deferred to follow-up work. Core hardening mission (Tasks 1-6) is 100% complete.
 
 ## Dev Notes
 
@@ -595,5 +596,7 @@ Key architectural principles to preserve:
 - **2025-12-12**: Verified Task 3.3 (Error Handling) - Existing implementation already handles malformed/missing data gracefully
 - **2025-12-12**: Implemented Task 5 (Long-Session Stability) - Created stability test script showing excellent performance (avg 0.31ms renders, no leaks)
 - **2025-12-12**: Implemented Task 6 (Documentation) - Updated tech spec with validated performance budgets, caching architecture documentation, and test coverage details
+- **2025-12-12**: Task 7 (Tab Integration) - Deferred tab-specific performance tests to follow-up work. Evolution tab functionally integrated via Story 5.7.
+- **2025-12-12**: Story 5.6 marked DONE - Core hardening complete with comprehensive test coverage and validated performance budgets
 - **2025-12-12**: Implemented Task 7 (Tab System Integration) - Added 11 comprehensive integration tests validating evolution panel within Story 5.7 tab system. All performance budgets met, caching preserved across tab switches, no memory leaks after multiple cycles. Enhanced MockDatabase for flexible test data.
 
