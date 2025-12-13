@@ -1,4 +1,4 @@
-<tool id="{bmad_folder}/core/tasks/shard-doc" name="Shard Document"
+<tool id=".bmad/core/tasks/shard-doc" name="Shard Document"
   description="Splits large markdown documents into smaller, organized files based on level 2 (default) sections" webskip="true"
   standalone="true">
   <objective>Split large markdown documents into smaller, organized files based on level 2 sections using @kayvan/markdown-tree-parser tool</objective>
@@ -36,7 +36,7 @@
 
     <step n="3" title="Execute Sharding">
       <action>Inform user that sharding is beginning</action>
-      <action>Execute command: `npx @kayvan/markdown-tree-parser [source-document] [destination-folder]`</action>
+      <action>Execute command: `npx @kayvan/markdown-tree-parser explode [source-document] [destination-folder]`</action>
       <action>Capture command output and any errors</action>
       <action if="command fails">HALT and display error to user</action>
     </step>

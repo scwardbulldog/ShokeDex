@@ -4,6 +4,7 @@
 <critical>You MUST have already loaded and processed: {project-root}/.bmad/bmm/workflows/4-implementation/retrospective/workflow.yaml</critical>
 <critical>Communicate all responses in {communication_language} and language MUST be tailored to {user_skill_level}</critical>
 <critical>Generate all documents in {document_output_language}</critical>
+<critical>⚠️ ABSOLUTELY NO TIME ESTIMATES - NEVER mention hours, days, weeks, months, or ANY time-based predictions. AI has fundamentally changed development speed - what once took teams weeks/months can now be done by one person in hours. DO NOT give ANY time estimates whatsoever.</critical>
 
 <critical>
   DOCUMENT OUTPUT: Retrospective analysis. Concise insights, lessons learned, action items. User skill level ({user_skill_level}) affects conversation style ONLY, not retrospective content.
@@ -1394,9 +1395,9 @@ Retrospective document was saved successfully, but {sprint_status_file} may need
 - Do NOT start Epic {{next_epic_num}} until review is complete
   {{else}}
 
-4. **Begin Epic {{next_epic_num}} planning when preparation complete**
-   - Load PM agent and run `epic-tech-context` for Epic {{next_epic_num}}
-   - Or continue with existing contexted epics
+4. **Begin Epic {{next_epic_num}} when ready**
+   - Start drafting stories with SM agent's `create-story`
+   - Epic will be marked as `in-progress` automatically when first story is created
    - Ensure all critical path items are done first
      {{/if}}
 
