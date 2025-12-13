@@ -3,9 +3,13 @@ Tests for EvolutionPanel component.
 
 Story 5.1: Three-Stage Evolution Chain Display
 Tests evolution panel rendering, data loading, sprite loading, and integration.
+
+Story 5.6: Performance and Data Accuracy Validation
+Tests performance budgets and data accuracy across curated sample.
 """
 
 import unittest
+import pytest
 import pygame
 import os
 import tempfile
@@ -1205,6 +1209,546 @@ class TestEvolutionPanel(unittest.TestCase):
         # AC #6: Cached render ≤ 50ms
         self.assertLess(cached_render_time, 50.0,
                        f"Cached render with requirements took {cached_render_time:.2f}ms, expected <50ms")
+    
+    # Story 5.6 Task 3.2: EvolutionPanel Data Accuracy Validation
+    # Test panel's internal data structures match expected values for curated sample
+    
+    def test_panel_data_accuracy_charmander_linear_three_stage(self):
+        """
+        Task 3.2: Validate EvolutionPanel data structure for linear 3-stage chain.
+        
+        Test Case: Charmander line (#4 → #5 → #6)
+        AC #4: Panel's evolution_data matches expected structure and values
+        """
+        with self.db as db:
+            db.create_schema()
+            
+            # Insert Charmander line
+            pokemon_data = [
+                (4, 'charmander', 4, 6, 85, 62, 1),
+                (5, 'charmeleon', 5, 11, 190, 142, 1),
+                (6, 'charizard', 6, 17, 905, 240, 1)
+            ]
+            db.executemany("""
+                INSERT INTO pokemon (id, name, species_id, height, weight, base_experience, generation)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, pokemon_data)
+            
+            db.execute("INSERT INTO evolution_chains (id) VALUES (?)", (2,))
+            
+            evolutions = [
+                (2, 4, 5, 16, 'level-up', None),
+                (2, 5, 6, 36, 'level-up', None)
+            ]
+            db.executemany("""
+                INSERT INTO evolutions 
+                (evolution_chain_id, from_pokemon_id, to_pokemon_id, min_level, trigger, item)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, evolutions)
+            
+            db.commit()
+        
+        # Create panel and load data
+        screen_manager = MockScreenManager(self.db)
+        panel = EvolutionPanel(screen_manager, 4)
+        panel.load_data()
+        
+        # Validate internal evolution_data structure
+        self.assertIsNotNone(panel.evolution_data)
+        self.assertEqual(len(panel.evolution_data['stages']), 3)
+        self.assertEqual(panel.evolution_data['current_stage'], 1)
+        self.assertFalse(panel.evolution_data['is_branching'])
+        
+        # Validate cached evolutions list
+        self.assertEqual(len(panel.evolutions), 2)
+        
+        # Validate stage pokemon IDs
+        stage_ids = [stage['pokemon_id'] for stage in panel.evolution_data['stages']]
+        self.assertEqual(stage_ids, [4, 5, 6])
+    
+    def test_panel_data_accuracy_eevee_branching(self):
+        """
+        Task 3.2: Validate EvolutionPanel data structure for branching chain.
+        
+        Test Case: Eevee line (#133 → 5 evolutions)
+        AC #4: Panel correctly identifies branching and loads all evolution paths
+        """
+        with self.db as db:
+            db.create_schema()
+            
+            # Insert Eevee and evolutions
+            pokemon_data = [
+                (133, 'eevee', 133, 3, 65, 65, 1),
+                (134, 'vaporeon', 134, 10, 290, 184, 1),
+                (135, 'jolteon', 135, 8, 245, 184, 1),
+                (136, 'flareon', 136, 9, 250, 184, 1),
+                (196, 'espeon', 196, 9, 265, 184, 2),
+                (197, 'umbreon', 197, 10, 270, 184, 2)
+            ]
+            db.executemany("""
+                INSERT INTO pokemon (id, name, species_id, height, weight, base_experience, generation)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, pokemon_data)
+            
+            db.execute("INSERT INTO evolution_chains (id) VALUES (?)", (67,))
+            
+            evolutions = [
+                (67, 133, 134, None, 'use-item', 'water-stone'),
+                (67, 133, 135, None, 'use-item', 'thunder-stone'),
+                (67, 133, 136, None, 'use-item', 'fire-stone'),
+                (67, 133, 196, None, 'level-up', None),
+                (67, 133, 197, None, 'level-up', None)
+            ]
+            db.executemany("""
+                INSERT INTO evolutions 
+                (evolution_chain_id, from_pokemon_id, to_pokemon_id, min_level, trigger, item)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, evolutions)
+            
+            db.commit()
+        
+        # Create panel and load data
+        screen_manager = MockScreenManager(self.db)
+        panel = EvolutionPanel(screen_manager, 133)
+        panel.load_data()
+        
+        # Validate branching flag
+        self.assertTrue(panel.evolution_data['is_branching'])
+        
+        # Validate all 5 evolutions present
+        self.assertEqual(len(panel.evolutions), 5)
+        
+        # Validate evolution target IDs
+        evolution_targets = {e['to_id'] for e in panel.evolutions}
+        self.assertEqual(evolution_targets, {134, 135, 136, 196, 197})
+    
+    def test_panel_data_accuracy_ditto_single_stage(self):
+        """
+        Task 3.2: Validate EvolutionPanel data structure for single-stage Pokémon.
+        
+        Test Case: Ditto (#132) - no evolutions
+        AC #4, #5: Panel handles single-stage gracefully with empty evolution list
+        """
+        with self.db as db:
+            db.create_schema()
+            
+            db.execute("""
+                INSERT INTO pokemon (id, name, species_id, height, weight, base_experience, generation)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (132, 'ditto', 132, 3, 40, 101, 1))
+            
+            db.execute("INSERT INTO evolution_chains (id) VALUES (?)", (66,))
+            db.commit()
+        
+        # Create panel and load data
+        screen_manager = MockScreenManager(self.db)
+        panel = EvolutionPanel(screen_manager, 132)
+        panel.load_data()
+        
+        # Validate single-stage structure
+        self.assertEqual(len(panel.evolution_data['stages']), 1)
+        self.assertEqual(len(panel.evolutions), 0)
+        self.assertEqual(panel.evolution_data['current_stage'], 1)
+        self.assertFalse(panel.evolution_data['is_branching'])
+    
+    def test_panel_data_accuracy_machoke_trade(self):
+        """
+        Task 3.2: Validate EvolutionPanel data structure for trade evolution.
+        
+        Test Case: Machoke line (#66 → #67 → #68)
+        AC #4: Panel correctly identifies trade evolution requirement
+        """
+        with self.db as db:
+            db.create_schema()
+            
+            pokemon_data = [
+                (66, 'machop', 66, 8, 195, 61, 1),
+                (67, 'machoke', 67, 15, 705, 142, 1),
+                (68, 'machamp', 68, 16, 1300, 227, 1)
+            ]
+            db.executemany("""
+                INSERT INTO pokemon (id, name, species_id, height, weight, base_experience, generation)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, pokemon_data)
+            
+            db.execute("INSERT INTO evolution_chains (id) VALUES (?)", (34,))
+            
+            evolutions = [
+                (34, 66, 67, 28, 'level-up', None),
+                (34, 67, 68, None, 'trade', None)
+            ]
+            db.executemany("""
+                INSERT INTO evolutions 
+                (evolution_chain_id, from_pokemon_id, to_pokemon_id, min_level, trigger, item)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, evolutions)
+            
+            db.commit()
+        
+        # Create panel and load data
+        screen_manager = MockScreenManager(self.db)
+        panel = EvolutionPanel(screen_manager, 67)
+        panel.load_data()
+        
+        # Validate trade evolution present
+        trade_evo = next((e for e in panel.evolutions if e['to_id'] == 68), None)
+        self.assertIsNotNone(trade_evo)
+        self.assertEqual(trade_evo['method'], 'trade')
+    
+    def test_panel_data_accuracy_pikachu_stone(self):
+        """
+        Task 3.2: Validate EvolutionPanel data structure for stone evolution.
+        
+        Test Case: Pikachu line (#172 → #25 → #26)
+        AC #4: Panel correctly identifies Thunder Stone requirement
+        """
+        with self.db as db:
+            db.create_schema()
+            
+            pokemon_data = [
+                (172, 'pichu', 172, 3, 20, 41, 2),
+                (25, 'pikachu', 25, 4, 60, 112, 1),
+                (26, 'raichu', 26, 8, 300, 243, 1)
+            ]
+            db.executemany("""
+                INSERT INTO pokemon (id, name, species_id, height, weight, base_experience, generation)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, pokemon_data)
+            
+            db.execute("INSERT INTO evolution_chains (id) VALUES (?)", (10,))
+            
+            evolutions = [
+                (10, 172, 25, None, 'level-up', None),
+                (10, 25, 26, None, 'use-item', 'thunder-stone')
+            ]
+            db.executemany("""
+                INSERT INTO evolutions 
+                (evolution_chain_id, from_pokemon_id, to_pokemon_id, min_level, trigger, item)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, evolutions)
+            
+            db.commit()
+        
+        # Create panel and load data
+        screen_manager = MockScreenManager(self.db)
+        panel = EvolutionPanel(screen_manager, 25)
+        panel.load_data()
+        
+        # Validate Thunder Stone evolution present
+        stone_evo = next((e for e in panel.evolutions if e['to_id'] == 26), None)
+        self.assertIsNotNone(stone_evo)
+        self.assertEqual(stone_evo['method'], 'use-item')
+        self.assertEqual(stone_evo['item'], 'thunder-stone')
+    
+    def test_panel_data_accuracy_golbat_happiness(self):
+        """
+        Task 3.2: Validate EvolutionPanel data structure for happiness evolution.
+        
+        Test Case: Golbat line (#41 → #42 → #169)
+        AC #4: Panel correctly identifies high-friendship requirement
+        """
+        with self.db as db:
+            db.create_schema()
+            
+            pokemon_data = [
+                (41, 'zubat', 41, 8, 75, 49, 1),
+                (42, 'golbat', 42, 16, 550, 159, 1),
+                (169, 'crobat', 169, 18, 750, 241, 2)
+            ]
+            db.executemany("""
+                INSERT INTO pokemon (id, name, species_id, height, weight, base_experience, generation)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, pokemon_data)
+            
+            db.execute("INSERT INTO evolution_chains (id) VALUES (?)", (21,))
+            
+            evolutions = [
+                (21, 41, 42, 22, 'level-up', None),
+                (21, 42, 169, None, 'level-up', None)
+            ]
+            db.executemany("""
+                INSERT INTO evolutions 
+                (evolution_chain_id, from_pokemon_id, to_pokemon_id, min_level, trigger, item)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, evolutions)
+            
+            # Add happiness requirement
+            db.execute("""
+                UPDATE evolutions 
+                SET min_happiness = 220 
+                WHERE from_pokemon_id = 42 AND to_pokemon_id = 169
+            """)
+            
+            db.commit()
+        
+        # Create panel and load data
+        screen_manager = MockScreenManager(self.db)
+        panel = EvolutionPanel(screen_manager, 42)
+        panel.load_data()
+        
+        # Validate happiness evolution present
+        happiness_evo = next((e for e in panel.evolutions if e['to_id'] == 169), None)
+        self.assertIsNotNone(happiness_evo)
+        self.assertEqual(happiness_evo['method'], 'level-up')
+        self.assertEqual(happiness_evo['trigger'], 'high-friendship')
+    
+    # Story 5.6 Task 4: Performance-Focused Tests
+    # Using pytest.mark.performance decorator for performance test identification
+    # Run with: pytest tests/test_evolution_panel.py -v -m performance
+    
+    @pytest.mark.performance
+    def test_performance_charmander_first_render(self):
+        """
+        Task 4.1: Test first-render performance for linear 3-stage chain.
+        
+        Test Case: Charmander line (#4 → #5 → #6)
+        Target: < 200ms first render on Raspberry Pi 3B+
+        AC #1: First render completes within budget
+        Margin: ±20% for cross-machine stability
+        """
+        with self.db as db:
+            db.create_schema()
+            
+            # Insert Charmander line
+            pokemon_data = [
+                (4, 'charmander', 4, 6, 85, 62, 1),
+                (5, 'charmeleon', 5, 11, 190, 142, 1),
+                (6, 'charizard', 6, 17, 905, 240, 1)
+            ]
+            db.executemany("""
+                INSERT INTO pokemon (id, name, species_id, height, weight, base_experience, generation)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, pokemon_data)
+            
+            db.execute("INSERT INTO evolution_chains (id) VALUES (?)", (2,))
+            
+            evolutions = [
+                (2, 4, 5, 16, 'level-up', None),
+                (2, 5, 6, 36, 'level-up', None)
+            ]
+            db.executemany("""
+                INSERT INTO evolutions 
+                (evolution_chain_id, from_pokemon_id, to_pokemon_id, min_level, trigger, item)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, evolutions)
+            
+            db.commit()
+        
+        # Create panel and load data/sprites
+        screen_manager = MockScreenManager(self.db)
+        panel = EvolutionPanel(screen_manager, 4)
+        panel.load_data()
+        panel.load_sprites()
+        
+        # Create test surface
+        surface = pygame.Surface((800, 480))
+        
+        # Measure first render (cold cache)
+        start_time = time.perf_counter()
+        panel.render(surface, 20, 100)
+        first_render_time = (time.perf_counter() - start_time) * 1000
+        
+        # AC #1: First render ≤ 200ms (with 20% margin = 240ms max)
+        self.assertLess(first_render_time, 240.0,
+                       f"First render took {first_render_time:.2f}ms, expected <200ms (240ms with margin)")
+        
+        # Log timing for monitoring
+        print(f"\n[PERF] Charmander first render: {first_render_time:.2f}ms")
+    
+    @pytest.mark.performance
+    def test_performance_charmander_cached_render(self):
+        """
+        Task 4.1: Test cached-render performance for linear 3-stage chain.
+        
+        Test Case: Charmander line (repeat render)
+        Target: < 50ms cached render
+        AC #2: Cached render uses cached data/sprites efficiently
+        Margin: ±20% for cross-machine stability
+        """
+        with self.db as db:
+            db.create_schema()
+            
+            # Insert Charmander line
+            pokemon_data = [
+                (4, 'charmander', 4, 6, 85, 62, 1),
+                (5, 'charmeleon', 5, 11, 190, 142, 1),
+                (6, 'charizard', 6, 17, 905, 240, 1)
+            ]
+            db.executemany("""
+                INSERT INTO pokemon (id, name, species_id, height, weight, base_experience, generation)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, pokemon_data)
+            
+            db.execute("INSERT INTO evolution_chains (id) VALUES (?)", (2,))
+            
+            evolutions = [
+                (2, 4, 5, 16, 'level-up', None),
+                (2, 5, 6, 36, 'level-up', None)
+            ]
+            db.executemany("""
+                INSERT INTO evolutions 
+                (evolution_chain_id, from_pokemon_id, to_pokemon_id, min_level, trigger, item)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, evolutions)
+            
+            db.commit()
+        
+        # Create panel and load data/sprites
+        screen_manager = MockScreenManager(self.db)
+        panel = EvolutionPanel(screen_manager, 4)
+        panel.load_data()
+        panel.load_sprites()
+        
+        # Create test surface
+        surface = pygame.Surface((800, 480))
+        
+        # Warm up cache with first render
+        panel.render(surface, 20, 100)
+        
+        # Measure cached render
+        start_time = time.perf_counter()
+        panel.render(surface, 20, 100)
+        cached_render_time = (time.perf_counter() - start_time) * 1000
+        
+        # AC #2: Cached render ≤ 50ms (with 20% margin = 60ms max)
+        self.assertLess(cached_render_time, 60.0,
+                       f"Cached render took {cached_render_time:.2f}ms, expected <50ms (60ms with margin)")
+        
+        # Log timing for monitoring
+        print(f"\n[PERF] Charmander cached render: {cached_render_time:.2f}ms")
+    
+    @pytest.mark.performance
+    def test_performance_eevee_first_render_worst_case(self):
+        """
+        Task 4.1: Test first-render performance for worst-case branching.
+        
+        Test Case: Eevee (#133) with 5 evolutions (6 total sprites)
+        Target: < 250ms first render on Raspberry Pi 3B+
+        AC #3: Worst-case branching meets performance budget
+        Margin: ±20% for cross-machine stability
+        """
+        with self.db as db:
+            db.create_schema()
+            
+            # Insert Eevee and all Gen 1-2 evolutions
+            pokemon_data = [
+                (133, 'eevee', 133, 3, 65, 65, 1),
+                (134, 'vaporeon', 134, 10, 290, 184, 1),
+                (135, 'jolteon', 135, 8, 245, 184, 1),
+                (136, 'flareon', 136, 9, 250, 184, 1),
+                (196, 'espeon', 196, 9, 265, 184, 2),
+                (197, 'umbreon', 197, 10, 270, 184, 2)
+            ]
+            db.executemany("""
+                INSERT INTO pokemon (id, name, species_id, height, weight, base_experience, generation)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, pokemon_data)
+            
+            db.execute("INSERT INTO evolution_chains (id) VALUES (?)", (67,))
+            
+            evolutions = [
+                (67, 133, 134, None, 'use-item', 'water-stone'),
+                (67, 133, 135, None, 'use-item', 'thunder-stone'),
+                (67, 133, 136, None, 'use-item', 'fire-stone'),
+                (67, 133, 196, None, 'level-up', None),
+                (67, 133, 197, None, 'level-up', None)
+            ]
+            db.executemany("""
+                INSERT INTO evolutions 
+                (evolution_chain_id, from_pokemon_id, to_pokemon_id, min_level, trigger, item)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, evolutions)
+            
+            db.commit()
+        
+        # Create panel and load data/sprites
+        screen_manager = MockScreenManager(self.db)
+        panel = EvolutionPanel(screen_manager, 133)
+        panel.load_data()
+        panel.load_sprites()
+        
+        # Create test surface
+        surface = pygame.Surface((800, 480))
+        
+        # Measure first render (cold cache)
+        start_time = time.perf_counter()
+        panel.render(surface, 20, 100)
+        first_render_time = (time.perf_counter() - start_time) * 1000
+        
+        # AC #3: First render ≤ 250ms (with 20% margin = 300ms max)
+        self.assertLess(first_render_time, 300.0,
+                       f"Eevee first render took {first_render_time:.2f}ms, expected <250ms (300ms with margin)")
+        
+        # Log timing for monitoring
+        print(f"\n[PERF] Eevee first render (worst-case): {first_render_time:.2f}ms")
+    
+    @pytest.mark.performance
+    def test_performance_eevee_cached_render_worst_case(self):
+        """
+        Task 4.1: Test cached-render performance for worst-case branching.
+        
+        Test Case: Eevee (repeat render)
+        Target: < 50ms cached render
+        AC #3: Cached worst-case branching remains fast
+        Margin: ±20% for cross-machine stability
+        """
+        with self.db as db:
+            db.create_schema()
+            
+            # Insert Eevee and all Gen 1-2 evolutions
+            pokemon_data = [
+                (133, 'eevee', 133, 3, 65, 65, 1),
+                (134, 'vaporeon', 134, 10, 290, 184, 1),
+                (135, 'jolteon', 135, 8, 245, 184, 1),
+                (136, 'flareon', 136, 9, 250, 184, 1),
+                (196, 'espeon', 196, 9, 265, 184, 2),
+                (197, 'umbreon', 197, 10, 270, 184, 2)
+            ]
+            db.executemany("""
+                INSERT INTO pokemon (id, name, species_id, height, weight, base_experience, generation)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, pokemon_data)
+            
+            db.execute("INSERT INTO evolution_chains (id) VALUES (?)", (67,))
+            
+            evolutions = [
+                (67, 133, 134, None, 'use-item', 'water-stone'),
+                (67, 133, 135, None, 'use-item', 'thunder-stone'),
+                (67, 133, 136, None, 'use-item', 'fire-stone'),
+                (67, 133, 196, None, 'level-up', None),
+                (67, 133, 197, None, 'level-up', None)
+            ]
+            db.executemany("""
+                INSERT INTO evolutions 
+                (evolution_chain_id, from_pokemon_id, to_pokemon_id, min_level, trigger, item)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, evolutions)
+            
+            db.commit()
+        
+        # Create panel and load data/sprites
+        screen_manager = MockScreenManager(self.db)
+        panel = EvolutionPanel(screen_manager, 133)
+        panel.load_data()
+        panel.load_sprites()
+        
+        # Create test surface
+        surface = pygame.Surface((800, 480))
+        
+        # Warm up cache with first render
+        panel.render(surface, 20, 100)
+        
+        # Measure cached render
+        start_time = time.perf_counter()
+        panel.render(surface, 20, 100)
+        cached_render_time = (time.perf_counter() - start_time) * 1000
+        
+        # AC #3: Cached render ≤ 50ms (with 20% margin = 60ms max)
+        self.assertLess(cached_render_time, 60.0,
+                       f"Eevee cached render took {cached_render_time:.2f}ms, expected <50ms (60ms with margin)")
+        
+        # Log timing for monitoring
+        print(f"\n[PERF] Eevee cached render (worst-case): {cached_render_time:.2f}ms")
 
 
 if __name__ == '__main__':

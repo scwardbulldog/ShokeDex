@@ -647,6 +647,318 @@ class TestDatabase(unittest.TestCase):
             espeon_evo = next(e for e in chain['evolutions'] if e['to_id'] == 196)
             self.assertEqual(espeon_evo['method'], 'level-up')
             self.assertEqual(espeon_evo['trigger'], 'happiness-day')
+    
+    # Story 5.6 Task 3.1: Data Accuracy Validation - Curated Sample Tests
+    # Testing get_evolution_chain() correctness across all evolution patterns
+    
+    def test_evolution_accuracy_charmander_line_linear_three_stage(self):
+        """
+        Task 3.1: Validate linear 3-stage evolution chain.
+        
+        Test Case: Charmander (#4) → Charmeleon (#5) → Charizard (#6)
+        Pattern: Linear three-stage with level-based evolution
+        AC #4: Chain shows correct family members and relationships
+        """
+        with self.db as db:
+            db.create_schema()
+            
+            # Insert Charmander line
+            pokemon_data = [
+                (4, 'charmander', 4, 6, 85, 62, 1),
+                (5, 'charmeleon', 5, 11, 190, 142, 1),
+                (6, 'charizard', 6, 17, 905, 240, 1)
+            ]
+            db.executemany("""
+                INSERT INTO pokemon (id, name, species_id, height, weight, base_experience, generation)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, pokemon_data)
+            
+            # Create evolution chain
+            db.execute("INSERT INTO evolution_chains (id) VALUES (?)", (2,))
+            
+            # Add evolutions (Charmander -> Charmeleon at 16, Charmeleon -> Charizard at 36)
+            evolutions = [
+                (2, 4, 5, 16, 'level-up', None),
+                (2, 5, 6, 36, 'level-up', None)
+            ]
+            db.executemany("""
+                INSERT INTO evolutions 
+                (evolution_chain_id, from_pokemon_id, to_pokemon_id, min_level, trigger, item)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, evolutions)
+            
+            db.commit()
+            
+            # Test from Charmander's perspective
+            chain = db.get_evolution_chain(4)
+            self.assertEqual(len(chain['stages']), 3, "Should have 3 stages")
+            self.assertEqual(chain['current_stage'], 1, "Charmander is stage 1")
+            self.assertEqual(len(chain['evolutions']), 2, "Should have 2 evolution relationships")
+            
+            # Validate stage data
+            self.assertEqual(chain['stages'][0]['pokemon_id'], 4)
+            self.assertEqual(chain['stages'][0]['name'], 'charmander')
+            self.assertEqual(chain['stages'][1]['pokemon_id'], 5)
+            self.assertEqual(chain['stages'][1]['name'], 'charmeleon')
+            self.assertEqual(chain['stages'][2]['pokemon_id'], 6)
+            self.assertEqual(chain['stages'][2]['name'], 'charizard')
+            
+            # Validate evolution relationships
+            evo_1 = next(e for e in chain['evolutions'] if e['from_id'] == 4)
+            self.assertEqual(evo_1['to_id'], 5)
+            self.assertEqual(evo_1['level'], 16)
+            self.assertEqual(evo_1['method'], 'level-up')
+            
+            evo_2 = next(e for e in chain['evolutions'] if e['from_id'] == 5)
+            self.assertEqual(evo_2['to_id'], 6)
+            self.assertEqual(evo_2['level'], 36)
+            self.assertEqual(evo_2['method'], 'level-up')
+    
+    def test_evolution_accuracy_eevee_branching_worst_case(self):
+        """
+        Task 3.1: Validate branching evolution (worst-case complexity).
+        
+        Test Case: Eevee (#133) → Vaporeon (#134), Jolteon (#135), Flareon (#136),
+                   Espeon (#196), Umbreon (#197)
+        Pattern: Branching with 5 possible evolutions (6 total sprites)
+        AC #4: Branching chains show all possible evolution paths
+        """
+        with self.db as db:
+            db.create_schema()
+            
+            # Insert Eevee and all Gen 1-2 evolutions
+            pokemon_data = [
+                (133, 'eevee', 133, 3, 65, 65, 1),
+                (134, 'vaporeon', 134, 10, 290, 184, 1),
+                (135, 'jolteon', 135, 8, 245, 184, 1),
+                (136, 'flareon', 136, 9, 250, 184, 1),
+                (196, 'espeon', 196, 9, 265, 184, 2),
+                (197, 'umbreon', 197, 10, 270, 184, 2)
+            ]
+            db.executemany("""
+                INSERT INTO pokemon (id, name, species_id, height, weight, base_experience, generation)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, pokemon_data)
+            
+            # Create evolution chain
+            db.execute("INSERT INTO evolution_chains (id) VALUES (?)", (67,))
+            
+            # Add all evolution paths
+            evolutions = [
+                (67, 133, 134, None, 'use-item', 'water-stone'),      # Vaporeon
+                (67, 133, 135, None, 'use-item', 'thunder-stone'),    # Jolteon
+                (67, 133, 136, None, 'use-item', 'fire-stone'),       # Flareon
+                (67, 133, 196, None, 'level-up', None),               # Espeon (happiness-day in full impl)
+                (67, 133, 197, None, 'level-up', None)                # Umbreon (happiness-night in full impl)
+            ]
+            db.executemany("""
+                INSERT INTO evolutions 
+                (evolution_chain_id, from_pokemon_id, to_pokemon_id, min_level, trigger, item)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, evolutions)
+            
+            db.commit()
+            
+            # Test from Eevee's perspective
+            chain = db.get_evolution_chain(133)
+            self.assertTrue(chain['is_branching'], "Eevee chain should be branching")
+            self.assertEqual(len(chain['evolutions']), 5, "Eevee has 5 possible evolutions")
+            self.assertEqual(chain['current_stage'], 1, "Eevee is stage 1")
+            
+            # Validate all evolution targets are present
+            evolution_targets = {e['to_id'] for e in chain['evolutions']}
+            expected_targets = {134, 135, 136, 196, 197}
+            self.assertEqual(evolution_targets, expected_targets, 
+                           "All 5 Eevee evolutions should be present")
+            
+            # Validate evolution methods
+            vaporeon_evo = next(e for e in chain['evolutions'] if e['to_id'] == 134)
+            self.assertEqual(vaporeon_evo['method'], 'use-item')
+            self.assertEqual(vaporeon_evo['item'], 'water-stone')
+    
+    def test_evolution_accuracy_ditto_single_stage(self):
+        """
+        Task 3.1: Validate single-stage Pokémon (no evolutions).
+        
+        Test Case: Ditto (#132) - no pre-evolution or evolution
+        Pattern: Single-stage, standalone Pokémon
+        AC #4: Single-stage Pokémon return empty evolution lists
+        AC #5: No crashes or errors for Pokémon without evolutions
+        """
+        with self.db as db:
+            db.create_schema()
+            
+            # Insert Ditto
+            db.execute("""
+                INSERT INTO pokemon (id, name, species_id, height, weight, base_experience, generation)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (132, 'ditto', 132, 3, 40, 101, 1))
+            
+            # Create evolution chain (exists but has no evolutions)
+            db.execute("INSERT INTO evolution_chains (id) VALUES (?)", (66,))
+            
+            db.commit()
+            
+            # Test Ditto (no evolutions)
+            chain = db.get_evolution_chain(132)
+            self.assertEqual(len(chain['stages']), 1, "Ditto has 1 stage")
+            self.assertEqual(len(chain['evolutions']), 0, "Ditto has 0 evolutions")
+            self.assertEqual(chain['current_stage'], 1, "Ditto is stage 1")
+            self.assertEqual(chain['stages'][0]['pokemon_id'], 132)
+            self.assertEqual(chain['stages'][0]['name'], 'ditto')
+            self.assertFalse(chain['is_branching'], "Single-stage should not be branching")
+    
+    def test_evolution_accuracy_machoke_trade_evolution(self):
+        """
+        Task 3.1: Validate trade-based evolution.
+        
+        Test Case: Machoke (#67) → Machamp (#68) via trade
+        Pattern: Trade evolution trigger
+        AC #4: Trade evolutions correctly identified with trigger='trade'
+        """
+        with self.db as db:
+            db.create_schema()
+            
+            # Insert Machop line
+            pokemon_data = [
+                (66, 'machop', 66, 8, 195, 61, 1),
+                (67, 'machoke', 67, 15, 705, 142, 1),
+                (68, 'machamp', 68, 16, 1300, 227, 1)
+            ]
+            db.executemany("""
+                INSERT INTO pokemon (id, name, species_id, height, weight, base_experience, generation)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, pokemon_data)
+            
+            # Create evolution chain
+            db.execute("INSERT INTO evolution_chains (id) VALUES (?)", (34,))
+            
+            # Add evolutions
+            evolutions = [
+                (34, 66, 67, 28, 'level-up', None),    # Machop -> Machoke
+                (34, 67, 68, None, 'trade', None)      # Machoke -> Machamp
+            ]
+            db.executemany("""
+                INSERT INTO evolutions 
+                (evolution_chain_id, from_pokemon_id, to_pokemon_id, min_level, trigger, item)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, evolutions)
+            
+            db.commit()
+            
+            # Test from Machoke's perspective
+            chain = db.get_evolution_chain(67)
+            self.assertEqual(len(chain['stages']), 3, "Machop line has 3 stages")
+            self.assertEqual(chain['current_stage'], 2, "Machoke is stage 2")
+            
+            # Find trade evolution
+            trade_evo = next(e for e in chain['evolutions'] if e['to_id'] == 68)
+            self.assertEqual(trade_evo['method'], 'trade', "Machamp evolution requires trade")
+            self.assertIsNone(trade_evo['item'], "No item required for Machamp trade")
+    
+    def test_evolution_accuracy_pikachu_stone_evolution(self):
+        """
+        Task 3.1: Validate stone-based evolution.
+        
+        Test Case: Pikachu (#25) → Raichu (#26) via Thunder Stone
+        Pattern: Item-triggered evolution with specific stone
+        AC #4: Stone evolutions show correct item requirement
+        """
+        with self.db as db:
+            db.create_schema()
+            
+            # Insert Pichu line
+            pokemon_data = [
+                (172, 'pichu', 172, 3, 20, 41, 2),
+                (25, 'pikachu', 25, 4, 60, 112, 1),
+                (26, 'raichu', 26, 8, 300, 243, 1)
+            ]
+            db.executemany("""
+                INSERT INTO pokemon (id, name, species_id, height, weight, base_experience, generation)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, pokemon_data)
+            
+            # Create evolution chain
+            db.execute("INSERT INTO evolution_chains (id) VALUES (?)", (10,))
+            
+            # Add evolutions
+            evolutions = [
+                (10, 172, 25, None, 'level-up', None),          # Pichu -> Pikachu
+                (10, 25, 26, None, 'use-item', 'thunder-stone') # Pikachu -> Raichu
+            ]
+            db.executemany("""
+                INSERT INTO evolutions 
+                (evolution_chain_id, from_pokemon_id, to_pokemon_id, min_level, trigger, item)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, evolutions)
+            
+            db.commit()
+            
+            # Test from Pikachu's perspective
+            chain = db.get_evolution_chain(25)
+            self.assertEqual(len(chain['stages']), 3, "Pichu line has 3 stages")
+            self.assertEqual(chain['current_stage'], 2, "Pikachu is stage 2")
+            
+            # Find Thunder Stone evolution
+            stone_evo = next(e for e in chain['evolutions'] if e['to_id'] == 26)
+            self.assertEqual(stone_evo['method'], 'use-item', "Raichu requires item")
+            self.assertEqual(stone_evo['item'], 'thunder-stone', "Thunder Stone required")
+    
+    def test_evolution_accuracy_golbat_happiness_evolution(self):
+        """
+        Task 3.1: Validate happiness-based evolution.
+        
+        Test Case: Golbat (#42) → Crobat (#169) via high friendship
+        Pattern: Happiness/friendship evolution trigger
+        AC #4: Happiness evolutions correctly identified with trigger='high-friendship'
+        """
+        with self.db as db:
+            db.create_schema()
+            
+            # Insert Zubat line
+            pokemon_data = [
+                (41, 'zubat', 41, 8, 75, 49, 1),
+                (42, 'golbat', 42, 16, 550, 159, 1),
+                (169, 'crobat', 169, 18, 750, 241, 2)
+            ]
+            db.executemany("""
+                INSERT INTO pokemon (id, name, species_id, height, weight, base_experience, generation)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, pokemon_data)
+            
+            # Create evolution chain
+            db.execute("INSERT INTO evolution_chains (id) VALUES (?)", (21,))
+            
+            # Add evolutions
+            evolutions = [
+                (21, 41, 42, 22, 'level-up', None),           # Zubat -> Golbat
+                (21, 42, 169, None, 'level-up', None)         # Golbat -> Crobat (happiness)
+            ]
+            db.executemany("""
+                INSERT INTO evolutions 
+                (evolution_chain_id, from_pokemon_id, to_pokemon_id, min_level, trigger, item)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, evolutions)
+            
+            # Update Crobat evolution with happiness requirement
+            db.execute("""
+                UPDATE evolutions 
+                SET min_happiness = 220 
+                WHERE from_pokemon_id = 42 AND to_pokemon_id = 169
+            """)
+            
+            db.commit()
+            
+            # Test from Golbat's perspective
+            chain = db.get_evolution_chain(42)
+            self.assertEqual(len(chain['stages']), 3, "Zubat line has 3 stages")
+            self.assertEqual(chain['current_stage'], 2, "Golbat is stage 2")
+            
+            # Find happiness evolution
+            happiness_evo = next(e for e in chain['evolutions'] if e['to_id'] == 169)
+            self.assertEqual(happiness_evo['method'], 'level-up')
+            self.assertEqual(happiness_evo['trigger'], 'high-friendship', 
+                           "Crobat requires high friendship")
 
 
 if __name__ == '__main__':
