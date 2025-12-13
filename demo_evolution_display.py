@@ -5,7 +5,8 @@ Visual demonstration of evolution chain display.
 Story 5.1: Three-Stage Evolution Chain Display
 Story 5.2: Branching Evolution Display
 Story 5.3: Single-Stage Pokémon Handling ("No evolutions" message)
-This demo shows linear, branching, and single-stage evolution panels in DetailScreen.
+Story 5.4: Evolution Requirement Display (Level/Stone/Trade)
+This demo shows linear, branching, and single-stage evolution panels with requirement text.
 """
 
 import pygame

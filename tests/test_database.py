@@ -545,6 +545,108 @@ class TestDatabase(unittest.TestCase):
             ids = [p['id'] for p in results]
             
             self.assertEqual(ids, [1, 25, 75, 151], "Pokemon should be ordered by ID")
+    
+    def test_get_evolution_chain_trade_with_item(self):
+        """Test get_evolution_chain with trade-item evolution (Onix -> Steelix)"""
+        with self.db as db:
+            db.create_schema()
+            
+            # Insert Onix and Steelix
+            pokemon_data = [
+                (95, 'onix', 95, 88, 2100, 77, 1),
+                (208, 'steelix', 208, 92, 4000, 179, 2)
+            ]
+            db.executemany("""
+                INSERT INTO pokemon (id, name, species_id, height, weight, base_experience, generation)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, pokemon_data)
+            
+            # Create evolution chain
+            db.execute("INSERT INTO evolution_chains (id) VALUES (?)", (39,))
+            
+            # Add trade-with-item evolution
+            db.execute("""
+                INSERT INTO evolutions 
+                (evolution_chain_id, from_pokemon_id, to_pokemon_id, min_level, trigger, item, min_happiness, time_of_day)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (39, 95, 208, None, 'trade', 'metal-coat', None, None))
+            
+            db.commit()
+            
+            # Test trade-with-item evolution
+            chain = db.get_evolution_chain(95)
+            self.assertEqual(len(chain['evolutions']), 1)
+            self.assertEqual(chain['evolutions'][0]['method'], 'trade')
+            self.assertEqual(chain['evolutions'][0]['item'], 'metal-coat')
+    
+    def test_get_evolution_chain_happiness(self):
+        """Test get_evolution_chain with happiness evolution (Pichu -> Pikachu)"""
+        with self.db as db:
+            db.create_schema()
+            
+            # Insert Pichu and Pikachu
+            pokemon_data = [
+                (172, 'pichu', 172, 3, 20, 41, 2),
+                (25, 'pikachu', 25, 4, 60, 112, 1)
+            ]
+            db.executemany("""
+                INSERT INTO pokemon (id, name, species_id, height, weight, base_experience, generation)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, pokemon_data)
+            
+            # Create evolution chain
+            db.execute("INSERT INTO evolution_chains (id) VALUES (?)", (10,))
+            
+            # Add happiness evolution
+            db.execute("""
+                INSERT INTO evolutions 
+                (evolution_chain_id, from_pokemon_id, to_pokemon_id, min_level, trigger, item, min_happiness, time_of_day)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (10, 172, 25, None, 'level-up', None, 220, None))
+            
+            db.commit()
+            
+            # Test happiness evolution
+            chain = db.get_evolution_chain(172)
+            self.assertEqual(len(chain['evolutions']), 1)
+            self.assertEqual(chain['evolutions'][0]['method'], 'level-up')
+            # Trigger should be 'high-friendship' based on min_happiness presence
+            self.assertEqual(chain['evolutions'][0]['trigger'], 'high-friendship')
+    
+    def test_get_evolution_chain_happiness_day(self):
+        """Test get_evolution_chain with happiness-day evolution (Eevee -> Espeon)"""
+        with self.db as db:
+            db.create_schema()
+            
+            # Insert Eevee and Espeon
+            pokemon_data = [
+                (133, 'eevee', 133, 3, 65, 65, 1),
+                (196, 'espeon', 196, 9, 265, 184, 2)
+            ]
+            db.executemany("""
+                INSERT INTO pokemon (id, name, species_id, height, weight, base_experience, generation)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, pokemon_data)
+            
+            # Create evolution chain
+            db.execute("INSERT INTO evolution_chains (id) VALUES (?)", (67,))
+            
+            # Add happiness-day evolution
+            db.execute("""
+                INSERT INTO evolutions 
+                (evolution_chain_id, from_pokemon_id, to_pokemon_id, min_level, trigger, item, min_happiness, time_of_day)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (67, 133, 196, None, 'level-up', None, 220, 'day'))
+            
+            db.commit()
+            
+            # Test happiness-day evolution
+            chain = db.get_evolution_chain(133)
+            self.assertGreaterEqual(len(chain['evolutions']), 1)
+            # Find the Espeon evolution
+            espeon_evo = next(e for e in chain['evolutions'] if e['to_id'] == 196)
+            self.assertEqual(espeon_evo['method'], 'level-up')
+            self.assertEqual(espeon_evo['trigger'], 'happiness-day')
 
 
 if __name__ == '__main__':

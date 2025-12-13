@@ -230,6 +230,179 @@ class TestEvolutionPanel(unittest.TestCase):
         requirement = panel._format_requirement(evo_data)
         self.assertEqual(requirement, "Trade")
     
+    def test_evolution_panel_format_requirement_trade_with_item(self):
+        """Test requirement formatting for trade-with-item evolution (AC #3, #7)."""
+        screen_manager = MockScreenManager(self.db)
+        panel = EvolutionPanel(screen_manager, 95)  # Onix
+        
+        # Test trade with item requirement
+        evo_data = {
+            'method': 'trade',
+            'level': None,
+            'item': 'metal-coat',
+            'trigger': None
+        }
+        
+        requirement = panel._format_requirement(evo_data)
+        self.assertEqual(requirement, "Trade holding Metal Coat")
+    
+    def test_evolution_panel_format_requirement_happiness(self):
+        """Test requirement formatting for happiness evolution (AC #7)."""
+        screen_manager = MockScreenManager(self.db)
+        panel = EvolutionPanel(screen_manager, 172)  # Pichu
+        
+        # Test happiness requirement
+        evo_data = {
+            'method': 'level-up',
+            'level': None,
+            'item': None,
+            'trigger': 'high-friendship'
+        }
+        
+        requirement = panel._format_requirement(evo_data)
+        self.assertEqual(requirement, "High Friendship")
+    
+    def test_evolution_panel_format_requirement_happiness_day(self):
+        """Test requirement formatting for happiness-day evolution (AC #7)."""
+        screen_manager = MockScreenManager(self.db)
+        panel = EvolutionPanel(screen_manager, 196)  # Espeon
+        
+        # Test happiness-day requirement
+        evo_data = {
+            'method': 'level-up',
+            'level': None,
+            'item': None,
+            'trigger': 'happiness-day'
+        }
+        
+        requirement = panel._format_requirement(evo_data)
+        self.assertEqual(requirement, "High Friendship (Day)")
+    
+    def test_evolution_panel_format_requirement_happiness_night(self):
+        """Test requirement formatting for happiness-night evolution (AC #7)."""
+        screen_manager = MockScreenManager(self.db)
+        panel = EvolutionPanel(screen_manager, 197)  # Umbreon
+        
+        # Test happiness-night requirement
+        evo_data = {
+            'method': 'level-up',
+            'level': None,
+            'item': None,
+            'trigger': 'happiness-night'
+        }
+        
+        requirement = panel._format_requirement(evo_data)
+        self.assertEqual(requirement, "High Friendship (Night)")
+    
+    def test_evolution_panel_format_requirement_level_atk_higher(self):
+        """Test requirement formatting for level-attack-higher evolution (AC #7)."""
+        screen_manager = MockScreenManager(self.db)
+        panel = EvolutionPanel(screen_manager, 236)  # Tyrogue -> Hitmonlee
+        
+        # Test level-attack-higher requirement
+        evo_data = {
+            'method': 'level-up',
+            'level': 20,
+            'item': None,
+            'trigger': 'attack-higher'
+        }
+        
+        requirement = panel._format_requirement(evo_data)
+        self.assertEqual(requirement, "Level (Atk > Def)")
+    
+    def test_evolution_panel_format_requirement_level_def_higher(self):
+        """Test requirement formatting for level-defense-higher evolution (AC #7)."""
+        screen_manager = MockScreenManager(self.db)
+        panel = EvolutionPanel(screen_manager, 236)  # Tyrogue -> Hitmonchan
+        
+        # Test level-defense-higher requirement
+        evo_data = {
+            'method': 'level-up',
+            'level': 20,
+            'item': None,
+            'trigger': 'defense-higher'
+        }
+        
+        requirement = panel._format_requirement(evo_data)
+        self.assertEqual(requirement, "Level (Def > Atk)")
+    
+    def test_evolution_panel_format_requirement_level_atk_def_equal(self):
+        """Test requirement formatting for level-attack-defense-equal evolution (AC #7)."""
+        screen_manager = MockScreenManager(self.db)
+        panel = EvolutionPanel(screen_manager, 236)  # Tyrogue -> Hitmontop
+        
+        # Test level-attack-defense-equal requirement
+        evo_data = {
+            'method': 'level-up',
+            'level': 20,
+            'item': None,
+            'trigger': 'attack-defense-equal'
+        }
+        
+        requirement = panel._format_requirement(evo_data)
+        self.assertEqual(requirement, "Level (Atk = Def)")
+    
+    def test_evolution_panel_format_requirement_null_or_empty(self):
+        """Test requirement formatting for null/empty evolution method (AC #7)."""
+        screen_manager = MockScreenManager(self.db)
+        panel = EvolutionPanel(screen_manager, 1)
+        
+        # Test null method
+        evo_data = {
+            'method': None,
+            'level': None,
+            'item': None,
+            'trigger': None
+        }
+        
+        requirement = panel._format_requirement(evo_data)
+        self.assertEqual(requirement, "")
+        
+        # Test empty string method
+        evo_data_empty = {
+            'method': '',
+            'level': None,
+            'item': None,
+            'trigger': None
+        }
+        
+        requirement_empty = panel._format_requirement(evo_data_empty)
+        self.assertEqual(requirement_empty, "")
+    
+    def test_evolution_panel_format_requirement_unrecognized(self):
+        """Test requirement formatting for unrecognized evolution method (AC #7)."""
+        screen_manager = MockScreenManager(self.db)
+        panel = EvolutionPanel(screen_manager, 1)
+        
+        # Test unrecognized method
+        evo_data = {
+            'method': 'some-future-method',
+            'level': None,
+            'item': None,
+            'trigger': None
+        }
+        
+        requirement = panel._format_requirement(evo_data)
+        self.assertEqual(requirement, "Unknown")
+    
+    def test_evolution_panel_format_requirement_truncation(self):
+        """Test requirement text truncation for strings > 24 characters (AC #1, #2, #3)."""
+        screen_manager = MockScreenManager(self.db)
+        panel = EvolutionPanel(screen_manager, 1)
+        
+        # Test long item name that should be truncated
+        evo_data = {
+            'method': 'use-item',
+            'level': None,
+            'item': 'incredibly-long-stone-name-that-exceeds-limit',
+            'trigger': None
+        }
+        
+        requirement = panel._format_requirement(evo_data)
+        # Should be ≤24 characters or have ellipsis
+        self.assertTrue(len(requirement) <= 24 or requirement.endswith('...'),
+                       f"Requirement '{requirement}' is {len(requirement)} chars, expected ≤24 or ellipsis")
+    
     def test_evolution_panel_render_all_elements(self):
         """Test that render() displays all required elements (Task 7.4, AC #1-5)."""
         # Insert three-stage evolution chain
@@ -810,6 +983,228 @@ class TestEvolutionPanel(unittest.TestCase):
             print(f"Two-branch render failed: {e}")
         
         self.assertTrue(rendering_works, "Two-branch layout should render correctly")
+    
+    def test_evolution_panel_integration_bulbasaur_level_requirements(self):
+        """Integration test: Bulbasaur evolution chain with level requirements (Story 5.4 AC #1)"""
+        with self.db as db:
+            db.create_schema()
+            # Insert Bulbasaur line
+            pokemon_data = [
+                (1, 'bulbasaur', 1, 7, 69, 64, 1),
+                (2, 'ivysaur', 2, 10, 130, 142, 1),
+                (3, 'venusaur', 3, 20, 1000, 236, 1)
+            ]
+            db.executemany("""
+                INSERT INTO pokemon (id, name, species_id, height, weight, base_experience, generation)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, pokemon_data)
+            
+            db.execute("INSERT INTO evolution_chains (id) VALUES (?)", (1,))
+            
+            evolutions = [
+                (1, 1, 2, 'level-up', 16, None, None, None, None),
+                (1, 2, 3, 'level-up', 32, None, None, None, None)
+            ]
+            db.executemany("""
+                INSERT INTO evolutions (evolution_chain_id, from_pokemon_id, to_pokemon_id,
+                                       trigger, min_level, item, min_happiness, time_of_day, relative_physical_stats)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, evolutions)
+            db.commit()
+        
+        # Create and render panel
+        screen_manager = MockScreenManager(self.db)
+        panel = EvolutionPanel(screen_manager, 1)
+        panel.load_data()
+        panel.load_sprites()
+        
+        # Verify requirements are formatted correctly
+        evolutions = panel.evolution_data['evolutions']
+        self.assertEqual(len(evolutions), 2)
+        
+        # Check first evolution (Bulbasaur -> Ivysaur at Level 16)
+        evo1 = evolutions[0]
+        requirement1 = panel._format_requirement(evo1)
+        self.assertEqual(requirement1, "Level 16")
+        
+        # Check second evolution (Ivysaur -> Venusaur at Level 32)
+        evo2 = evolutions[1]
+        requirement2 = panel._format_requirement(evo2)
+        self.assertEqual(requirement2, "Level 32")
+        
+        # Render and verify no crashes
+        surface = pygame.Surface((800, 480))
+        panel.render(surface, 20, 100)
+    
+    def test_evolution_panel_integration_pikachu_stone_requirement(self):
+        """Integration test: Pikachu evolution with Thunder Stone (Story 5.4 AC #2)"""
+        with self.db as db:
+            db.create_schema()
+            # Insert Pichu, Pikachu, Raichu
+            pokemon_data = [
+                (172, 'pichu', 172, 3, 20, 41, 2),
+                (25, 'pikachu', 25, 4, 60, 112, 1),
+                (26, 'raichu', 26, 8, 300, 243, 1)
+            ]
+            db.executemany("""
+                INSERT INTO pokemon (id, name, species_id, height, weight, base_experience, generation)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, pokemon_data)
+            
+            db.execute("INSERT INTO evolution_chains (id) VALUES (?)", (10,))
+            
+            evolutions = [
+                (10, 172, 25, 'level-up', None, None, 220, None, None),  # Happiness
+                (10, 25, 26, 'use-item', None, 'thunder-stone', None, None, None)  # Stone
+            ]
+            db.executemany("""
+                INSERT INTO evolutions (evolution_chain_id, from_pokemon_id, to_pokemon_id,
+                                       trigger, min_level, item, min_happiness, time_of_day, relative_physical_stats)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, evolutions)
+            db.commit()
+        
+        # Create panel for Pikachu
+        screen_manager = MockScreenManager(self.db)
+        panel = EvolutionPanel(screen_manager, 25)
+        panel.load_data()
+        
+        # Find stone evolution
+        evolutions = panel.evolution_data['evolutions']
+        stone_evo = next(e for e in evolutions if e['to_id'] == 26)
+        
+        # Verify stone requirement formatting
+        requirement = panel._format_requirement(stone_evo)
+        self.assertEqual(requirement, "Thunder Stone")
+    
+    def test_evolution_panel_integration_onix_trade_with_item(self):
+        """Integration test: Onix -> Steelix with Metal Coat (Story 5.4 AC #3)"""
+        with self.db as db:
+            db.create_schema()
+            # Insert Onix and Steelix
+            pokemon_data = [
+                (95, 'onix', 95, 88, 2100, 77, 1),
+                (208, 'steelix', 208, 92, 4000, 179, 2)
+            ]
+            db.executemany("""
+                INSERT INTO pokemon (id, name, species_id, height, weight, base_experience, generation)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, pokemon_data)
+            
+            db.execute("INSERT INTO evolution_chains (id) VALUES (?)", (39,))
+            
+            db.execute("""
+                INSERT INTO evolutions (evolution_chain_id, from_pokemon_id, to_pokemon_id,
+                                       trigger, min_level, item, min_happiness, time_of_day, relative_physical_stats)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (39, 95, 208, 'trade', None, 'metal-coat', None, None, None))
+            db.commit()
+        
+        # Create panel
+        screen_manager = MockScreenManager(self.db)
+        panel = EvolutionPanel(screen_manager, 95)
+        panel.load_data()
+        
+        # Verify trade-with-item requirement
+        evo = panel.evolution_data['evolutions'][0]
+        requirement = panel._format_requirement(evo)
+        self.assertEqual(requirement, "Trade holding Metal Coat")
+    
+    def test_evolution_panel_integration_golbat_happiness(self):
+        """Integration test: Golbat -> Crobat with happiness (Story 5.4 AC #7)"""
+        with self.db as db:
+            db.create_schema()
+            # Insert Zubat, Golbat, Crobat
+            pokemon_data = [
+                (41, 'zubat', 41, 8, 75, 49, 1),
+                (42, 'golbat', 42, 16, 550, 159, 1),
+                (169, 'crobat', 169, 18, 750, 241, 2)
+            ]
+            db.executemany("""
+                INSERT INTO pokemon (id, name, species_id, height, weight, base_experience, generation)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, pokemon_data)
+            
+            db.execute("INSERT INTO evolution_chains (id) VALUES (?)", (21,))
+            
+            evolutions = [
+                (21, 41, 42, 'level-up', 22, None, None, None, None),
+                (21, 42, 169, 'level-up', None, None, 220, None, None)  # Happiness
+            ]
+            db.executemany("""
+                INSERT INTO evolutions (evolution_chain_id, from_pokemon_id, to_pokemon_id,
+                                       trigger, min_level, item, min_happiness, time_of_day, relative_physical_stats)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, evolutions)
+            db.commit()
+        
+        # Create panel for Golbat
+        screen_manager = MockScreenManager(self.db)
+        panel = EvolutionPanel(screen_manager, 42)
+        panel.load_data()
+        
+        # Find happiness evolution
+        evolutions = panel.evolution_data['evolutions']
+        happiness_evo = next(e for e in evolutions if e['to_id'] == 169)
+        
+        # Verify happiness requirement
+        requirement = panel._format_requirement(happiness_evo)
+        self.assertEqual(requirement, "High Friendship")
+    
+    def test_evolution_panel_performance_with_requirements(self):
+        """Performance test: Rendering with requirement text stays within budget (Story 5.4 AC #6)"""
+        with self.db as db:
+            db.create_schema()
+            # Insert three-stage evolution
+            pokemon_data = [
+                (4, 'charmander', 4, 6, 85, 62, 1),
+                (5, 'charmeleon', 5, 11, 190, 142, 1),
+                (6, 'charizard', 6, 17, 905, 240, 1)
+            ]
+            db.executemany("""
+                INSERT INTO pokemon (id, name, species_id, height, weight, base_experience, generation)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, pokemon_data)
+            
+            db.execute("INSERT INTO evolution_chains (id) VALUES (?)", (2,))
+            
+            evolutions = [
+                (2, 4, 5, 'level-up', 16, None, None, None, None),
+                (2, 5, 6, 'level-up', 36, None, None, None, None)
+            ]
+            db.executemany("""
+                INSERT INTO evolutions (evolution_chain_id, from_pokemon_id, to_pokemon_id,
+                                       trigger, min_level, item, min_happiness, time_of_day, relative_physical_stats)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, evolutions)
+            db.commit()
+        
+        # Create panel
+        screen_manager = MockScreenManager(self.db)
+        panel = EvolutionPanel(screen_manager, 5)
+        panel.load_data()
+        panel.load_sprites()
+        
+        # Create test surface
+        surface = pygame.Surface((800, 480))
+        
+        # Measure first render (cold cache)
+        start_time = time.perf_counter()
+        panel.render(surface, 20, 100)
+        first_render_time = (time.perf_counter() - start_time) * 1000
+        
+        # AC #6: First render ≤ 200ms
+        self.assertLess(first_render_time, 200.0,
+                       f"First render with requirements took {first_render_time:.2f}ms, expected <200ms")
+        
+        # Measure cached render
+        start_time = time.perf_counter()
+        panel.render(surface, 20, 100)
+        cached_render_time = (time.perf_counter() - start_time) * 1000
+        
+        # AC #6: Cached render ≤ 50ms
+        self.assertLess(cached_render_time, 50.0,
+                       f"Cached render with requirements took {cached_render_time:.2f}ms, expected <50ms")
 
 
 if __name__ == '__main__':

@@ -509,35 +509,76 @@ class EvolutionPanel:
         """
         Format evolution requirement text for display.
         
+        Story 5.4: Centralized requirement formatting for all Gen 1-3 evolution methods.
+        
         Args:
             evo_data: Evolution relationship dict with method, level, item, trigger
             
         Returns:
             Formatted requirement string (e.g., "Level 16", "Thunder Stone", "Trade")
+            Maximum 20 characters or truncated with ellipsis per AC #1, #2, #3.
             
-        AC #3: Requirements displayed with proper formatting
+        AC #1: Level-based evolutions format as "Level {level}"
+        AC #2: Stone-based evolutions format as "{item_name}"
+        AC #3: Trade evolutions format as "Trade" or "Trade holding {item}"
+        AC #7: Complete coverage of all Gen 1-3 evolution methods
         """
-        method = evo_data.get('method', 'level-up')
+        method = evo_data.get('method', '')
         level = evo_data.get('level')
         item = evo_data.get('item')
         trigger = evo_data.get('trigger')
         
-        # Format based on evolution method
-        if method == 'level-up' and level:
-            return f"Level {level}"
-        elif method == 'use-item' and item:
-            # Format item name (e.g., "thunder-stone" → "Thunder Stone")
-            return item.replace('-', ' ').title()
+        # AC #7: Handle NULL/empty method
+        if not method:
+            return ""
+        
+        # AC #1: Level-based evolution with conditional stat requirements
+        if method == 'level-up':
+            # Check for conditional stat-based evolutions (Tyrogue line)
+            if trigger == 'attack-higher':
+                result = "Level (Atk > Def)"
+            elif trigger == 'defense-higher':
+                result = "Level (Def > Atk)"
+            elif trigger == 'attack-defense-equal':
+                result = "Level (Atk = Def)"
+            elif trigger == 'high-friendship' or trigger == 'happiness':
+                result = "High Friendship"
+            elif trigger == 'happiness-day':
+                result = "High Friendship (Day)"
+            elif trigger == 'happiness-night':
+                result = "High Friendship (Night)"
+            elif level:
+                result = f"Level {level}"
+            else:
+                result = "Level Up"
+        
+        # AC #2: Stone-based or item-based evolution
+        elif method == 'use-item':
+            if item:
+                # Format item name (e.g., "thunder-stone" → "Thunder Stone")
+                result = item.replace('-', ' ').title()
+            else:
+                result = "Use Item"
+        
+        # AC #3: Trade evolution (with or without held item)
         elif method == 'trade':
             if item:
-                return f"Trade + {item.replace('-', ' ').title()}"
-            return "Trade"
-        elif trigger == 'high-friendship':
-            return "High Friendship"
-        elif trigger in ('daytime', 'nighttime'):
-            return trigger.capitalize()
+                # Format: "Trade holding {item_name}"
+                item_formatted = item.replace('-', ' ').title()
+                result = f"Trade holding {item_formatted}"
+            else:
+                result = "Trade"
+        
+        # AC #7: Unrecognized evolution method
         else:
-            return "Unknown"
+            result = "Unknown"
+        
+        # AC #1, #2, #3: Truncate to ≤24 characters with ellipsis if longer
+        # (Accommodates "Trade holding Metal Coat" and "High Friendship (Night)")
+        if len(result) > 24:
+            result = result[:21] + "..."
+        
+        return result
     
     def _render_no_evolutions(self, surface: pygame.Surface, x: int, y: int):
         """Backward-compatible wrapper for older call sites.

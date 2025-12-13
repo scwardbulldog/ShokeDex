@@ -480,7 +480,8 @@ class Database:
                 min_level,
                 item,
                 min_happiness,
-                time_of_day
+                time_of_day,
+                relative_physical_stats
             FROM evolutions
             WHERE evolution_chain_id = ?
             ORDER BY from_pokemon_id, to_pokemon_id
@@ -532,15 +533,35 @@ class Database:
         # Step 6: Format evolution relationships
         evolutions = []
         for evo in evolution_rows:
+            # Story 5.4: Enhanced trigger mapping for all Gen 1-3 evolution methods
+            trigger_value = None
+            
+            # Handle conditional stat-based evolutions (Tyrogue line)
+            if evo['relative_physical_stats'] == 1:  # Attack > Defense
+                trigger_value = 'attack-higher'
+            elif evo['relative_physical_stats'] == -1:  # Defense > Attack
+                trigger_value = 'defense-higher'
+            elif evo['relative_physical_stats'] == 0:  # Attack == Defense
+                trigger_value = 'attack-defense-equal'
+            # Handle happiness with time of day (Eevee -> Espeon/Umbreon)
+            elif evo['min_happiness'] and evo['time_of_day'] == 'day':
+                trigger_value = 'happiness-day'
+            elif evo['min_happiness'] and evo['time_of_day'] == 'night':
+                trigger_value = 'happiness-night'
+            # Handle simple happiness evolution (Pichu -> Pikachu, Golbat -> Crobat)
+            elif evo['min_happiness']:
+                trigger_value = 'high-friendship'
+            # Handle time-of-day without happiness
+            elif evo['time_of_day']:
+                trigger_value = evo['time_of_day']
+            
             evolutions.append({
                 'from_id': evo['from_pokemon_id'],
                 'to_id': evo['to_pokemon_id'],
                 'method': evo['trigger'] or 'level-up',
                 'level': evo['min_level'],
                 'item': evo['item'],
-                'trigger': evo['time_of_day'] or (
-                    'high-friendship' if evo['min_happiness'] else None
-                )
+                'trigger': trigger_value
             })
         
         # Step 7: Determine current Pokemon's stage
