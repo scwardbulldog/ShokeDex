@@ -6,7 +6,15 @@ Story 5.1: Three-Stage Evolution Chain Display
 Story 5.2: Branching Evolution Display
 Story 5.3: Single-Stage Pokémon Handling ("No evolutions" message)
 Story 5.4: Evolution Requirement Display (Level/Stone/Trade)
-This demo shows linear, branching, and single-stage evolution panels with requirement text.
+
+This demo showcases all evolution requirement types:
+- Level-based (Charmander, Bulbasaur, Squirtle)
+- Stone-based (Pikachu → Raichu with Thunder Stone)
+- Trade-based (Kadabra → Alakazam)
+- Trade with item (Onix → Steelix with Metal Coat)
+- Happiness-based (Golbat → Crobat)
+- Conditional stats (Tyrogue branches based on Attack vs Defense)
+- Happiness with time-of-day (Eevee → Espeon/Umbreon)
 """
 
 import pygame
@@ -44,8 +52,8 @@ class DemoScreenManager:
 
 def main():
     """Run evolution panel demo."""
-    print("Evolution Panel Demo - Stories 5.1 & 5.2")
-    print("=" * 50)
+    print("Evolution Panel Demo - Stories 5.1, 5.2, 5.3, 5.4")
+    print("=" * 60)
     print()
     
     # Initialize pygame
@@ -63,31 +71,45 @@ def main():
     
     screen_size = SMALL_SCREEN if choice == "1" else LARGE_SCREEN
     screen = pygame.display.set_mode(screen_size)
-    pygame.display.set_caption("Evolution Panel Demo - Linear & Branching")
+    pygame.display.set_caption("Evolution Panel Demo - All Requirement Types")
     
-    # Pokemon to display (linear, branching, and single-stage evolution chains)
+    # Pokemon to display - organized by requirement type (Story 5.4)
     test_pokemon = [
-        # Linear chains (Story 5.1)
-        (4, "Charmander (3-stage linear: Charmander  Charmeleon  Charizard)"),
-        (1, "Bulbasaur (3-stage linear: Bulbasaur  Ivysaur  Venusaur)"),
-        (7, "Squirtle (3-stage linear: Squirtle  Wartortle  Blastoise)"),
-        (25, "Pikachu (2-stage linear: Pikachu  Raichu)"),
-        # Single-stage chains (Story 5.3)
+        # Level-based requirements (Story 5.1)
+        (4, "Charmander (Level 16 → Charmeleon, Level 36 → Charizard)"),
+        (1, "Bulbasaur (Level 16 → Ivysaur, Level 32 → Venusaur)"),
+        (7, "Squirtle (Level 16 → Wartortle, Level 36 → Blastoise)"),
+        
+        # Stone-based requirements (Story 5.4 AC #2)
+        (25, "Pikachu (Thunder Stone → Raichu)"),
+        
+        # Trade requirements (Story 5.4 AC #3)
+        (64, "Kadabra (Trade → Alakazam)"),
+        (95, "Onix (Trade holding Metal Coat → Steelix)"),
+        
+        # Happiness requirements (Story 5.4 AC #7)
+        (42, "Golbat (High Friendship → Crobat)"),
+        
+        # Branching with mixed requirements (Story 5.2 + 5.4)
+        (133, "Eevee (5 branches: Stones + Happiness with Day/Night)"),
+        (236, "Tyrogue (3 branches based on Attack vs Defense stats)"),
+        (265, "Wurmple (2 branches: Silcoon/Cascoon)"),
+        
+        # Single-stage (no evolutions) (Story 5.3)
         (132, "Ditto (Gen 1 single-stage, no evolutions)"),
         (83, "Farfetch'd (Gen 1 single-stage, no evolutions)"),
         (201, "Unown (Gen 2 single-stage, no evolutions)"),
         (359, "Absol (Gen 3 single-stage, no evolutions)"),
-        # Branching chains (Story 5.2)
-        (133, "Eevee (5 branches: Vaporeon/Jolteon/Flareon/Espeon/Umbreon) "),
-        (134, "Vaporeon (view from branch, shows all Eevee evolutions)"),
-        (236, "Tyrogue (3 branches: Hitmonlee/Hitmonchan/Hitmontop)"),
-        (265, "Wurmple (2 branches: Silcoon/Cascoon)"),
+        
+        # Additional examples
+        (134, "Vaporeon (view from Eevee branch)"),
     ]
     
     print()
-    print("Test Pokemon:")
+    print("Test Pokemon (grouped by requirement type):")
+    print()
     for i, (pid, desc) in enumerate(test_pokemon, 1):
-        print(f"{i}. {desc}")
+        print(f"{i:2d}. {desc}")
     
     choice = input(f"\nEnter choice (1-{len(test_pokemon)}): ").strip()
     try:
@@ -96,7 +118,7 @@ def main():
     except (ValueError, IndexError):
         print("Invalid choice, using Eevee (#133)")
         pokemon_id = 133
-        description = test_pokemon[5][1]
+        description = "Eevee"
     
     print(f"\nDisplaying: {description}")
     print("Press Q to quit, or click X to close window")

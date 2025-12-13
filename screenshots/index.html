@@ -264,6 +264,59 @@
             </div>
         </div>
         
+        <div class="tab-section">
+            <h3>Evolution Requirement Examples</h3>
+            <div class="screenshot-grid">
+                <div class="screenshot-item">
+                    <h2>12. Kadabra - Trade Evolution</h2>
+                    <img src="12_kadabra_evolution_tab.png" alt="Kadabra Evolution Tab">
+                    <p>
+                        Simple trade evolution:
+                        <br>• Kadabra → Alakazam via Trade
+                        <br>• Clean "Trade" requirement label
+                        <br>• Common Gen 1 evolution method
+                        <br>• Ice blue requirement text
+                    </p>
+                </div>
+                
+                <div class="screenshot-item">
+                    <h2>13. Onix - Trade with Held Item</h2>
+                    <img src="13_onix_evolution_tab.png" alt="Onix Evolution Tab">
+                    <p>
+                        Trade with held item evolution:
+                        <br>• Onix → Steelix via Trade holding Metal Coat
+                        <br>• "Trade holding Metal Coat" requirement text
+                        <br>• Gen 2 evolution with item requirement
+                        <br>• Demonstrates truncation handling
+                    </p>
+                </div>
+                
+                <div class="screenshot-item">
+                    <h2>14. Golbat - Happiness Evolution</h2>
+                    <img src="14_golbat_evolution_tab.png" alt="Golbat Evolution Tab">
+                    <p>
+                        Happiness-based evolution:
+                        <br>• Golbat → Crobat via High Friendship
+                        <br>• "High Friendship" requirement display
+                        <br>• Gen 2 friendship evolution mechanic
+                        <br>• Three-stage chain (Zubat → Golbat → Crobat)
+                    </p>
+                </div>
+                
+                <div class="screenshot-item">
+                    <h2>15. Tyrogue - Conditional Stats</h2>
+                    <img src="15_tyrogue_evolution_tab.png" alt="Tyrogue Evolution Tab">
+                    <p>
+                        Stat-based branching evolution:
+                        <br>• Three branches based on Attack vs Defense
+                        <br>• "Level (Atk > Def)" → Hitmonlee
+                        <br>• "Level (Def > Atk)" → Hitmonchan
+                        <br>• "Level (Atk = Def)" → Hitmontop
+                    </p>
+                </div>
+            </div>
+        </div>
+        
         <div class="feature-list">
             <h2>✨ Implemented MVP Features</h2>
             <ul>
@@ -273,7 +326,14 @@
                 <li><strong>Detail Screen:</strong> Comprehensive Pokémon information with tabbed interface</li>
                 <li><strong>Info Tab:</strong> Pokédex entry, basic info, types, measurements</li>
                 <li><strong>Stats Tab:</strong> Visual stat bars, type effectiveness, detailed stats breakdown</li>
-                <li><strong>Evolution Tab:</strong> Evolution chain visualization with requirements and branching support</li>
+                <li><strong>Evolution Tab:</strong> Evolution chain visualization with complete Gen 1-3 requirement support
+                    <br>&nbsp;&nbsp;• Level-based evolutions (e.g., "Level 16", "Level 36")
+                    <br>&nbsp;&nbsp;• Stone-based evolutions (Thunder Stone, Fire Stone, Water Stone)
+                    <br>&nbsp;&nbsp;• Trade evolutions (simple and with held items)
+                    <br>&nbsp;&nbsp;• Happiness-based evolutions (High Friendship, Day/Night variants)
+                    <br>&nbsp;&nbsp;• Conditional stat-based branching (Attack vs Defense)
+                    <br>&nbsp;&nbsp;• Consistent ice blue styling across all requirement types
+                </li>
                 <li><strong>Button Navigation:</strong> Full keyboard/GPIO support (↑↓←→ Enter Esc Tab)</li>
                 <li><strong>Sync Manager:</strong> Offline/online sync logic stub for future expansion</li>
                 <li><strong>Responsive UI:</strong> Optimized for 480x320 small displays</li>
