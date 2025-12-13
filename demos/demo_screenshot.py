@@ -12,7 +12,7 @@ import os
 from pathlib import Path
 
 # Add src directory to path
-sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.input_manager import InputManager, InputMode, InputAction
 from src.ui import ScreenManager, HomeScreen, DetailScreen
@@ -37,7 +37,7 @@ def main():
     screen = pygame.display.set_mode((DISPLAY_WIDTH, DISPLAY_HEIGHT))
     
     # Initialize database
-    db_path = Path(__file__).parent / "data" / "pokedex.db"
+    db_path = Path(__file__).parent.parent / "data" / "pokedex.db"
     
     with Database(str(db_path)) as database:
         # Initialize managers

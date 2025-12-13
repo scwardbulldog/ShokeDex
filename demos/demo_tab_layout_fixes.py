@@ -56,7 +56,7 @@ def main():
     pygame.display.set_caption("ShokeDex - Tab Layout Fixes Demo")
     
     # Initialize database
-    db_path = os.path.join(os.path.dirname(__file__), 'data', 'pokedex.db')
+    db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'pokedex.db')
     if not os.path.exists(db_path):
         print(f"Database not found at {db_path}")
         print("Run: python src/data/manage_db.py init && python src/data/manage_db.py seed --gen 1-3")

@@ -206,6 +206,11 @@ ShokeDex/
 │   ├── profile_performance.py # Performance profiling tool
 │   ├── test_input_latency.py # Input latency tester
 │   └── README.md          # Tools documentation
+├── demos/                 # Visual demonstration scripts
+│   ├── demo_screenshot.py # Generate reference screenshots
+│   ├── demo_evolution_display.py # Evolution panel testing
+│   ├── demo_tab_system.py # Tab navigation demo
+│   └── demo_*.py          # Additional visual demos
 ├── examples/              # Example scripts
 │   ├── database_usage.py  # Database usage examples
 │   ├── config_example.py  # Configuration example
@@ -291,6 +296,23 @@ python -m unittest discover tests -v
 # Run specific test module
 python -m unittest tests.test_database -v
 ```
+
+### Visual Demonstrations
+
+Demo scripts for visual testing and reference screenshots:
+
+```bash
+# Generate reference screenshots for all features
+python demos/demo_screenshot.py
+
+# Test evolution panel rendering
+python demos/demo_evolution_display.py
+
+# Test tab navigation system
+python demos/demo_tab_system.py
+```
+
+Screenshots are saved to `screenshots/` directory. See individual demo scripts for detailed usage.
 
 ### Performance Profiling and Optimization
 

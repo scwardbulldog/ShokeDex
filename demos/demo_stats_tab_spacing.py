@@ -9,7 +9,7 @@ import sys
 import os
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.data.database import Database
 from src.ui.detail_screen import DetailScreen
@@ -20,7 +20,7 @@ def main():
     screen = pygame.display.set_mode((480, 320))
     pygame.display.set_caption("Stats Tab - Type Badge Spacing Test")
     
-    db_path = Path(__file__).parent / "data" / "pokedex.db"
+    db_path = Path(__file__).parent.parent / "data" / "pokedex.db"
     
     with Database(str(db_path)) as database:
         class MockManager:
