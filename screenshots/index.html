@@ -6,66 +6,79 @@
     <title>ShokeDex MVP Screenshots</title>
     <style>
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #0f380f 0%, #306230 100%);
-            color: #fff;
+            font-family: 'Courier New', monospace;
+            background: #0a0e1a;
+            color: #ffffff;
             padding: 20px;
             margin: 0;
+            text-shadow: 0 0 5px rgba(155, 188, 15, 0.3);
         }
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
         }
         h1 {
             text-align: center;
             color: #9bbc0f;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            text-shadow: 0 0 10px rgba(155, 188, 15, 0.8), 0 0 20px rgba(155, 188, 15, 0.4);
             margin-bottom: 10px;
+            font-size: 2.5em;
         }
         .subtitle {
             text-align: center;
-            color: #ccc;
+            color: #cccccc;
             margin-bottom: 40px;
+            font-size: 1.2em;
         }
         .screenshot-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
-            gap: 30px;
+            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+            gap: 20px;
             margin-bottom: 40px;
         }
         .screenshot-item {
-            background: rgba(255,255,255,0.1);
-            border: 2px solid #9bbc0f;
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            background: rgba(255,255,255,0.05);
+            border: 1px solid #9bbc0f;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 0 10px rgba(155, 188, 15, 0.2);
+            transition: all 0.3s ease;
+        }
+        .screenshot-item:hover {
+            box-shadow: 0 0 20px rgba(155, 188, 15, 0.4);
+            transform: translateY(-2px);
         }
         .screenshot-item h2 {
             margin-top: 0;
             color: #9bbc0f;
-            font-size: 1.3em;
+            font-size: 1.2em;
+            text-shadow: 0 0 5px rgba(155, 188, 15, 0.5);
         }
         .screenshot-item img {
             width: 100%;
-            border: 2px solid #306230;
+            border: 1px solid #9bbc0f;
             border-radius: 5px;
             image-rendering: pixelated;
             image-rendering: -moz-crisp-edges;
             image-rendering: crisp-edges;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
         }
         .screenshot-item p {
-            color: #ddd;
+            color: #dddddd;
             line-height: 1.6;
+            font-size: 0.9em;
         }
         .feature-list {
-            background: rgba(255,255,255,0.05);
-            border: 2px solid #9bbc0f;
-            border-radius: 10px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid #9bbc0f;
+            border-radius: 8px;
             padding: 20px;
             margin-top: 40px;
+            box-shadow: 0 0 10px rgba(155, 188, 15, 0.1);
         }
         .feature-list h2 {
             color: #9bbc0f;
+            text-shadow: 0 0 5px rgba(155, 188, 15, 0.5);
         }
         .feature-list ul {
             list-style: none;
@@ -77,11 +90,23 @@
             position: relative;
         }
         .feature-list li:before {
-            content: "✓";
+            content: "▶";
             position: absolute;
             left: 0;
             color: #9bbc0f;
             font-weight: bold;
+            text-shadow: 0 0 3px rgba(155, 188, 15, 0.5);
+        }
+        .tab-section {
+            border-top: 1px solid #9bbc0f;
+            margin-top: 30px;
+            padding-top: 20px;
+        }
+        .tab-section h3 {
+            color: #9bbc0f;
+            text-align: center;
+            font-size: 1.5em;
+            text-shadow: 0 0 5px rgba(155, 188, 15, 0.5);
         }
     </style>
 </head>
@@ -114,65 +139,128 @@
                     <br>• Current view mode display
                 </p>
             </div>
-            
-            <div class="screenshot-item">
-                <h2>3. Detail Screen - Stats Tab</h2>
-                <img src="03_detail_stats.png" alt="Pikachu Detail - Stats">
-                <p>
-                    Pokémon detail view showing Pikachu's stats:
-                    <br>• Base stats with visual bars
-                    <br>• Type indicators (Electric)
-                    <br>• Height and weight information
-                    <br>• Tabbed interface (Stats/Evolutions/Abilities)
-                </p>
+        </div>
+        
+        <div class="tab-section">
+            <h3>Pikachu (#025) - Linear Evolution Chain</h3>
+            <div class="screenshot-grid">
+                <div class="screenshot-item">
+                    <h2>3. Info Tab</h2>
+                    <img src="03_pikachu_info_tab.png" alt="Pikachu Info Tab">
+                    <p>
+                        Pokémon information display:
+                        <br>• Pokédex entry and description
+                        <br>• Basic stats overview
+                        <br>• Type indicators (Electric)
+                        <br>• Height and weight information
+                    </p>
+                </div>
+                
+                <div class="screenshot-item">
+                    <h2>4. Stats Tab</h2>
+                    <img src="04_pikachu_stats_tab.png" alt="Pikachu Stats Tab">
+                    <p>
+                        Detailed stats display:
+                        <br>• Base stats with visual bars (HP/Atk/Def/SpA/SpD/Spe)
+                        <br>• Type effectiveness indicators
+                        <br>• Physical measurements
+                        <br>• Stat distribution visualization
+                    </p>
+                </div>
+                
+                <div class="screenshot-item">
+                    <h2>5. Evolution Tab</h2>
+                    <img src="05_pikachu_evolution_tab.png" alt="Pikachu Evolution Tab">
+                    <p>
+                        Evolution chain display:
+                        <br>• Linear evolution path (Pichu → Pikachu → Raichu)
+                        <br>• Evolution requirements (level, happiness, etc.)
+                        <br>• Clean visual representation
+                        <br>• Arrow indicators for evolution flow
+                    </p>
+                </div>
             </div>
-            
-            <div class="screenshot-item">
-                <h2>4. Detail Screen - Evolutions Tab</h2>
-                <img src="04_detail_evolutions.png" alt="Pikachu Detail - Evolutions">
-                <p>
-                    Evolution chain display:
-                    <br>• Shows evolution path (Pichu → Pikachu → Raichu)
-                    <br>• Evolution requirements (level, items, etc.)
-                    <br>• Clean visual representation
-                    <br>• Arrow indicators for evolution flow
-                </p>
+        </div>
+        
+        <div class="tab-section">
+            <h3>Eevee (#133) - Branching Evolution Chain</h3>
+            <div class="screenshot-grid">
+                <div class="screenshot-item">
+                    <h2>6. Info Tab</h2>
+                    <img src="06_eevee_info_tab.png" alt="Eevee Info Tab">
+                    <p>
+                        Eevee information display:
+                        <br>• Pokédex entry and description
+                        <br>• Basic stats overview
+                        <br>• Type indicators (Normal)
+                        <br>• Height and weight information
+                    </p>
+                </div>
+                
+                <div class="screenshot-item">
+                    <h2>7. Stats Tab</h2>
+                    <img src="07_eevee_stats_tab.png" alt="Eevee Stats Tab">
+                    <p>
+                        Eevee detailed stats:
+                        <br>• Base stats with visual bars
+                        <br>• Type effectiveness indicators
+                        <br>• Physical measurements
+                        <br>• Balanced stat distribution
+                    </p>
+                </div>
+                
+                <div class="screenshot-item">
+                    <h2>8. Evolution Tab</h2>
+                    <img src="08_eevee_evolution_tab.png" alt="Eevee Evolution Tab">
+                    <p>
+                        Branching evolution display:
+                        <br>• Multiple evolution paths (5 evolutions in Gen 1-3)
+                        <br>• Evolution requirements (items, friendship, etc.)
+                        <br>• Complex branching visualization
+                        <br>• Evolution method indicators
+                    </p>
+                </div>
             </div>
-            
-            <div class="screenshot-item">
-                <h2>5. Detail Screen - Abilities Tab</h2>
-                <img src="05_detail_abilities.png" alt="Pikachu Detail - Abilities">
-                <p>
-                    Pokémon abilities display:
-                    <br>• Lists all abilities
-                    <br>• Marks hidden abilities with (Hidden) tag
-                    <br>• Clean, readable layout
-                    <br>• Easy to navigate with arrow keys
-                </p>
-            </div>
-            
-            <div class="screenshot-item">
-                <h2>6. Settings Screen</h2>
-                <img src="06_settings.png" alt="Settings Screen">
-                <p>
-                    Application settings:
-                    <br>• Network Sync toggle (with offline/online logic)
-                    <br>• Input Mode selection (Keyboard/GPIO)
-                    <br>• Volume control slider
-                    <br>• Interactive menu with descriptions
-                </p>
-            </div>
-            
-            <div class="screenshot-item">
-                <h2>7. Detail Screen - Bulbasaur</h2>
-                <img src="07_detail_bulbasaur.png" alt="Bulbasaur Detail">
-                <p>
-                    Another Pokémon example (Bulbasaur #001):
-                    <br>• Dual-type display (Grass/Poison)
-                    <br>• Complete stat breakdown
-                    <br>• Left/Right navigation between Pokémon
-                    <br>• Consistent UI across all Pokémon
-                </p>
+        </div>
+        
+        <div class="tab-section">
+            <h3>Ditto (#132) - No Evolution Chain</h3>
+            <div class="screenshot-grid">
+                <div class="screenshot-item">
+                    <h2>9. Info Tab</h2>
+                    <img src="09_ditto_info_tab.png" alt="Ditto Info Tab">
+                    <p>
+                        Ditto information display:
+                        <br>• Pokédex entry and description
+                        <br>• Basic stats overview
+                        <br>• Type indicators (Normal)
+                        <br>• Height and weight information
+                    </p>
+                </div>
+                
+                <div class="screenshot-item">
+                    <h2>10. Stats Tab</h2>
+                    <img src="10_ditto_stats_tab.png" alt="Ditto Stats Tab">
+                    <p>
+                        Ditto detailed stats:
+                        <br>• Base stats with visual bars
+                        <br>• Type effectiveness indicators
+                        <br>• Physical measurements
+                        <br>• Unique stat distribution
+                    </p>
+                </div>
+                
+                <div class="screenshot-item">
+                    <h2>11. Evolution Tab</h2>
+                    <img src="11_ditto_evolution_tab.png" alt="Ditto Evolution Tab">
+                    <p>
+                        No evolution display:
+                        <br>• Single-stage Pokémon indicator
+                        <br>• No evolution chain to show
+                        <br>• Clean empty state handling
+                        <br>• Consistent tab layout
+                    </p>
+                </div>
             </div>
         </div>
         
@@ -183,9 +271,9 @@
                 <li><strong>Search Functionality:</strong> Incremental search by name, ID, or type with live results</li>
                 <li><strong>List/Grid Views:</strong> Multiple view modes with filtering and pagination</li>
                 <li><strong>Detail Screen:</strong> Comprehensive Pokémon information with tabbed interface</li>
-                <li><strong>Stats Display:</strong> Visual stat bars, types, height, weight, and physical stats</li>
-                <li><strong>Evolution Chains:</strong> Complete evolution paths with requirements</li>
-                <li><strong>Abilities:</strong> All abilities including hidden ones</li>
+                <li><strong>Info Tab:</strong> Pokédex entry, basic info, types, measurements</li>
+                <li><strong>Stats Tab:</strong> Visual stat bars, type effectiveness, detailed stats breakdown</li>
+                <li><strong>Evolution Tab:</strong> Evolution chain visualization with requirements and branching support</li>
                 <li><strong>Button Navigation:</strong> Full keyboard/GPIO support (↑↓←→ Enter Esc Tab)</li>
                 <li><strong>Sync Manager:</strong> Offline/online sync logic stub for future expansion</li>
                 <li><strong>Responsive UI:</strong> Optimized for 480x320 small displays</li>
