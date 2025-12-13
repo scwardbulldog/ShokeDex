@@ -107,12 +107,41 @@ class TestEvolutionPanel(unittest.TestCase):
     
     def test_evolution_panel_load_sprites(self):
         """Test sprite loading for evolution chain (AC #7)."""
-        # Insert test Pokemon
+        # Insert three-stage evolution chain so sprites are expected
         with self.db as db:
-            db.execute("""
+            pokemon_data = [
+                (4, 'charmander', 4, 6, 85, 62, 1),
+                (5, 'charmeleon', 5, 11, 190, 142, 1),
+                (6, 'charizard', 6, 17, 905, 240, 1),
+            ]
+            db.executemany(
+                """
                 INSERT INTO pokemon (id, name, species_id, height, weight, base_experience, generation)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, (4, 'charmander', 4, 6, 85, 62, 1))
+                """,
+                pokemon_data,
+            )
+            db.execute("INSERT INTO evolution_chains (id) VALUES (?)", (4,))
+            evolutions = [
+                (4, 4, 5, 'level-up', 16, None, None, None),
+                (4, 5, 6, 'level-up', 36, None, None, None),
+            ]
+            db.executemany(
+                """
+                INSERT INTO evolutions (
+                    evolution_chain_id,
+                    from_pokemon_id,
+                    to_pokemon_id,
+                    trigger,
+                    min_level,
+                    item,
+                    min_happiness,
+                    time_of_day
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                evolutions,
+            )
             db.commit()
         
         # Create panel
@@ -149,6 +178,9 @@ class TestEvolutionPanel(unittest.TestCase):
         self.assertEqual(len(panel.evolution_data['stages']), 1)
         self.assertEqual(len(panel.evolution_data['evolutions']), 0)
         self.assertEqual(panel.evolution_data['current_stage'], 1)
+        # Story 5.3: Expose empty evolution list on panel for single-stage handling
+        self.assertTrue(hasattr(panel, 'evolutions'))
+        self.assertEqual(len(panel.evolutions), 0)
     
     def test_evolution_panel_format_requirement_level(self):
         """Test requirement formatting for level evolution (AC #3)."""
@@ -377,6 +409,133 @@ class TestEvolutionPanel(unittest.TestCase):
             print(f"Render failed: {e}")
         
         self.assertTrue(success, "Evolution panel render should not crash")
+
+    # ========================================
+    # Story 5.3: Single-Stage Pokémon Handling
+    # ========================================
+
+    def test_single_stage_renders_centered_no_evolutions_message(self):
+        """Story 5.3 AC #1-3: Centered 'No evolutions' message for Ditto."""
+        # Insert Ditto (no evolutions)
+        with self.db as db:
+            db.execute(
+                """
+                INSERT INTO pokemon (id, name, species_id, height, weight, base_experience, generation)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (132, 'ditto', 132, 3, 40, 101, 1),
+            )
+            db.commit()
+
+        screen_manager = MockScreenManager(self.db)
+        panel = EvolutionPanel(screen_manager, 132)
+        panel.load_data()
+
+        # Render on test surface
+        surface = pygame.Surface((800, 480))
+        panel.render(surface, 20, 100)
+
+        # Story 5.3: No-evolutions message should allocate cached text surface/rect
+        self.assertTrue(hasattr(panel, "_no_evo_text_surface"))
+        self.assertTrue(hasattr(panel, "_no_evo_text_rect"))
+        self.assertIsNotNone(panel._no_evo_text_surface)
+        self.assertIsNotNone(panel._no_evo_text_rect)
+
+        # Verify message is centered within evolution panel region
+        panel_width = surface.get_width() - (20 * 2)
+        panel_height = 120  # Matches linear evolution panel height
+        expected_center = (20 + panel_width // 2, 100 + panel_height // 2)
+        self.assertEqual(panel._no_evo_text_rect.center, expected_center)
+
+    def test_single_stage_load_sprites_skips_loading(self):
+        """Story 5.3 AC #5: load_sprites() should not load sprites for single-stage Pokémon."""
+        # Insert Ditto (no evolutions)
+        with self.db as db:
+            db.execute(
+                """
+                INSERT INTO pokemon (id, name, species_id, height, weight, base_experience, generation)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (132, 'ditto', 132, 3, 40, 101, 1),
+            )
+            db.commit()
+
+        screen_manager = MockScreenManager(self.db)
+        panel = EvolutionPanel(screen_manager, 132)
+        panel.load_data()
+        panel.load_sprites()
+
+        # For single-stage Pokémon with no evolutions, sprites dict should remain empty
+        self.assertEqual(len(panel.evolution_data['evolutions']), 0)
+        self.assertEqual(len(panel.sprites), 0)
+
+    def test_single_stage_no_evolutions_across_generations(self):
+        """Story 5.3 AC #6: Single-stage Pokémon across Gen 1-3 return empty evolution chains."""
+        single_stage_pokemon = [
+            (132, 'ditto', 1),   # Gen 1
+            (201, 'unown', 2),   # Gen 2
+            (359, 'absol', 3),   # Gen 3
+        ]
+
+        with self.db as db:
+            for pokemon_id, name, generation in single_stage_pokemon:
+                db.execute(
+                    """
+                    INSERT INTO pokemon (id, name, species_id, height, weight, base_experience, generation)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (pokemon_id, name, pokemon_id, 5, 50, 100, generation),
+                )
+            db.commit()
+
+        for pokemon_id, name, generation in single_stage_pokemon:
+            screen_manager = MockScreenManager(self.db)
+            panel = EvolutionPanel(screen_manager, pokemon_id)
+            panel.load_data()
+
+            # Each should be a single-stage chain with no evolutions
+            self.assertEqual(
+                len(panel.evolution_data['stages']),
+                1,
+                msg=f"{name} (Gen {generation}) should have a single stage",
+            )
+            self.assertEqual(
+                len(panel.evolution_data['evolutions']),
+                0,
+                msg=f"{name} (Gen {generation}) should have no evolutions",
+            )
+
+    def test_single_stage_render_under_50ms(self):
+        """Story 5.3 AC #7: Single-stage evolution panel renders under 50ms."""
+        # Insert Ditto as a single-stage Pokémon (no evolutions)
+        with self.db as db:
+            db.execute(
+                """
+                INSERT INTO pokemon (id, name, species_id, height, weight, base_experience, generation)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (132, 'ditto', 132, 3, 40, 101, 1),
+            )
+            db.commit()
+
+        screen_manager = MockScreenManager(self.db)
+        panel = EvolutionPanel(screen_manager, 132)
+        panel.load_data()
+
+        surface = pygame.Surface((800, 480))
+
+        # Warm-up render to initialize cached text surface
+        panel.render(surface, 20, 100)
+
+        start = time.perf_counter()
+        panel.render(surface, 20, 100)
+        duration_ms = (time.perf_counter() - start) * 1000.0
+
+        self.assertLess(
+            duration_ms,
+            50.0,
+            msg=f"Single-stage render took {duration_ms:.2f}ms, expected <50ms",
+        )
     
     # ========================================
     # Story 5.2: Branching Evolution Tests

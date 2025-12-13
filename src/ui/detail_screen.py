@@ -101,7 +101,12 @@ class EvolutionPanel:
         
         # Evolution data
         self.evolution_data: Optional[Dict] = None
+        self.evolutions: List[Dict] = []  # Story 5.3: cached evolutions list for convenience
         self.sprites: Dict[int, pygame.Surface] = {}  # pokemon_id -> Surface
+
+        # Story 5.3: Cached text surface/rect for "No evolutions" message
+        self._no_evo_text_surface: Optional[pygame.Surface] = None
+        self._no_evo_text_rect: Optional[pygame.Rect] = None
         
         # Fonts (initialized in load_data after pygame is guaranteed ready)
         self.name_font: Optional[pygame.font.Font] = None
@@ -119,6 +124,7 @@ class EvolutionPanel:
         if not self.database:
             logging.warning("EvolutionPanel: No database available")
             self.evolution_data = None
+            self.evolutions = []
             return
         
         try:
@@ -132,7 +138,14 @@ class EvolutionPanel:
         except Exception as e:
             logging.error(f"EvolutionPanel: Failed to load evolution data: {e}")
             self.evolution_data = None
+            self.evolutions = []
             return
+
+        # Story 5.3: Cache evolutions list for convenience
+        if self.evolution_data and 'evolutions' in self.evolution_data:
+            self.evolutions = self.evolution_data.get('evolutions') or []
+        else:
+            self.evolutions = []
         
         # Initialize fonts now that pygame is ready
         self.name_font = pygame.font.Font(None, 14)  # Rajdhani Bold 14px for names
@@ -149,6 +162,11 @@ class EvolutionPanel:
         Missing sprites handled gracefully with placeholder
         """
         if not self.evolution_data or not self.evolution_data['stages']:
+            return
+
+        # Story 5.3 AC #5: Skip sprite loading entirely for single-stage Pokémon
+        # with no evolutions (we only show the informational message).
+        if len(self.evolutions) == 0:
             return
         
         start_time = time.perf_counter()
@@ -190,21 +208,29 @@ class EvolutionPanel:
         AC #5: Panel styling: dark blue background, electric blue border, 16px padding
         AC #8: Rendering performance < 200ms first load, < 50ms cached
         """
-        if not self.evolution_data or not self.evolution_data['stages']:
-            # No evolution data - render "No evolutions" message
-            self._render_no_evolutions(surface, x, y)
-            return
-        
-        start_time = time.perf_counter()
-        
-        stages = self.evolution_data['stages']
-        evolutions = self.evolution_data['evolutions']
-        current_stage = self.evolution_data['current_stage']
-        is_branching = self.evolution_data.get('is_branching', False)  # Story 5.2
-        
         # Panel dimensions (AC #5: holographic styling)
         panel_width = surface.get_width() - (x * 2)  # Full width minus margins
         panel_height = 120  # Height for sprites + text + arrows (linear layout)
+
+        # If we have no evolution data or stages at all, render default
+        # "No evolutions" informational panel.
+        if not self.evolution_data or not self.evolution_data.get('stages'):
+            self._render_no_evolutions_message(surface, x, y, panel_width, panel_height)
+            return
+
+        stages = self.evolution_data['stages']
+        evolutions = self.evolutions
+
+        # Story 5.3 AC #1, #2, #5: For single-stage Pokémon where the
+        # evolution chain exists but has no evolutions, render a centered
+        # "No evolutions" message instead of chain sprites/arrows.
+        if len(evolutions) == 0:
+            self._render_no_evolutions_message(surface, x, y, panel_width, panel_height)
+            return
+
+        start_time = time.perf_counter()
+        current_stage = self.evolution_data['current_stage']
+        is_branching = self.evolution_data.get('is_branching', False)  # Story 5.2
         
         # Story 5.2 AC #6: Conditional layout based on branching
         if is_branching:
@@ -514,29 +540,62 @@ class EvolutionPanel:
             return "Unknown"
     
     def _render_no_evolutions(self, surface: pygame.Surface, x: int, y: int):
-        """
-        Render "No evolutions" message for single-stage Pokémon.
-        
-        Args:
-            surface: pygame.Surface to draw on
-            x: X position
-            y: Y position
+        """Backward-compatible wrapper for older call sites.
+
+        Delegates to _render_no_evolutions_message() with standard panel
+        dimensions so that single-stage and missing-data cases share the
+        same holographic styling and centered message behavior.
         """
         panel_width = surface.get_width() - (x * 2)
-        panel_height = 60
-        
-        # Draw panel background
+        panel_height = 120
+        self._render_no_evolutions_message(surface, x, y, panel_width, panel_height)
+
+    def _render_no_evolutions_message(
+        self,
+        surface: pygame.Surface,
+        x: int,
+        y: int,
+        panel_width: int,
+        panel_height: int,
+    ) -> None:
+        """Render centered "No evolutions" message in evolution panel.
+
+        Story 5.3 AC #1-3:
+        - Message is centered horizontally and vertically within panel
+        - Uses ice blue color (#a8e6ff) on dark blue background
+        - Panel remains visible with standard holographic styling
+        """
+        # Draw panel background (dark blue with electric blue border)
         panel_surface = pygame.Surface((panel_width, panel_height), pygame.SRCALPHA)
         panel_surface.fill((*Colors.DARK_BLUE, 230))
-        pygame.draw.rect(panel_surface, Colors.ELECTRIC_BLUE,
-                        pygame.Rect(0, 0, panel_width, panel_height), 2)
+        pygame.draw.rect(
+            panel_surface,
+            Colors.ELECTRIC_BLUE,
+            pygame.Rect(0, 0, panel_width, panel_height),
+            2,
+        )
         surface.blit(panel_surface, (x, y))
-        
-        # Render message
-        if self.name_font:
-            message = self.name_font.render("No evolutions", True, Colors.ICE_BLUE)
-            message_rect = message.get_rect(center=(x + panel_width // 2, y + panel_height // 2))
-            surface.blit(message, message_rect)
+
+        # Lazily create and cache the text surface/rect for performance
+        if self._no_evo_text_surface is None or self._no_evo_text_rect is None:
+            try:
+                # Rajdhani-equivalent 16px body font (assets font used if configured)
+                font = pygame.font.Font(None, 16)
+            except Exception:
+                font = pygame.font.Font(None, 16)
+
+            self._no_evo_text_surface = font.render(
+                "No evolutions",
+                True,
+                Colors.ICE_BLUE,
+            )
+            self._no_evo_text_rect = self._no_evo_text_surface.get_rect()
+
+        center_x = x + panel_width // 2
+        center_y = y + panel_height // 2
+        self._no_evo_text_rect.center = (center_x, center_y)
+
+        surface.blit(self._no_evo_text_surface, self._no_evo_text_rect)
 
 
 class DetailScreen(Screen):

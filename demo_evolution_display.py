@@ -4,7 +4,8 @@ Visual demonstration of evolution chain display.
 
 Story 5.1: Three-Stage Evolution Chain Display
 Story 5.2: Branching Evolution Display
-This demo shows both linear and branching evolution panels in DetailScreen.
+Story 5.3: Single-Stage Pokémon Handling ("No evolutions" message)
+This demo shows linear, branching, and single-stage evolution panels in DetailScreen.
 """
 
 import pygame
@@ -63,16 +64,20 @@ def main():
     screen = pygame.display.set_mode(screen_size)
     pygame.display.set_caption("Evolution Panel Demo - Linear & Branching")
     
-    # Pokemon to display (linear and branching evolution chains)
+    # Pokemon to display (linear, branching, and single-stage evolution chains)
     test_pokemon = [
         # Linear chains (Story 5.1)
-        (4, "Charmander (3-stage linear: Charmander → Charmeleon → Charizard)"),
-        (1, "Bulbasaur (3-stage linear: Bulbasaur → Ivysaur → Venusaur)"),
-        (7, "Squirtle (3-stage linear: Squirtle → Wartortle → Blastoise)"),
-        (25, "Pikachu (2-stage linear: Pikachu → Raichu)"),
-        (132, "Ditto (single stage, no evolutions)"),
+        (4, "Charmander (3-stage linear: Charmander  Charmeleon  Charizard)"),
+        (1, "Bulbasaur (3-stage linear: Bulbasaur  Ivysaur  Venusaur)"),
+        (7, "Squirtle (3-stage linear: Squirtle  Wartortle  Blastoise)"),
+        (25, "Pikachu (2-stage linear: Pikachu  Raichu)"),
+        # Single-stage chains (Story 5.3)
+        (132, "Ditto (Gen 1 single-stage, no evolutions)"),
+        (83, "Farfetch'd (Gen 1 single-stage, no evolutions)"),
+        (201, "Unown (Gen 2 single-stage, no evolutions)"),
+        (359, "Absol (Gen 3 single-stage, no evolutions)"),
         # Branching chains (Story 5.2)
-        (133, "Eevee (5 branches: Vaporeon/Jolteon/Flareon/Espeon/Umbreon) ⭐"),
+        (133, "Eevee (5 branches: Vaporeon/Jolteon/Flareon/Espeon/Umbreon) "),
         (134, "Vaporeon (view from branch, shows all Eevee evolutions)"),
         (236, "Tyrogue (3 branches: Hitmonlee/Hitmonchan/Hitmontop)"),
         (265, "Wurmple (2 branches: Silcoon/Cascoon)"),
