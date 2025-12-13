@@ -1,6 +1,6 @@
 # Story 5.5: Navigation to Evolution Relatives
 
-Status: ready-for-dev
+Status: deferred-to-post-mvp
 
 ## Story
 
@@ -163,5 +163,6 @@ Non-functional constraints to keep in mind (per PRD and architecture docs):
 
 - Story 5.5 is now fully drafted with end-to-end acceptance criteria covering focus, selection, navigation, back-stack behavior, integration with adjacent navigation, and performance.
 - A concrete task breakdown and implementation guidance are provided to keep EvolutionPanel behavior, DetailScreen navigation, and ScreenManager stack handling consistent with existing architecture patterns.
-- This story is marked `ready-for-dev` and represents the navigation half of FR4.2 (Evolution Navigation) for the Evolution System epic.
-- After implementation and tests are complete, update this story file’s Status to `done` and ensure [docs/sprint-artifacts/sprint-status.yaml](docs/sprint-artifacts/sprint-status.yaml) reflects the final state.
+- **DEFERRED TO POST-MVP (December 12, 2025):** During validation, determined that evolution navigation adds complexity without proportional value for MVP. Existing adjacent navigation (UP/DOWN buttons from Story 3.6) already provides efficient Pokémon-to-Pokémon navigation. Evolution navigation is most valuable for cross-generation evolutions (e.g., Golbat→Crobat) but violates the "appliance simplicity" and "3-press rule" core principles. Evolution DISPLAY (Stories 5.1-5.4) delivers FR4.1 completely. Evolution NAVIGATION (FR4.2) deferred until user feedback indicates need.
+- This story is marked `deferred-to-post-mvp` and may be reconsidered for Epic 7 (Interactive Features) if user testing shows demand for faster evolution chain navigation.
+- Original context preserved for future implementation.

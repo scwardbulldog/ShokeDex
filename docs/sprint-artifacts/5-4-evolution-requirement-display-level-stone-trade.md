@@ -17,6 +17,7 @@ so that I know what is required for evolution.
    - **And** level-based requirement strings follow the format `Level {level}` (for example, "Level 16", "Level 36")
    - **And** requirement text uses ice blue color (#a8e6ff)
    - **And** font is Rajdhani, 14px
+   - **And** requirement text must be ≤20 characters or implement ellipsis truncation (...) if longer
    - **And** the text is fully readable and not truncated on 480x320 and 800x480 displays
 
 2. **Stone-Based Evolution Requirements (AC #2)**
@@ -25,6 +26,7 @@ so that I know what is required for evolution.
    - **Then** the requirement text shows the full stone name (for example, "Thunder Stone", "Fire Stone", "Water Stone") below the corresponding evolution arrow
    - **And** requirement text uses ice blue color (#a8e6ff)
    - **And** font is Rajdhani, 14px
+   - **And** requirement text must be ≤20 characters or implement ellipsis truncation (...) if longer
    - **And** stone-based requirement text is fully readable and not truncated on 480x320 and 800x480 displays
 
 3. **Trade and Trade-with-Item Requirements (AC #3)**
@@ -35,6 +37,7 @@ so that I know what is required for evolution.
    - **When** the evolution chain is displayed in the evolution panel
    - **Then** the requirement text follows the format "Trade holding {item_name}" (for example, "Trade holding Metal Coat") below the appropriate arrow
    - **And** all trade-related requirement text uses ice blue color (#a8e6ff) and Rajdhani 14px
+   - **And** requirement text must be ≤20 characters or implement ellipsis truncation (...) if longer
    - **And** trade and trade-with-item requirement strings are fully readable and not truncated on 480x320 and 800x480 displays
 
 4. **Requirement Formatting Logic and Data Source (AC #4)**
@@ -42,7 +45,8 @@ so that I know what is required for evolution.
    - **When** the evolution panel formats requirement text for any supported evolution method (for example, `level`, `stone`, `trade`, `trade-item`, `happiness`, or similar values from the `evolutions` table)
    - **Then** the requirement string is derived from database fields (for example, `minimum_level`, `item_name`, `evolution_method`, `trigger`) and not hard-coded per Pokémon
    - **And** level-based, stone-based, and trade-based evolutions reuse a single formatting function or helper so that requirements render consistently in both three-stage (Story 5.1) and branching (Story 5.2) layouts
-   - **And** null or unsupported requirement combinations fall back to a safe, human-readable string (for example, "See evolution data") without breaking panel rendering
+   - **And** null or empty evolution_method values display an empty string (no requirement text rendered)
+   - **And** unrecognized or unsupported evolution_method values display "Unknown" as a safe fallback without breaking panel rendering
 
 5. **Consistency Across Linear and Branching Layouts (AC #5)**
    - **Given** a three-stage evolution chain (Story 5.1) or a branching evolution chain (Story 5.2)
@@ -54,21 +58,46 @@ so that I know what is required for evolution.
 6. **Performance and Safety (AC #6)**
    - **Given** evolution requirements are rendered for any Pokémon in Gen 1–3
    - **When** the evolution panel is constructed and rendered on Raspberry Pi hardware
-   - **Then** requirement formatting does not introduce noticeable performance regressions beyond the budgets already established in Stories 5.1 and 5.2 (first render ≤ 200–250ms, cached renders ≤ 50ms)
+   - **Then** requirement formatting does not introduce noticeable performance regressions: first render ≤ 200ms, cached renders ≤ 50ms (budgets from Stories 5.1 and 5.2)
    - **And** all SQL used to fetch requirement data remains fully parameterized (no string interpolation)
-   - **And** missing or malformed evolution data is handled gracefully without crashes (for example, log a warning and display a neutral fallback string or omit requirement text for that arrow).
+   - **And** missing or malformed evolution data is handled gracefully without crashes: null/empty evolution_method displays empty string, unrecognized methods display "Unknown", and errors are logged as warnings.
+
+7. **Complete Evolution Method Coverage (AC #7)**
+   - **Given** any evolution method supported in Gen 1-3 from the database (`level`, `stone`, `trade`, `trade-item`, `happiness`, `happiness-day`, `happiness-night`, `level-attack-higher`, `level-defense-higher`, `level-attack-defense-equal`, NULL/empty, or unrecognized values)
+   - **When** the evolution panel formats the requirement text
+   - **Then** the text follows the defined pattern for that method:
+     - `level` → `Level {minimum_level}` (for example, "Level 16")
+     - `stone` or `use-item` → `{item_name}` (for example, "Thunder Stone")
+     - `trade` with no item → `Trade`
+     - `trade-item` or `trade` with item → `Trade holding {item_name}` (for example, "Trade holding Metal Coat")
+     - `happiness` → `High Friendship`
+     - `happiness-day` → `High Friendship (Day)`
+     - `happiness-night` → `High Friendship (Night)`
+     - `level-attack-higher` → `Level (Atk > Def)`
+     - `level-defense-higher` → `Level (Def > Atk)`
+     - `level-attack-defense-equal` → `Level (Atk = Def)`
+     - NULL or empty → display empty string (no requirement text)
+     - Unrecognized method → display "Unknown"
+   - **And** all requirement text uses ice blue color (#a8e6ff), Rajdhani 14px, and is ≤20 characters or truncated with ellipsis
 
 ## Tasks / Subtasks
 
 - [ ] **Task 1: Centralize Evolution Requirement Formatting (AC: #1, #2, #3, #4)**
   - [ ] 1.1: Identify current locations in EvolutionPanel (and any helpers) where level, stone, and trade requirements are formatted for display (for example, inline `f"Level {level}"` strings from Story 5.1 or 5.2).
   - [ ] 1.2: Introduce a dedicated helper (for example, `_format_requirement(evolution_record: Dict[str, Any]) -> str`) that takes one evolution row from `get_evolution_chain()` and returns the final human-readable requirement string.
-  - [ ] 1.3: Implement formatting rules in the helper based on `evolution_method`, `minimum_level`, `item_name`, and any `trigger` or auxiliary fields:
+  - [ ] 1.3: Implement formatting rules in the helper based on `evolution_method`, `minimum_level`, `item_name`, and any `trigger` or auxiliary fields (see AC #7 for complete list):
         - `level` → `Level {minimum_level}`
-        - `stone` → `{item_name}` (for example, "Thunder Stone")
+        - `stone` or `use-item` → `{item_name}` (for example, "Thunder Stone")
         - `trade` with no item → `Trade`
         - `trade` or `trade-item` with item → `Trade holding {item_name}`
-        - other / complex cases (for example, happiness/time-of-day) → readable string that matches existing tech spec patterns.
+        - `happiness` → `High Friendship`
+        - `happiness-day` → `High Friendship (Day)`
+        - `happiness-night` → `High Friendship (Night)`
+        - `level-attack-higher` → `Level (Atk > Def)`
+        - `level-defense-higher` → `Level (Def > Atk)`
+        - `level-attack-defense-equal` → `Level (Atk = Def)`
+        - NULL/empty → empty string (no text rendered)
+        - Unrecognized → `Unknown`
   - [ ] 1.4: Ensure the helper is used for both three-stage and branching layouts so there is exactly one place where requirement strings are constructed.
 
 - [ ] **Task 2: Wire Requirement Formatting into Linear (Three-Stage) Layout (AC: #1, #2, #3, #5)**
@@ -83,22 +112,22 @@ so that I know what is required for evolution.
   - [ ] 3.3: Validate that requirement text remains legible for long strings like "Trade holding Metal Coat" and that they do not bleed outside the evolution panel on 480x320.
   - [ ] 3.4: Adjust panel spacing, line wrapping, or text clipping logic as needed to keep all requirement labels inside the panel while preserving readability.
 
-- [ ] **Task 4: Database Contract and Safety Validation (AC: #4, #6)**
-  - [ ] 4.1: Review `Database.get_evolution_chain()` in `src/data/database.py` to confirm that all fields required for requirement formatting (`evolution_method`, `minimum_level`, `item_name` or equivalent) are present in the returned structure for both linear and branching chains.
-  - [ ] 4.2: If needed, extend the SQL query or result mapping so that `item_name` and any additional trigger fields are available without violating the existing method contract used by Stories 5.1 and 5.2.
+- [ ] **Task 4: Database Contract and Safety Validation (AC: #4, #6, #7)**
+  - [ ] 4.1: Verify `Database.get_evolution_chain()` in `src/data/database.py` returns these exact fields for each evolution: `evolution_method`, `minimum_level`, `item_name`, `trigger`. Document which fields are present and which are missing.
+  - [ ] 4.2: **CONDITIONAL**: If ANY required fields are missing from the query result, update the SQL query FIRST before proceeding to Tasks 2-3. Ensure the method contract remains backward compatible with Stories 5.1 and 5.2.
   - [ ] 4.3: Double-check that all SQL related to evolution data remains parameterized and free of string interpolation.
-  - [ ] 4.4: Add or update unit tests in `tests/test_database.py` to cover level-, stone-, and trade-based evolutions, asserting that the evolution records contain the expected method and requirement data.
+  - [ ] 4.4: Add or update unit tests in `tests/test_database.py` to cover all Gen 1-3 evolution methods (level, stone, trade, trade-item, happiness, happiness-day, happiness-night, conditional stats), asserting that the evolution records contain the expected method and requirement data.
 
-- [ ] **Task 5: Unit and Integration Tests for Requirement Display (AC: #1, #2, #3, #4, #5, #6)**
-  - [ ] 5.1: Add focused tests in `tests/test_evolution_panel.py` that exercise `_format_requirement()` for each method type (level, stone, trade, trade-with-item) using small synthetic evolution records.
-  - [ ] 5.2: Add integration-style tests that construct an EvolutionPanel for representative Pokémon (for example, Bulbasaur, Pikachu, Machoke, Onix) and verify that rendered requirement strings match expectations.
-  - [ ] 5.3: Where possible, validate that requirement strings are not empty and that fallbacks are used when database fields are missing or null.
-  - [ ] 5.4: Add at least one performance-oriented test (for example, marked with `@pytest.mark.performance`) to confirm that rendering with requirement text remains within existing performance budgets.
+- [ ] **Task 5: Unit and Integration Tests for Requirement Display (AC: #1, #2, #3, #4, #5, #6, #7)**
+  - [ ] 5.1: Add focused tests in `tests/test_evolution_panel.py` that exercise `_format_requirement()` for ALL Gen 1-3 method types (level, stone, trade, trade-with-item, happiness, happiness-day, happiness-night, conditional stats, NULL/empty, unrecognized) using small synthetic evolution records.
+  - [ ] 5.2: Add integration-style tests that construct an EvolutionPanel for representative Pokémon (for example, Bulbasaur, Pikachu, Machoke, Onix, Golbat) and verify that rendered requirement strings match expectations from AC #7.
+  - [ ] 5.3: Validate that NULL/empty evolution_method displays empty string, unrecognized methods display "Unknown", and text >20 chars is truncated with ellipsis.
+  - [ ] 5.4: Add at least one performance-oriented test (for example, marked with `@pytest.mark.performance`) to confirm that rendering with requirement text remains within performance budgets (first render ≤200ms, cached ≤50ms).
 
-- [ ] **Task 6: Visual / Layout Validation (AC: #1, #2, #3, #5)**
+- [ ] **Task 6: Visual / Layout Validation (AC: #1, #2, #3, #5, #7)**
   - [ ] 6.1: Update or extend `demo_evolution_display.py` to include specific test Pokémon that exercise level, stone, and trade evolutions.
   - [ ] 6.2: Manually verify on the demo that requirement labels are visually aligned, readable, and consistent between three-stage and branching layouts on the target resolutions.
-  - [ ] 6.3: Capture updated screenshots for key examples (for example, a three-stage line with level-based requirements, a stone-based evolution, and a trade-with-item evolution) to attach to design/implementation docs if needed.
+  - [ ] 6.3: Capture updated screenshots for these specific Pokémon to verify all evolution method formatting: Bulbasaur (level), Pikachu (stone), Machoke (trade), Onix (trade+item), Eevee (branching), Golbat (happiness). Attach screenshots to design/implementation docs if needed.
 
 ## Dev Notes
 

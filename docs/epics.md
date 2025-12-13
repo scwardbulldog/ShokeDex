@@ -1008,7 +1008,18 @@ So that I know what's required for evolution.
 
 ---
 
-### Story 5.5: Navigation to Evolution Relatives
+### Story 5.5: Navigation to Evolution Relatives [DEFERRED TO POST-MVP]
+
+**Deferral Rationale (December 12, 2025):**
+- Evolution navigation adds UI complexity (focus mode, input conflicts) without proportional MVP value
+- Story 3.6 adjacent navigation (UP/DOWN) already provides efficient Pokémon-to-Pokémon navigation (2 presses for 3-stage chains)
+- Evolution navigation requires 4-5 presses (tab switch + panel focus + sprite selection + navigate)
+- Violates "appliance simplicity" and "3-press rule" core design principles  
+- Most valuable for cross-generation evolutions (Golbat→Crobat), but adds overhead for common cases
+- Evolution DISPLAY (Stories 5.1-5.4) fully delivers FR4.1; FR4.2 deferred pending user feedback
+- May reconsider for Epic 7 (Interactive Features) if user testing indicates demand
+
+**Original Story (Preserved for Future Implementation):**
 
 As a user,
 I want to tap or select an evolution relative to view its details,
@@ -1155,7 +1166,7 @@ This matrix shows exactly which stories implement which functional requirements 
 | **FR3.3** | Type Display | Story 3.3 (Type Badge Display) |
 | **FR3.4** | Navigation Within Detail View | Story 3.6 (Adjacent Pokémon Navigation) |
 | **FR4.1** | Evolution Information | Story 5.1 (Three-Stage), Story 5.2 (Branching), Story 5.3 (No Evolutions), Story 5.4 (Requirements) |
-| **FR4.2** | Evolution Navigation | Story 5.5 (Navigation to Evolution Relatives) |
+| **FR4.2** | Evolution Navigation | Story 5.5 (Navigation to Evolution Relatives) [DEFERRED] |
 | **FR5.1** | Session State | Story 4.1 (First Boot), Story 4.2 (Last Viewed Persistence), Story 4.3 (Boot Behavior) |
 | **FR5.2** | User Preferences | Story 4.4 (Volume and Input Mode Preferences) |
 | **FR6.1** | Region Indicators | Story 1.2 (Generation Badge UI Component) |
