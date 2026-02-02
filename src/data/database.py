@@ -76,6 +76,7 @@ class Database:
                 base_experience INTEGER,
                 generation INTEGER NOT NULL,
                 is_default BOOLEAN DEFAULT 1,
+                description TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
