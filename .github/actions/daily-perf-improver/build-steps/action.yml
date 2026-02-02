@@ -1,0 +1,85 @@
+name: 'ShokeDex Build Steps for Performance Development'
+description: 'Sets up environment for performance testing and development'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Python 3.11
+      shell: bash
+      run: |
+        echo "=== Setting up Python 3.11 ===" | tee -a build-steps.log
+        python --version | tee -a build-steps.log
+        
+    - name: Upgrade pip
+      shell: bash
+      run: |
+        echo "=== Upgrading pip ===" | tee -a build-steps.log
+        python -m pip install --upgrade pip 2>&1 | tee -a build-steps.log
+        
+    - name: Install dependencies
+      shell: bash
+      run: |
+        echo "=== Installing dependencies from requirements.txt ===" | tee -a build-steps.log
+        pip install -r requirements.txt 2>&1 | tee -a build-steps.log
+        echo "✅ Dependencies installed successfully" | tee -a build-steps.log
+        
+    - name: Initialize database
+      shell: bash
+      run: |
+        echo "=== Initializing database ===" | tee -a build-steps.log
+        python src/data/manage_db.py init 2>&1 | tee -a build-steps.log
+        echo "✅ Database initialized" | tee -a build-steps.log
+        
+    - name: Seed database (Gen 1-3)
+      shell: bash
+      run: |
+        echo "=== Seeding database with Pokémon data (Gen 1-3) ===" | tee -a build-steps.log
+        echo "⏱️  This may take 10-20 minutes due to API rate limiting..." | tee -a build-steps.log
+        python src/data/manage_db.py seed --gen 1-3 2>&1 | tee -a build-steps.log
+        echo "✅ Database seeded successfully" | tee -a build-steps.log
+        
+    - name: Verify test environment
+      shell: bash
+      run: |
+        echo "=== Verifying test environment ===" | tee -a build-steps.log
+        export SDL_VIDEODRIVER=dummy
+        echo "SDL_VIDEODRIVER set to: $SDL_VIDEODRIVER" | tee -a build-steps.log
+        pytest --version 2>&1 | tee -a build-steps.log
+        pytest --markers 2>&1 | tee -a build-steps.log
+        echo "✅ Test environment ready" | tee -a build-steps.log
+        
+    - name: Run unit tests (smoke test)
+      shell: bash
+      run: |
+        echo "=== Running unit tests for smoke test ===" | tee -a build-steps.log
+        export SDL_VIDEODRIVER=dummy
+        pytest -m unit -x --tb=short 2>&1 | tee -a build-steps.log
+        echo "✅ Unit tests passed" | tee -a build-steps.log
+        
+    - name: Build steps summary
+      shell: bash
+      run: |
+        echo "" | tee -a build-steps.log
+        echo "========================================" | tee -a build-steps.log
+        echo "🎯 Build Steps Complete!" | tee -a build-steps.log
+        echo "========================================" | tee -a build-steps.log
+        echo "✅ Python 3.11 configured" | tee -a build-steps.log
+        echo "✅ Dependencies installed" | tee -a build-steps.log
+        echo "✅ Database initialized and seeded" | tee -a build-steps.log
+        echo "✅ Test environment verified" | tee -a build-steps.log
+        echo "✅ Unit tests passing" | tee -a build-steps.log
+        echo "" | tee -a build-steps.log
+        echo "📊 Environment ready for performance development" | tee -a build-steps.log
+        echo "" | tee -a build-steps.log
+        echo "Available test commands:" | tee -a build-steps.log
+        echo "  pytest -m unit           # Unit tests (fast)" | tee -a build-steps.log
+        echo "  pytest -m integration    # Integration tests" | tee -a build-steps.log
+        echo "  pytest -m e2e            # End-to-end tests" | tee -a build-steps.log
+        echo "  pytest -m performance    # Performance tests" | tee -a build-steps.log
+        echo "  pytest -n auto           # Parallel execution" | tee -a build-steps.log
+        echo "" | tee -a build-steps.log
+        echo "Performance tools:" | tee -a build-steps.log
+        echo "  python tools/profile_performance.py" | tee -a build-steps.log
+        echo "  python tools/test_input_latency.py" | tee -a build-steps.log
+        echo "  python tools/test_long_session_stability.py" | tee -a build-steps.log
+        echo "========================================" | tee -a build-steps.log
