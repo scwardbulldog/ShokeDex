@@ -14,7 +14,13 @@ on:
 timeout-minutes: 60
 
 permissions:
-  all: read
+  contents: read
+  pull-requests: read
+  discussions: read
+  actions: read
+  checks: read
+  issues: read
+  security-events: read
 
 network: defaults
 
