@@ -14,6 +14,7 @@ A handheld Pokédex device built on Raspberry Pi that displays Pokémon informat
 - [Setup Instructions](#setup-instructions)
 - [Project Structure](#project-structure)
 - [Development](#development)
+- [Automated Workflows](#automated-workflows)
 - [License](#license)
 
 ## 🎯 Overview
@@ -346,6 +347,43 @@ This project follows PEP 8 guidelines. Consider using:
 - `black` for code formatting
 - `pylint` or `flake8` for linting
 - `mypy` for type checking
+
+## 🤖 Automated Workflows
+
+ShokeDex uses GitHub Actions workflows to automate maintenance and improvements:
+
+### Daily Performance Improvement Workflow
+
+An AI-powered workflow that systematically identifies and implements performance optimizations across the application. The workflow operates in three phases:
+
+1. **Research Phase**: Analyzes performance landscape, identifies bottlenecks, and creates optimization plan
+2. **Configuration Phase**: Infers build steps and creates performance engineering guides
+3. **Implementation Phase**: Implements performance improvements and measures impact
+
+**Control the workflow:**
+
+```bash
+# Disable the workflow
+gh aw disable daily-perf-improver --repo scwardbulldog/ShokeDex
+
+# Enable the workflow
+gh aw enable daily-perf-improver --repo scwardbulldog/ShokeDex
+
+# Run the workflow manually
+gh aw run daily-perf-improver --repo scwardbulldog/ShokeDex
+
+# Run multiple iterations
+gh aw run daily-perf-improver --repo scwardbulldog/ShokeDex --repeat 3
+
+# View workflow logs
+gh aw logs daily-perf-improver --repo scwardbulldog/ShokeDex
+```
+
+The workflow creates discussions for research and planning, and pull requests with performance improvements. See [docs/workflows.md](docs/workflows.md) for detailed documentation.
+
+### Daily Documentation Updater
+
+Automatically reviews recent code changes and updates documentation to keep it current and accurate.
 
 ## 📄 License
 
