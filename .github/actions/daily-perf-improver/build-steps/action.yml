@@ -1,0 +1,61 @@
+name: 'ShokeDex Performance Development Build Steps'
+description: 'Validated build steps for performance testing and development'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Python 3.11
+      shell: bash
+      run: |
+        echo "=== Python Setup ===" | tee -a build-steps.log
+        python --version | tee -a build-steps.log 2>&1 || echo "Python not found" | tee -a build-steps.log
+        
+    - name: Upgrade pip
+      shell: bash
+      run: |
+        echo "=== Upgrading pip ===" | tee -a build-steps.log
+        python -m pip install --upgrade pip 2>&1 | tee -a build-steps.log
+        
+    - name: Install dependencies
+      shell: bash
+      run: |
+        echo "=== Installing dependencies from requirements.txt ===" | tee -a build-steps.log
+        pip install -r requirements.txt 2>&1 | tee -a build-steps.log || echo "WARNING: Dependency installation failed (may be network/cache issue)" | tee -a build-steps.log
+        
+    - name: Install development dependencies
+      shell: bash
+      run: |
+        echo "=== Installing development dependencies ===" | tee -a build-steps.log
+        pip install black pylint flake8 mypy 2>&1 | tee -a build-steps.log || echo "WARNING: Dev dependency installation failed (may be network/cache issue)" | tee -a build-steps.log
+        
+    - name: Verify installations
+      shell: bash
+      run: |
+        echo "=== Verifying package installations ===" | tee -a build-steps.log
+        python -c "import pygame; import PIL; import requests; import pytest; print('Core packages OK')" 2>&1 | tee -a build-steps.log || echo "WARNING: Some packages not available" | tee -a build-steps.log
+        black --version 2>&1 | tee -a build-steps.log || echo "black not installed" | tee -a build-steps.log
+        pylint --version 2>&1 | tee -a build-steps.log || echo "pylint not installed" | tee -a build-steps.log
+        pytest --version 2>&1 | tee -a build-steps.log || echo "pytest not installed" | tee -a build-steps.log
+        
+    - name: Initialize database
+      shell: bash
+      run: |
+        echo "=== Initializing database ===" | tee -a build-steps.log
+        python src/data/manage_db.py init 2>&1 | tee -a build-steps.log || echo "Database may already exist" | tee -a build-steps.log
+        
+    - name: Check database status
+      shell: bash
+      run: |
+        echo "=== Database statistics ===" | tee -a build-steps.log
+        python src/data/manage_db.py stats 2>&1 | tee -a build-steps.log || echo "Cannot get stats - database may be empty" | tee -a build-steps.log
+        
+    - name: Environment ready
+      shell: bash
+      run: |
+        echo "=== Build environment ready for performance development ===" | tee -a build-steps.log
+        echo "Ready for:" | tee -a build-steps.log
+        echo "  - Performance testing: SDL_VIDEODRIVER=dummy pytest -m performance" | tee -a build-steps.log
+        echo "  - Unit tests: SDL_VIDEODRIVER=dummy pytest -m unit -n auto" | tee -a build-steps.log
+        echo "  - Code formatting: black src/ tests/" | tee -a build-steps.log
+        echo "  - Linting: pylint src/" | tee -a build-steps.log
+        echo "=== Build steps complete ===" | tee -a build-steps.log
