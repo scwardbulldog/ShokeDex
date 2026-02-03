@@ -3,10 +3,11 @@ from typing import Optional, Dict
 from collections import OrderedDict
 
 
-# LRU Cache with max 50 sprites (per Architecture)
+# LRU Cache with max 128 sprites (per perf-sprite-graphics.md guide)
 # Using OrderedDict for efficient move_to_end() and popitem() operations
+# Increased from 50 to 128 to reduce cache misses during navigation
 _CACHE: OrderedDict[str, object] = OrderedDict()
-_CACHE_MAX_SIZE = 50
+_CACHE_MAX_SIZE = 128
 
 # Cache statistics for performance monitoring
 _cache_hits = 0
@@ -109,7 +110,7 @@ def load_thumb(pokemon_id: int) -> Optional[object]:
     Returns None if the file doesn't exist or pygame isn't available.
     The return type is intentionally generic to avoid importing pygame at module import time.
     
-    Uses LRU caching with max 50 sprites to prevent unbounded memory growth.
+    Uses LRU caching with max 128 sprites to prevent unbounded memory growth.
     """
     global _cache_hits, _cache_misses
     
@@ -138,7 +139,7 @@ def load_detail(pokemon_id: int) -> Optional[object]:
 
     Returns None if the file doesn't exist or pygame isn't available.
     
-    Uses LRU caching with max 50 sprites to prevent unbounded memory growth.
+    Uses LRU caching with max 128 sprites to prevent unbounded memory growth.
     """
     global _cache_hits, _cache_misses
     
@@ -160,3 +161,41 @@ def load_detail(pokemon_id: int) -> Optional[object]:
     _CACHE[key] = surf
     _evict_lru_if_needed()
     return surf
+
+
+def preload_adjacent(pokemon_id: int, size: str = 'detail', lookahead: int = 2):
+    """Pre-load sprites for adjacent Pokémon to reduce navigation lag.
+    
+    Loads sprites for pokemon_id ± lookahead range into cache.
+    This improves navigation smoothness by warming the cache before user navigates.
+    
+    Args:
+        pokemon_id: Current Pokémon ID (1-386)
+        size: 'thumb' or 'detail' - which sprite size to preload
+        lookahead: How many Pokémon to preload in each direction (default 2)
+        
+    Example:
+        preload_adjacent(25, 'detail', 2)  # Preloads #23, #24, #26, #27
+        
+    Performance:
+        - Preloading happens synchronously but is fast (~1-2ms per sprite)
+        - Only loads if not already cached
+        - Bounded by LRU cache size (128 sprites)
+        
+    Story reference: perf-sprite-graphics.md "Pre-loading Adjacent Pokémon"
+    """
+    load_func = load_thumb if size == 'thumb' else load_detail
+    
+    for offset in range(-lookahead, lookahead + 1):
+        if offset == 0:
+            continue  # Skip current, already loaded
+        
+        neighbor_id = pokemon_id + offset
+        # Wrap around boundaries (1-386 for Gen 1-3)
+        if neighbor_id < 1:
+            neighbor_id += 386
+        elif neighbor_id > 386:
+            neighbor_id -= 386
+        
+        # Load sprite (will be cached if not already)
+        load_func(neighbor_id)
