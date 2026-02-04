@@ -38,6 +38,7 @@ Stores basic Pokémon information.
 | base_experience | INTEGER | Base experience yield |
 | generation | INTEGER | Generation number (1-3) |
 | is_default | BOOLEAN | Whether this is the default form |
+| description | TEXT | Pokémon description/flavor text |
 | created_at | TIMESTAMP | Record creation timestamp |
 | updated_at | TIMESTAMP | Record update timestamp |
 
@@ -341,7 +342,6 @@ For production use, consider:
 Potential schema additions for future versions:
 - Move data population (currently structure only)
 - Pokémon sprites/image paths
-- Pokémon descriptions/flavor text
 - Type effectiveness chart
 - Move effectiveness and battle mechanics
 - Pokémon forms and variants
