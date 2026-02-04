@@ -19,7 +19,7 @@ from typing import Optional, Dict, List
 from .screen import Screen
 from .colors import Colors, get_stat_color, TYPE_COLORS
 from ..input_manager import InputAction
-from .sprite_loader import load_detail, load_thumb
+from .sprite_loader import load_detail, load_thumb, preload_adjacent
 
 
 # Story 3.7: Stat label formatting map (AC #4)
@@ -1179,6 +1179,7 @@ class DetailScreen(Screen):
         
         Uses cached sprites when available for performance (AC #9).
         Falls back to text placeholder if sprite missing (AC #7).
+        Pre-loads adjacent sprites to improve navigation smoothness.
         """
         if self.pokemon_data:
             try:
@@ -1186,6 +1187,10 @@ class DetailScreen(Screen):
                 if self.sprite is None:
                     logging.warning(f"Missing sprite for Pokemon #{self.pokemon_id}")
                     self.sprite = self._create_text_placeholder(self.pokemon_data['name'])
+                else:
+                    # Pre-load adjacent sprites for smooth navigation
+                    # Loads ±2 sprites in background (e.g., for #25: #23, #24, #26, #27)
+                    preload_adjacent(self.pokemon_id, size='detail', lookahead=2)
             except Exception as e:
                 logging.error(f"Error loading sprite for Pokemon #{self.pokemon_id}: {e}")
                 self.sprite = self._create_text_placeholder(
