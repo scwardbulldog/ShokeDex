@@ -1253,6 +1253,9 @@ class DetailScreen(Screen):
         
         # Story 5.7: Render tab indicator (always visible at bottom) (AC #7)
         self._render_tab_indicator(surface)
+        
+        # Return empty list = full screen update
+        return []
     
     def _render_header(self, surface: pygame.Surface):
         """

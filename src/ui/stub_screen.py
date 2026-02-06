@@ -125,3 +125,6 @@ class StubScreen(Screen):
         )
         back_rect = back_text.get_rect(center=(240, 313))
         surface.blit(back_text, back_rect)
+        
+        # Return empty list = full screen update
+        return []

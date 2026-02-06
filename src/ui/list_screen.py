@@ -263,3 +263,6 @@ class ListScreen(Screen):
             Colors.LIGHT_GREEN,
             (scrollbar_x, thumb_y, 3, thumb_height)
         )
+        
+        # Return empty list = full screen update
+        return []

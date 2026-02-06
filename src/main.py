@@ -237,11 +237,11 @@ class ShokeDexApp:
         # Clear screen
         self.screen.fill((0, 0, 0))
         
-        # Render current screen
+        # Render current screen (returns dirty rects)
         self.screen_manager.render()
         
-        # Update display
-        pygame.display.flip()
+        # Update display using dirty rects
+        self.screen_manager.update_display()
     
     def run(self):
         """Run the main application loop."""

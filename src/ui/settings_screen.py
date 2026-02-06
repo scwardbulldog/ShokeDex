@@ -279,3 +279,6 @@ class SettingsScreen(Screen):
                 arrow_text = self.text_font.render("→", True, text_color)
                 arrow_rect = arrow_text.get_rect(right=450, centery=y + 10)
                 surface.blit(arrow_text, arrow_rect)
+        
+        # Return empty list = full screen update
+        return []
