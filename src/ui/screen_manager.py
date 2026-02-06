@@ -5,6 +5,7 @@ Screen Manager for ShokeDex - Handles screen stack and transitions
 import pygame
 from typing import List, Optional, Dict, Type
 from .screen import Screen
+from .dirty_rect_manager import DirtyRectManager
 
 
 class ScreenManager:
@@ -27,6 +28,7 @@ class ScreenManager:
         self.display_surface = display_surface
         self.screen_stack: List[Screen] = []
         self.screen_registry: Dict[str, Type[Screen]] = {}
+        self.dirty_rect_manager = DirtyRectManager()
     
     def register_screen(self, name: str, screen_class: Type[Screen]):
         """
@@ -135,11 +137,37 @@ class ScreenManager:
         if current:
             current.update(delta_time)
     
-    def render(self):
-        """Render the current screen to the display surface."""
+    def render(self) -> List[pygame.Rect]:
+        """
+        Render the current screen to the display surface.
+        
+        Returns:
+            List of dirty rectangles that were updated
+        """
         current = self.get_current()
         if current:
-            current.render(self.display_surface)
+            # Get dirty rects from screen rendering
+            dirty_rects = current.render(self.display_surface)
+            
+            # Add to dirty rect manager
+            if current.needs_full_render():
+                self.dirty_rect_manager.mark_full_update()
+                current.clear_full_render()
+            else:
+                for rect in dirty_rects:
+                    self.dirty_rect_manager.mark_dirty(rect)
+            
+            return dirty_rects
+        return []
+    
+    def update_display(self) -> int:
+        """
+        Update the display using dirty rect optimization.
+        
+        Returns:
+            Number of dirty rectangles updated (0 if full flip was used)
+        """
+        return self.dirty_rect_manager.update_display()
     
     def has_screens(self) -> bool:
         """Check if there are any screens in the stack."""
