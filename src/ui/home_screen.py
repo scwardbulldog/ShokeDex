@@ -1060,3 +1060,6 @@ class HomeScreen(Screen):
         )
         name_rect = name_text.get_rect(centerx=x + self.cell_width // 2, top=y + 58)
         surface.blit(name_text, name_rect)
+        
+        # Return empty list = full screen update
+        return []

@@ -283,3 +283,6 @@ class SearchScreen(Screen):
             )
             types_rect = types_render.get_rect(right=450, centery=y + self.item_height // 2)
             surface.blit(types_render, types_rect)
+        
+        # Return empty list = full screen update
+        return []
