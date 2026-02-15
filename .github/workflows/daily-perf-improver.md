@@ -7,7 +7,6 @@ description: |
   Creates discussions to coordinate and draft PRs with improvements.
 
 on:
-  schedule: daily
   workflow_dispatch:
   stop-after: +1mo # workflow will no longer trigger after 1 month
 

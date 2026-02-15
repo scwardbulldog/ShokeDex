@@ -25,9 +25,6 @@
 
 name: "Daily Documentation Updater"
 "on":
-  schedule:
-  - cron: "51 12 * * *"
-    # Friendly format: daily (scattered)
   workflow_dispatch:
 
 permissions: {}
