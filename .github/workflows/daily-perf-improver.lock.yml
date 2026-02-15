@@ -29,8 +29,6 @@
 
 name: "Daily Perf Improver"
 "on":
-  schedule:
-  - cron: "5 1 * * *"
   workflow_dispatch: null
 
 permissions: {}
